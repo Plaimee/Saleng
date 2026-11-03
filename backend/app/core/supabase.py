@@ -23,6 +23,8 @@ class SupabaseStore:
         self.receipts: Dict[str, dict] = {}
         self.collector_reviews: Dict[str, dict] = {}
         self.seller_favorites: List[dict] = []
+        self.seller_notifications: Dict[str, dict] = {}
+        self.support_tickets: Dict[str, dict] = {}
         self.audit_logs: List[dict] = []
         self._seed_default_benchmark_prices()
 
@@ -267,6 +269,97 @@ class SupabaseStore:
                 ]
                 completed.append(order_copy)
         return sorted(completed, key=lambda x: x.get("completed_at") or x.get("created_at") or "", reverse=True)
+
+
+    # -------------------------------------------------------------------------
+    # ระบบแจ้งเตือนผู้ขาย (seller_notifications - UC-08, AC-S08-01, P-01)
+    # -------------------------------------------------------------------------
+    def create_notification(self, notif_data: dict) -> dict:
+        notif_id = notif_data.get("id") or str(uuid.uuid4())
+        notif_data["id"] = notif_id
+        if "is_read" not in notif_data:
+            notif_data["is_read"] = False
+        if "created_at" not in notif_data or not notif_data["created_at"]:
+            notif_data["created_at"] = datetime.now(timezone.utc).isoformat()
+        self.seller_notifications[notif_id] = notif_data
+        return notif_data
+
+    def get_seller_notifications(self, seller_id: str) -> List[dict]:
+        notifs = [
+            n for n in self.seller_notifications.values()
+            if n.get("seller_id") == seller_id
+        ]
+        return sorted(notifs, key=lambda x: x.get("created_at", ""), reverse=True)
+
+    def mark_notification_as_read(self, notification_id: str) -> Optional[dict]:
+        notif = self.seller_notifications.get(notification_id)
+        if notif:
+            notif["is_read"] = True
+            self.seller_notifications[notification_id] = notif
+        return notif
+
+    def mark_all_notifications_as_read(self, seller_id: str) -> int:
+        count = 0
+        for notif in self.seller_notifications.values():
+            if notif.get("seller_id") == seller_id and not notif.get("is_read", False):
+                notif["is_read"] = True
+                count += 1
+        return count
+
+    def generate_draft_reminders_for_seller(self, seller_id: str):
+        """
+        ตรวจสอบคำขอสถานะ S1 ที่ค้างเกิน 3 วัน (72 ชม.) และสร้าง Draft Reminder หากยังไม่มี (AC-S08-01, Q-01)
+        """
+        now = datetime.now(timezone.utc)
+        for o in self.orders.values():
+            if o.get("seller_id") == seller_id and o.get("status") == "S1":
+                created_at_str = o.get("created_at")
+                if created_at_str:
+                    try:
+                        # parse ISO timestamp
+                        dt = datetime.fromisoformat(created_at_str.replace("Z", "+00:00"))
+                        delta_days = (now - dt).total_seconds() / 86400.0
+                    except Exception:
+                        delta_days = 0.0
+
+                    if delta_days >= 3.0:
+                        order_id = o["order_id"]
+                        # ตรวจสอบว่ามี reminder ของ order นี้หรือยัง
+                        existing = any(
+                            n.get("seller_id") == seller_id
+                            and n.get("order_id") == order_id
+                            and n.get("type") == "DRAFT_REMINDER"
+                            for n in self.seller_notifications.values()
+                        )
+                        if not existing:
+                            self.create_notification({
+                                "seller_id": seller_id,
+                                "type": "DRAFT_REMINDER",
+                                "title": "แจ้งเตือน: รายการของเก่าค้างในฉบับร่าง",
+                                "message": f"คุณมีรายการของเก่าคำขอ {order_id} บันทึกค้างไว้เกิน 3 วัน อย่าลืมส่งคำขอนัดหมายเพื่อระบายของเก่าก่อนล้นพื้นที่",
+                                "order_id": order_id,
+                                "is_read": False,
+                            })
+
+    # -------------------------------------------------------------------------
+    # ระบบคำร้องขอความช่วยเหลือ (support_tickets - UC-13, REQ-SEC-002, AC-S08-04)
+    # -------------------------------------------------------------------------
+    def create_support_ticket(self, ticket_data: dict) -> dict:
+        ticket_id = ticket_data.get("id") or str(uuid.uuid4())
+        ticket_data["id"] = ticket_id
+        if "status" not in ticket_data:
+            ticket_data["status"] = "OPEN"
+        if "created_at" not in ticket_data or not ticket_data["created_at"]:
+            ticket_data["created_at"] = datetime.now(timezone.utc).isoformat()
+        self.support_tickets[ticket_id] = ticket_data
+        return ticket_data
+
+    def get_support_tickets_by_seller(self, seller_id: str) -> List[dict]:
+        tickets = [
+            t for t in self.support_tickets.values()
+            if t.get("seller_id") == seller_id
+        ]
+        return sorted(tickets, key=lambda x: x.get("created_at", ""), reverse=True)
 
 
 # Singleton instance สำหรับเข้าถึง Database

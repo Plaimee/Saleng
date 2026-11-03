@@ -567,6 +567,47 @@
 
 ---
 
+## บันทึก #37 — `/implement T-01..08` (พัฒนาระบบแจ้งเตือนและการช่วยเหลือ Notifications & Help Center ครบวงจร)
+- **วันที่:** 2026-11-03
+- **คำสั่งที่ใช้:** `/implement T-01..08`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `backend/app/models/notification_help_models.py` (Pydantic models สำหรับ Notifications, Sorting Guides, FAQs, Support Tickets, Contact Info)
+  - `backend/app/core/supabase.py` (เพิ่มคอลเลกชัน `seller_notifications`, `support_tickets`, ฟังก์ชัน `generate_draft_reminders_for_seller`, `mark_all_notifications_as_read`, `create_support_ticket`)
+  - `backend/app/services/notification_help_service.py` (`NotificationService`, `KnowledgeBaseService`, `SupportTicketService` พร้อม PDPA masking `08X-XXX-XXXX` และบันทึก Audit Log)
+  - `backend/app/api/v1/notifications_help.py` (FastAPI Router สำหรับ endpoints แจ้งเตือน, คู่มือคัดแยก, FAQ, และส่งคำร้องขอความช่วยเหลือ)
+  - `backend/app/api/v1/pricing.py` (ลงทะเบียน `notifications_help_router`)
+  - `frontend/src/services/notificationHelpApi.js` (API Client ฝั่งหน้าบ้านพร้อมระบบ LocalStorage Caching สำหรับคู่มือและ FAQ โหมดออฟไลน์ CC-05, REQ-OP-001)
+  - `frontend/src/components/NotificationCenterModal.jsx` (คอมโพเนนต์ศูนย์แจ้งเตือน พร้อมตัวเลขนับ badge, รายการแจ้งเตือน, ปุ่มอ่านแล้วรายข้อ/อ่านทั้งหมด `UC-08`)
+  - `frontend/src/components/WasteSortingGuideView.jsx` (คอมโพเนนต์คู่มือแนะนำคัดแยกขยะ 4 หมวดหลัก พร้อมเคล็ดลับเพิ่มมูลค่าราคาและข้อควรระวัง `UC-08`)
+  - `frontend/src/components/FaqAccordionView.jsx` (คอมโพเนนต์คำถามที่พบบ่อย 3 หมวดหมู่ แบบ Accordion พร้อม Search Filter ค้นหาคำสำคัญ `UC-08`)
+  - `frontend/src/components/SupportTicketModal.jsx` (แบบฟอร์มส่งคำร้องขอความช่วยเหลือ พร้อมปกปิดเบอร์โทรศัพท์และข้อมูลติดต่อสายด่วน Call Center / LINE `UC-13`, `REQ-SEC-002`)
+  - `frontend/src/pages/HelpCenterPage.jsx` (หน้าจอรวมศูนย์ช่วยเหลือและการแจ้งเตือน Mobile-First SPA)
+  - `backend/tests/test_T01_notifications_and_help_models.py` (Unit tests สำหรับ Pydantic Models และ Supabase Store: 3 passed)
+  - `backend/tests/test_AC_S08_01_notifications.py` (Backend test สำหรับ AC-S08-01: 1 passed)
+  - `backend/tests/test_AC_S08_02_sorting_guides.py` (Backend test สำหรับ AC-S08-02: 1 passed)
+  - `backend/tests/test_AC_S08_03_faqs.py` (Backend test สำหรับ AC-S08-03: 2 passed)
+  - `backend/tests/test_AC_S08_04_support_tickets.py` (Backend test สำหรับ AC-S08-04: 2 passed)
+  - `backend/tests/test_e2e_notifications_and_help.py` (Backend E2E Integration test สำหรับ AC-S08-01..05: 1 passed)
+  - `frontend/tests/notificationHelpApi.test.mjs` (Frontend API & Offline Cache test: 5 passed)
+  - `frontend/tests/AC-S08-01.test.jsx` (Vitest UI Component test: 2 passed)
+  - `frontend/tests/AC-S08-02.test.jsx` (Vitest UI Component test: 1 passed)
+  - `frontend/tests/AC-S08-03.test.jsx` (Vitest UI Component test: 1 passed)
+  - `frontend/tests/AC-S08-04.test.jsx` (Vitest UI Component test: 1 passed)
+  - `specs/seller/08-notifications-and-help/tasks.md` (อัปเดตสถานะงาน `T-01` ถึง `T-08` เป็น `[DONE]` และอัปเดตสถานะรวมเป็น `completed`)
+- **ผลการตรวจ 5 ข้อหลังจบ Task:**
+  1. **ไฟล์ที่แตะ:** แตะเฉพาะไฟล์ที่กำหนดไว้ใน `tasks.md` (T-01 ถึง T-08)
+  2. **ผลการรัน Test:**
+     - รัน `npm test --prefix frontend` (Vitest): **`21 files passed, 55 passed in 1.57s`** (ผ่าน 100% ครอบคลุม UI Components และ Offline Cache)
+     - รัน `pytest backend/tests/` (Pytest): **`67 passed in 0.28s`** (ผ่าน 100% ครอบคลุม Unit, AC, และ E2E Lifecycle)
+     - **ยอดรวมทั้งระบบ: 122 tests ผ่านทั้งหมด 100% (Backend 67 + Frontend 55)**
+  3. **การอ้างอิง ID:** ฟังก์ชัน คอมโพเนนต์ และชุดทดสอบทุกไฟล์ระบุรหัส `UC-08`, `UC-13`, `REQ-OP-001`, `REQ-SEC-001`, `REQ-SEC-002`, `CC-01..06`, `AC-S08-01..05`, `P-01..P-06`, `T-01..T-08` ครบถ้วนตามกฎของ `AGENTS.md`
+  4. **Non-goals & Open Questions:** ขอบเขตตรงตามสเปก v2.0 ไม่ทำ AI Live Agent Chatbot 24 ชม., และไม่เชื่อมโยง Push Notifications ข้ามเครื่อง (APNs/FCM)
+  5. **การบันทึกสถานะ:** อัปเดตงานย่อย `T-01..T-08` เป็น `[DONE]` ใน `tasks.md` และบันทึกลง `prompt-log.md` เรียบร้อย
+
+
+
+---
+
 ## บันทึก #33 — `/implement T-01..07` (พัฒนาระบบหลังทำธุรกรรมครบทุกงานย่อย T-01 ถึง T-07)
 - **วันที่:** 2026-11-03
 - **คำสั่งที่ใช้:** `/implement T-01..07`
@@ -601,3 +642,105 @@
   3. **การอ้างอิง ID:** ฟังก์ชันและชุดทดสอบทุกไฟล์ระบุรหัส `UC-10`, `SC-05`, `REQ-FN-005`, `REQ-SEC-001`, `REQ-SEC-002`, `REQ-OP-001`, `CC-01..06`, `AC-S07-01..05`, `P-01..P-06` ครบถ้วนตามกฎของ `AGENTS.md`
   4. **Non-goals & Open Questions:** ขอบเขตตรงตามสเปก v2.0 ไม่ทำระบบให้ทิป (Tipping), ไม่ทำระบบแชทคุยต่อหลังจบงาน, และไม่ทำเว็บบอร์ดสาธารณะ
   5. **การบันทึกสถานะ:** อัปเดตงานย่อย `T-01..T-07` เป็น `[DONE]` ใน `tasks.md` และบันทึกลง `prompt-log.md` เรียบร้อย
+
+
+---
+
+## บันทึก #34 — `/clarify specs/seller/08-notifications-and-help` (ระบบแจ้งเตือนและการช่วยเหลือ)
+- **วันที่:** 2026-11-03
+- **คำสั่งที่ใช้:** `/clarify specs/seller/08-notifications-and-help`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/seller/08-notifications-and-help/spec.md` (ปรับปรุงเป็น Version 2.0 สถานะ reviewed-post-clarify หลังเคลียร์จุดกำกวม CC-01..03 และคำถาม Q-01..05 ครบถ้วน)
+- **ประเด็นที่เคลียร์และข้อตกลงของทีม:**
+  1. **`CC-01`**: เชื่อมโยง Use Case หลักตามสารบัญกลาง `docs/srs/use-cases.md`: ใช้ `UC-08: สื่อสารผ่านข้อความมาตรฐานและแจ้งเตือนสถานะนัดหมาย` และเชื่อมโยง Customer Support กับศูนย์ดูแลระบบ Admin `UC-13`
+  2. **`CC-02`**: ปรับการเชื่อมโยงรหัส Requirement ให้สอดคล้องกับ Catalogue กลาง 16 ข้อ: ยกเลิกการอ้างอิง `REQ-UX-002` (ซึ่งหมายถึงเกณฑ์เตือนส่วนต่างน้ำหนัก ±15%) และเชื่อมโยงกับ `UC-08`, `REQ-OP-001` / `CC-05` (Offline Cache สำหรับคู่มือและ FAQ), `REQ-SEC-002` (PDPA Masking `08X-XXX-XXXX` ใน Ticket), และ `REQ-SEC-001` (Audit Logging)
+  3. **`CC-03`**: ผังสถานะยึดตาม `MD-STM-04`: การแจ้งเตือนของค้างทำงานบนสถานะ `S1 (Draft/Posted)` ที่ค้างเกิน 3 วัน และการแจ้งเตือนสถานะคำขอทำงานบนสถานะ `S2..S7`
+  4. **`Q-01` (ทางเลือก A)**: ระบบแจ้งเตือนแบบ In-App Notification Feed (Notification Center) มี Badge แสดงตัวเลขที่ยังไม่ได้อ่าน แจ้งเตือนของค้างใน S1 เกิน 3 วัน และแจ้งเตือนเมื่อคำขอเปลี่ยนสถานะ
+  5. **`Q-02` (ทางเลือก A)**: คู่มือแนะนำการคัดแยกขยะเพื่อเพิ่มมูลค่า 4 หมวดหลัก (`MAT-CARDBOARD`, `MAT-WHITE-PAPER`, `MAT-GLASS-BOTTLE`, `MAT-PLASTIC-PET`) พร้อมเคล็ดลับเพิ่มมูลค่า และเปิดอ่านออฟไลน์ได้
+  6. **`Q-03` (ทางเลือก A)**: ศูนย์ช่วยเหลือและคำถามที่พบบ่อย (FAQ) แบ่งเป็น 3 หมวดหมู่หลักในรูปแบบ Accordion พร้อมกล่องค้นหาตามคำสำคัญ (Search Filter)
+  7. **`Q-04` (ทางเลือก A)**: ช่องทางติดต่อ Customer Support มีแบบฟอร์มส่ง Ticket บันทึกลงตารางพร้อม PII Masking และแสดงข้อมูลติดต่อสายด่วน Call Center / LINE Official
+  8. **`Q-05`**: ยืนยันขอบเขต Non-goals ไม่ทำ AI Chatbot 24 ชม., และไม่ส่ง Push Notification ข้ามเครื่องผ่าน APNs/FCM
+- **สถานะ:** สเปก `seller/08` ได้รับการรับรองและพร้อมสำหรับขั้นตอน `/plan`
+
+
+---
+
+## บันทึก #35 — `/plan specs/seller/08-notifications-and-help/spec.md` (แผนสถาปัตยกรรมและเทคโนโลยี)
+- **วันที่:** 2026-11-03
+- **คำสั่งที่ใช้:** `/plan specs/seller/08-notifications-and-help/spec.md`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/seller/08-notifications-and-help/plan.md` (จัดทำแผนสถาปัตยกรรมระบบ 7 หัวข้อหลัก ครอบคลุม P-01 ถึง P-06, Tech Stack "ทีมเลือกเอง ไม่ได้มาจาก spec", Data Model, Endpoints, และตารางตรวจ Constraints 13 ข้อ)
+- **ประเด็นสำคัญในแผน:**
+  1. **Tech Stack:** Python 3.11 (FastAPI) + Supabase (PostgreSQL 15+) + React 18 (Vite + TailwindCSS) (`"ทีมเลือกเอง ไม่ได้มาจาก spec"`)
+  2. **สถาปัตยกรรม 6 การตัดสินใจ (`P-01` ถึง `P-06`):**
+     - `P-01`: NotificationService ตรวจสอบคำขอค้างใน `S1` > 3 วันเพื่อสร้าง Draft Reminder และแจ้งเตือนสถานะคำขอ (`UC-08`, `AC-S08-01`)
+     - `P-02`: Waste Sorting Knowledge Base คู่มือ 4 หมวดหลักพร้อมเคล็ดลับเพิ่มมูลค่า และออฟไลน์แคช (`UC-08`, `CC-05`, `AC-S08-02`)
+     - `P-03`: Categorized FAQ Knowledge Base คำถาม 3 หมวดหมู่ แบบ Accordion พร้อม Search Filter (`UC-08`, `CC-05`, `AC-S08-03`)
+     - `P-04`: Customer Support Ticket Service ตาราง `support_tickets` พร้อมรหัส `TCK-YYYYMMDD-XXXX`, PII Masking `08X-XXX-XXXX`, และข้อมูลสายด่วน (`UC-13`, `REQ-SEC-002`, `AC-S08-04`)
+     - `P-05`: Audit Logging for Support Events บันทึกประวัติการส่งตั๋วและเคลียร์การแจ้งเตือน (`REQ-SEC-001`, `AC-S08-05`)
+     - `P-06`: Mobile-First UI Architecture คอมโพเนนต์ React รองรับจอมือถือ 375px–414px (`CC-01`, `AC-S08-01..05`)
+  3. **ตารางตรวจ Constraints:** ครบทั้ง 13 ข้อตาม `specs/000-shared/constraints.md` พร้อมระบุเหตุผลข้อที่ไม่เกี่ยวข้อง
+- **สถานะ:** แผน `plan.md` พร้อมสำหรับการแตกงานย่อยในขั้นตอน `/tasks`
+
+
+---
+
+## บันทึก #36 — `/tasks specs/seller/08-notifications-and-help/plan.md` (รายการงานย่อยและ Two-way Traceability Matrix)
+- **วันที่:** 2026-11-03
+- **คำสั่งที่ใช้:** `/tasks specs/seller/08-notifications-and-help/plan.md`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/seller/08-notifications-and-help/tasks.md` (แตกงานย่อย 8 งาน `T-01` ถึง `T-08` ครบทั้ง 6 คอลัมน์, พร้อมตาราง Two-way Traceability Matrix ครบทุกข้อ `AC-S08-01..05`, และตาราง Constraints Traceability ครบทั้ง 13 ข้อ)
+- **ประเด็นสำคัญใน tasks.md:**
+  1. **งานย่อย 8 งาน (`T-01` ถึง `T-08`):**
+     - `T-01`: สร้าง Data Models และ Schema สำหรับระบบแจ้งเตือน (`seller_notifications`) และตั๋วช่วยเหลือ (`support_tickets`)
+     - `T-02`: สร้าง Service และ API สำหรับศูนย์แจ้งเตือนและเตือนของค้างในฉบับร่าง S1 > 3 วัน (`NotificationService`, `AC-S08-01`)
+     - `T-03`: สร้าง Service และ API สำหรับคู่มือแนะนำการคัดแยกขยะ 4 หมวดหลัก (`KnowledgeBaseService`, `AC-S08-02`)
+     - `T-04`: สร้าง Service และ API สำหรับคำถามที่พบบ่อย (FAQ) 3 หมวดหมู่ พร้อมระบบค้นหา (`AC-S08-03`)
+     - `T-05`: สร้าง Service และ API สำหรับส่งตั๋วแจ้งปัญหาพร้อม PII Masking และข้อมูลสายด่วน (`SupportTicketService`, `AC-S08-04`)
+     - `T-06`: สร้าง Frontend API Client และระบบแคชคู่มือ/FAQ ออฟไลน์ใน `localStorage` (`AC-S08-02`, `AC-S08-03`)
+     - `T-07`: พัฒนาคอมโพเนนต์และหน้าจอศูนย์ช่วยเหลือ React Mobile-First SPA (`NotificationCenterModal`, `WasteSortingGuideView`, `FaqAccordionView`, `SupportTicketModal`, `HelpCenterPage`)
+     - `T-08`: สร้างชุดทดสอบหน้าจอ Vitest Component Tests และ Backend Integration E2E Test Suite (`AC-S08-01..05`)
+  2. **Two-way Traceability Matrix:** เกณฑ์การยอมรับทุกข้อ (`AC-S08-01` ถึง `AC-S08-05`) เชื่อมโยงกับงานย่อยและชื่อไฟล์ชุดทดสอบอย่างครบถ้วน
+  3. **Constraints Traceability:** ตรวจสอบข้อจำกัดกลางทั้ง 13 ข้อตาม `specs/000-shared/constraints.md` ครบถ้วน
+- **สถานะ:** แตกงานย่อยเสร็จสมบูรณ์ พร้อมสำหรับการเริ่มพัฒนางานย่อยแรก `/implement T-01`
+
+
+---
+
+## บันทึก #37 — `/implement T-01..08` (พัฒนาระบบแจ้งเตือนและการช่วยเหลือ Notifications & Help Center ครบวงจร)
+- **วันที่:** 2026-11-03
+- **คำสั่งที่ใช้:** `/implement T-01..08`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `backend/app/models/notification_help_models.py` (Pydantic models สำหรับ Notifications, Sorting Guides, FAQs, Support Tickets, Contact Info)
+  - `backend/app/core/supabase.py` (เพิ่มคอลเลกชัน `seller_notifications`, `support_tickets`, ฟังก์ชัน `generate_draft_reminders_for_seller`, `mark_all_notifications_as_read`, `create_support_ticket`)
+  - `backend/app/services/notification_help_service.py` (`NotificationService`, `KnowledgeBaseService`, `SupportTicketService` พร้อม PDPA masking `08X-XXX-XXXX` และบันทึก Audit Log)
+  - `backend/app/api/v1/notifications_help.py` (FastAPI Router สำหรับ endpoints แจ้งเตือน, คู่มือคัดแยก, FAQ, และส่งคำร้องขอความช่วยเหลือ)
+  - `backend/app/api/v1/pricing.py` (ลงทะเบียน `notifications_help_router`)
+  - `frontend/src/services/notificationHelpApi.js` (API Client ฝั่งหน้าบ้านพร้อมระบบ LocalStorage Caching สำหรับคู่มือและ FAQ โหมดออฟไลน์ CC-05, REQ-OP-001)
+  - `frontend/src/components/NotificationCenterModal.jsx` (คอมโพเนนต์ศูนย์แจ้งเตือน พร้อมตัวเลขนับ badge, รายการแจ้งเตือน, ปุ่มอ่านแล้วรายข้อ/อ่านทั้งหมด `UC-08`)
+  - `frontend/src/components/WasteSortingGuideView.jsx` (คอมโพเนนต์คู่มือแนะนำคัดแยกขยะ 4 หมวดหลัก พร้อมเคล็ดลับเพิ่มมูลค่าราคาและข้อควรระวัง `UC-08`)
+  - `frontend/src/components/FaqAccordionView.jsx` (คอมโพเนนต์คำถามที่พบบ่อย 3 หมวดหมู่ แบบ Accordion พร้อม Search Filter ค้นหาคำสำคัญ `UC-08`)
+  - `frontend/src/components/SupportTicketModal.jsx` (แบบฟอร์มส่งคำร้องขอความช่วยเหลือ พร้อมปกปิดเบอร์โทรศัพท์และข้อมูลติดต่อสายด่วน Call Center / LINE `UC-13`, `REQ-SEC-002`)
+  - `frontend/src/pages/HelpCenterPage.jsx` (หน้าจอรวมศูนย์ช่วยเหลือและการแจ้งเตือน Mobile-First SPA)
+  - `backend/tests/test_T01_notifications_and_help_models.py` (Unit tests สำหรับ Pydantic Models และ Supabase Store: 3 passed)
+  - `backend/tests/test_AC_S08_01_notifications.py` (Backend test สำหรับ AC-S08-01: 1 passed)
+  - `backend/tests/test_AC_S08_02_sorting_guides.py` (Backend test สำหรับ AC-S08-02: 1 passed)
+  - `backend/tests/test_AC_S08_03_faqs.py` (Backend test สำหรับ AC-S08-03: 2 passed)
+  - `backend/tests/test_AC_S08_04_support_tickets.py` (Backend test สำหรับ AC-S08-04: 2 passed)
+  - `backend/tests/test_e2e_notifications_and_help.py` (Backend E2E Integration test สำหรับ AC-S08-01..05: 1 passed)
+  - `frontend/tests/notificationHelpApi.test.mjs` (Frontend API & Offline Cache test: 5 passed)
+  - `frontend/tests/AC-S08-01.test.jsx` (Vitest UI Component test: 2 passed)
+  - `frontend/tests/AC-S08-02.test.jsx` (Vitest UI Component test: 1 passed)
+  - `frontend/tests/AC-S08-03.test.jsx` (Vitest UI Component test: 1 passed)
+  - `frontend/tests/AC-S08-04.test.jsx` (Vitest UI Component test: 1 passed)
+  - `specs/seller/08-notifications-and-help/tasks.md` (อัปเดตสถานะงาน `T-01` ถึง `T-08` เป็น `[DONE]` และอัปเดตสถานะรวมเป็น `completed`)
+- **ผลการตรวจ 5 ข้อหลังจบ Task:**
+  1. **ไฟล์ที่แตะ:** แตะเฉพาะไฟล์ที่กำหนดไว้ใน `tasks.md` (T-01 ถึง T-08)
+  2. **ผลการรัน Test:**
+     - รัน `npm test --prefix frontend` (Vitest): **`21 files passed, 55 passed in 1.57s`** (ผ่าน 100% ครอบคลุม UI Components และ Offline Cache)
+     - รัน `pytest backend/tests/` (Pytest): **`67 passed in 0.28s`** (ผ่าน 100% ครอบคลุม Unit, AC, และ E2E Lifecycle)
+     - **ยอดรวมทั้งระบบ: 122 tests ผ่านทั้งหมด 100% (Backend 67 + Frontend 55)**
+  3. **การอ้างอิง ID:** ฟังก์ชัน คอมโพเนนต์ และชุดทดสอบทุกไฟล์ระบุรหัส `UC-08`, `UC-13`, `REQ-OP-001`, `REQ-SEC-001`, `REQ-SEC-002`, `CC-01..06`, `AC-S08-01..05`, `P-01..P-06`, `T-01..T-08` ครบถ้วนตามกฎของ `AGENTS.md`
+  4. **Non-goals & Open Questions:** ขอบเขตตรงตามสเปก v2.0 ไม่ทำ AI Live Agent Chatbot 24 ชม., และไม่เชื่อมโยง Push Notifications ข้ามเครื่อง (APNs/FCM)
+  5. **การบันทึกสถานะ:** อัปเดตงานย่อย `T-01..T-08` เป็น `[DONE]` ใน `tasks.md` และบันทึกลง `prompt-log.md` เรียบร้อย
+
