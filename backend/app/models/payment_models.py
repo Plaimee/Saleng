@@ -39,7 +39,7 @@ class SettledItemOutput(BaseModel):
     item_id: str
     category_code: str
     category_name: str
-    unit: Literal["kg", "bag"]
+    unit: Literal["kg", "bag", "piece", "box"]
     est_quantity: float
     actual_quantity: float
     locked_unit_price: float
