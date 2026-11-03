@@ -40,6 +40,7 @@ def test_AC_S03_05_direct_appointment_request_success():
 
     # ตรวจสอบคำขอใน store
     updated_order = supabase_store.get_order(order_id)
+    assert updated_order is not None
     assert updated_order["status"] == "S2"
     assert updated_order["assigned_saleng_id"] == "saleng-01"
 

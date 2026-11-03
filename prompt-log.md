@@ -1142,3 +1142,110 @@
   - **Frontend (Vitest):** 41 test files passed, 100 tests passed, 0 failed
   - **Zero Regressions:** ไม่พบผลกระทบต่อฟีเจอร์เดิมของระบบ
 - **สถานะ:** ฟีเจอร์ Seller 03 พัฒนาและตรวจสอบคุณภาพเสร็จสมบูรณ์ 100% พร้อมใช้งาน
+
+
+---
+
+## บันทึก #54 — `/clarify specs/seller/05-booking-and-status-tracking/spec.md` (การตรวจสอบความสอดคล้องกับสารบัญกลางและการขยายสเปก v2.0)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/clarify specs/seller/05-booking-and-status-tracking/spec.md`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/seller/05-booking-and-status-tracking/spec.md` (ปรับปรุงเป็น Version `2.0`, สถานะ `reviewed-post-clarify`, ปรับ Use Case เป็น `UC-04` ร่วมกับ `MD-STM-04`, เชื่อมโยงกฎธุรกิจ `BR-03`, `REQ-FN-003`, `REQ-SEC-001`, `REQ-SEC-002`, `REQ-UX-001`, `REQ-QA-001`, หลักฐาน `EV-01`, `EV-02`, `EV-08`, ขยายเกณฑ์การยอมรับเป็น 5 ข้อ `AC-S05-01` ถึง `AC-S05-05`, และบันทึกมติ `Q-01..05` พร้อม Non-goals ชัดเจน)
+- **ประเด็นสำคัญที่ทีมเห็นชอบ:**
+  1. **`CC-01` (Use Case Alignment):** ปรับรหัส Use Case ให้สอดคล้องกับสารบัญกลางใน `docs/srs/use-cases.md` เป็น **`UC-04: จัดการคิวงาน คำนวณเส้นทางรับซื้อ และติดตามสถานะการเดินทาง`** (ฟังก์ชันฝั่งผู้ขาย: การนัดหมาย, ส่งคำขอ, ติดตามสถานะเรียลไทม์, และการยกเลิกตามกฎ `BR-03`) ร่วมกับผังสถานะ **`MD-STM-04`**
+  2. **`CC-02` (Requirements Catalogue & Evidence Mapping):** ปลดรหัส `EV-012` ที่อยู่นอกสารบัญ และเชื่อมโยงรหัสหลักฐานกลาง `EV-01`, `EV-02`, `EV-08` พร้อมทั้งผูกรหัสความต้องการกลาง `REQ-FN-003`, `REQ-SEC-001`, `REQ-SEC-002`, และกฎธุรกิจ `BR-03` ครบถ้วน
+  3. **`CC-03` (State Machine & Cancellation Guard `BR-03`):** ผู้ขายสามารถกดยกเลิกนัดหมายได้ในสถานะ `S1 (Draft)`, `S2 (Pending/Open)`, และ `S3 (Assigned/Accepted)` (`-> S8: ยกเลิก`) แต่เมื่อคำขอเข้าสู่สถานะ `S4 (กำลังเดินทาง)` ระบบต้องล็อกปุ่มยกเลิกบนหน้าจอทันที และบล็อกการยกเลิกผ่าน API (HTTP 400 ตามกฎ `BR-03`)
+  4. **มติในคำถามเปิด `Q-01` ถึง `Q-05` (เลือกทางเลือก A ทั้งหมด):**
+     - `Q-01` (Booking Slots): 2 รูปแบบ คือ เรียกทันที (1–2 ชม.) และนัดหมายล่วงหน้า (3 ช่วงเวลามาตรฐาน 09:00–12:00, 13:00–16:00, 16:00–18:00) (Option A)
+     - `Q-02` (Cancellation in S3): ยกเลิกได้ตามกฎ BR-03 โดยเปลี่ยนเป็น S8, บันทึกเหตุผล, แจ้งเตือนซาเล้ง, และคืนโควตาน้ำหนักรถ (Option A)
+     - `Q-03` (Tracking in S4 In-Transit): แสดงข้อความ 'กำลังเดินทางมาหาคุณ', ระยะทางที่เหลือ (กม.), และ ETA โดยล็อกปุ่มยกเลิกตาม BR-03 (Option A)
+     - `Q-04` (Notifications): แจ้งเตือน In-App Banner ใน 3 จังหวะสำคัญ: S3 รับงาน, S4 ออกเดินทาง, S5 ถึงหน้างาน (Option A)
+     - `Q-05` (Non-goals): ไม่ทำ Live GPS Animation ทุกวินาที, ไม่คิดค่าปรับการยกเลิกก่อนออกเดินทาง, และไม่อนุญาตให้แก้รายการของเก่าหลังรับงาน (Option A)
+- **สถานะ:** สเปก `spec.md` ได้รับการรับรองและอัปเดตเป็น Version 2.0 (`reviewed-post-clarify`) พร้อมสำหรับขั้นตอน `/plan`
+
+
+---
+
+## บันทึก #55 — `/plan specs/seller/05-booking-and-status-tracking/spec.md` (แผนสถาปัตยกรรม เทคโนโลยี และการปฏิบัติตาม Constraints ครบทั้ง 13 ข้อ)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/plan specs/seller/05-booking-and-status-tracking/spec.md`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/seller/05-booking-and-status-tracking/plan.md` (Version `1.0`, สถานะ `ready-for-tasks`, ออกแบบสถาปัตยกรรม Service Layer, กำหนดการตัดสินใจ `P-01` ถึง `P-06`, กำหนด DDL Schema และ Pydantic Models, ออกแบบ API 4 เส้นทาง, แผนพัฒนาหน้าจอ 5 คอมโพเนนต์, และตารางตรวจสอบ Constraints ครบทั้ง 13 ข้อ)
+- **ประเด็นสำคัญใน plan.md:**
+  1. **เทคโนโลยีที่ใช้:** ระบุกำกับชัดเจนว่า `"ทีมเลือกเอง ไม่ได้มาจาก spec"` (FastAPI, Supabase/PostgreSQL, React 18 + TailwindCSS, Pytest, Vitest + RTL + JSDOM)
+  2. **การตัดสินใจเชิงสถาปัตยกรรม (`P-01` ถึง `P-06`):**
+     - `P-01`: บริการเลือกสล็อตเวลานัดหมาย (เรียกทันทีใน 1–2 ชม. หรือนัดล่วงหน้า 3 ช่วงเวลา) เปลี่ยนสถานะ S1 เป็น S2 พร้อม Audit Log (`AC-S05-01`, `Q-01`)
+     - `P-02`: บริการติดตามสถานะ 9 สถานะแบบเรียลไทม์ พร้อม Stepper แสดงความคืบหน้าของใบงานตามผัง MD-STM-04 (`AC-S05-02`)
+     - `P-03`: บริการบังคับใช้กฎเหล็กการยกเลิกนัดหมาย BR-03: ยกเลิกได้ใน S1..S3 แต่ล็อกปุ่มยกเลิกและบล็อก API ใน S4 In-Transit โยน HTTP 400 (`AC-S05-03`, `Q-02`)
+     - `P-04`: บริการคำนวณและแสดงระยะทางที่เหลือ และเวลาประเมินถึงหน้างาน (ETA) ตามรอบพิกัด GPS ซาเล้งทุก 60 วินาที (`AC-S05-04`, `Q-03`, `CC-02`)
+     - `P-05`: บริการแจ้งเตือน In-App Banner ใน 3 จังหวะสำคัญ: S3 รับงาน, S4 ออกเดินทาง, S5 ถึงหน้างาน พร้อม Audit Log (`AC-S05-04`, `Q-04`)
+     - `P-06`: แคชข้อมูลสถานะและรายละเอียดคำขอล่าสุดใน `localStorage` (`saleng_active_order_tracking`) รองรับโหมดออฟไลน์ (`CC-05`, `REQ-OP-001`)
+  3. **ตารางตรวจ Constraints:** ครบทั้ง 13 ข้อตาม `specs/000-shared/constraints.md` โดยเชื่อมโยงการตัดสินใจ `P-01` ถึง `P-06` ครบถ้วน
+- **สถานะ:** แผน `plan.md` พร้อมสำหรับการแตกงานย่อยในขั้นตอน `/tasks`
+
+
+---
+
+## บันทึก #56 — `/tasks specs/seller/05-booking-and-status-tracking/plan.md` (รายการงานย่อยและ Two-way Traceability Matrix)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/tasks specs/seller/05-booking-and-status-tracking/plan.md`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/seller/05-booking-and-status-tracking/tasks.md` (แตกงานย่อย 8 งาน `T-01` ถึง `T-08` ครบทั้ง 6 คอลัมน์, พร้อมตาราง Two-way Traceability Matrix ครบทุกข้อ `AC-S05-01..05`, และตาราง Constraints Traceability ครบทั้ง 13 ข้อ)
+- **ประเด็นสำคัญใน tasks.md:**
+  1. **งานย่อย 8 งาน (`T-01` ถึง `T-08`):**
+     - `T-01`: สร้าง Data Models และ Schema สำหรับระบบนัดหมายและติดตามสถานะ (`booking_tracking_models.py`, `supabase.py`)
+     - `T-02`: สร้าง Service และ API สำหรับเลือกสล็อตเวลานัดหมาย (เรียกทันที vs นัดล่วงหน้า 3 ช่วงเวลา) เปลี่ยนสถานะ S1 เป็น S2 พร้อม Audit Log (`AC-S05-01`, `P-01`, `Q-01`)
+     - `T-03`: สร้าง Service และ API สำหรับติดตามสถานะ 9 สถานะแบบเรียลไทม์ และ Stepper Timeline ตามผัง MD-STM-04 (`AC-S05-02`, `P-02`)
+     - `T-04`: สร้าง Service และ API บังคับใช้กฎเหล็กการยกเลิกนัดหมาย BR-03: ยกเลิกได้ใน S1..S3 และบล็อกใน S4 In-Transit โยน HTTP 400 (`AC-S05-03`, `P-03`, `Q-02`)
+     - `T-05`: สร้าง Service และ API สำหรับคำนวณระยะทาง ETA และแจ้งเตือนความคืบหน้าสถานะ S3/S4/S5 (`AC-S05-04`, `AC-S05-05`, `P-04`, `P-05`, `Q-03`, `Q-04`)
+     - `T-06`: สร้าง Frontend API Client และระบบแคชสถานะคำขอออฟไลน์ใน `localStorage` (`CC-05`, `REQ-OP-001`)
+     - `T-07`: พัฒนาคอมโพเนนต์ React ระบบนัดหมายและติดตามสถานะ (`BookingSlotSelector`, `StatusTimelineStepper`, `InTransitTrackingCard`, `CancelBookingModal`, `BookingTrackingPanel`)
+     - `T-08`: สร้างชุดทดสอบหน้าจอ Vitest Component Tests และ Backend Integration E2E Test Suite (`AC-S05-01..05`)
+  2. **Two-way Traceability Matrix:** เกณฑ์การยอมรับทุกข้อ (`AC-S05-01` ถึง `AC-S05-05`) เชื่อมโยงกับงานย่อยและชื่อไฟล์ชุดทดสอบอย่างครบถ้วน
+  3. **Constraints Traceability:** ตรวจสอบข้อจำกัดกลางทั้ง 13 ข้อตาม `specs/000-shared/constraints.md` ครบถ้วน
+- **สถานะ:** แตกงานย่อยเสร็จสมบูรณ์ พร้อมสำหรับการเริ่มพัฒนางานย่อยในขั้นตอน `/implement T-01..08`
+
+
+---
+
+## บันทึก #57 — `/implement T-01..08` (พัฒนาระบบนัดหมายและติดตามสถานะ Seller 05 ครบวงจรทั้ง Backend, Frontend, E2E และการบังคับใช้กฎเหล็ก BR-03)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/implement T-01..08` (สำหรับ `specs/seller/05-booking-and-status-tracking/`)
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - **Backend Data Models & Store (`T-01`):**
+    - `backend/app/models/booking_tracking_models.py` (สร้าง Pydantic models: `BookingSlotRequest`, `OrderCancellationRequest`, `OrderTrackingResponse`, `SimulateStatusRequest`)
+    - `backend/app/core/supabase.py` (เพิ่มการจัดเก็บและอัปเดตฟิลด์คำขอนัดหมาย `booking_type`, `scheduled_date`, `scheduled_slot`, `cancellation_reason`, `cancelled_by`, `cancelled_at` และ Audit Log `ORDER_SUBMITTED`, `ORDER_CANCELLED_BY_SELLER`)
+    - `backend/tests/test_T01_booking_tracking_models.py` (Unit tests สำหรับ Schema Validation และความถูกต้องของ Data Models: 3 passed)
+  - **Backend Service, Endpoints & Cancellation Enforcement (`T-02`, `T-03`, `T-04`, `T-05`):**
+    - `backend/app/services/booking_tracking_service.py` (พัฒนา `BookingTrackingService` สำหรับการเลือกสล็อตเวลานัดหมาย, การเปลี่ยนสถานะตามผัง 9 สถานะ MD-STM-04, การบล็อกการยกเลิกในสถานะ S4 ตามกฎเหล็ก `BR-03`, การคำนวณระยะทางและ ETA ด้วยสูตร Haversine x 1.35 ตามรอบ GPS 60 วินาที `CC-02`, และการบันทึก Audit Log)
+    - `backend/app/api/v1/booking_tracking.py` (เปิด FastAPI Router 4 endpoints: `POST /orders/{id}/book`, `GET /orders/{id}/status`, `POST /orders/{id}/cancel`, `PATCH /orders/{id}/simulate-status`)
+    - `backend/app/api/v1/pricing.py` (รวม router เข้ากับแอปพลิเคชันหลัก)
+  - **Backend Automated Tests (`T-02`, `T-03`, `T-04`, `T-05`, `T-08`):**
+    - `backend/tests/test_AC_S05_01_booking_slot_submission.py` (2 passed)
+    - `backend/tests/test_AC_S05_02_status_timeline_stepper.py` (1 passed)
+    - `backend/tests/test_AC_S05_03_pre_transit_cancellation.py` (2 passed)
+    - `backend/tests/test_AC_S05_04_in_transit_eta_display.py` (1 passed)
+    - `backend/tests/test_AC_S05_05_audit_logging.py` (1 passed)
+    - `backend/tests/test_e2e_booking_and_status_tracking.py` (Integration E2E test ทดสอบตั้งแต่เลือกสล็อต -> ส่งคำขอ S2 -> ซาเล้งรับงาน S3 -> ออกเดินทาง S4 -> ทดสอบบล็อกยกเลิก BR-03 -> ถึงหน้างาน S5 -> บันทึก Audit Log: 1 passed)
+  - **Frontend Services & API Client (`T-06`):**
+    - `frontend/src/services/bookingTrackingApi.js` (สร้าง API client สำหรับ `bookSlot`, `getStatus`, `cancelOrder`, `simulateStatus` พร้อมแคชออฟไลน์ใน `localStorage` `saleng_active_order_tracking` ตาม `CC-05`, `REQ-OP-001`)
+    - `frontend/tests/bookingTrackingApi.test.mjs` (Unit test สำหรับ API client และแคชออฟไลน์: 3 passed)
+  - **Frontend Mobile-First React Components (`T-07`):**
+    - `frontend/src/components/BookingSlotSelector.jsx` (แผงเลือกสล็อตเวลานัดหมาย: เรียกทันที 1–2 ชม. หรือนัดล่วงหน้า 3 ช่วงเวลา เช้า, บ่าย, เย็น พร้อมหมายเหตุ)
+    - `frontend/src/components/StatusTimelineStepper.jsx` (แถบแสดงขั้นตอนความคืบหน้า 5 ขั้นหลักตามผัง 9 สถานะ MD-STM-04 พร้อมแบนเนอร์ยกเลิก S8 และข้อพิพาท S9)
+    - `frontend/src/components/InTransitTrackingCard.jsx` (การ์ดแสดงระยะทางที่เหลือ, เวลา ETA สดรอบ GPS 60 วินาที, โปรไฟล์ซาเล้งพร้อมป้าย KYC 100%, และปุ่มยกเลิกที่ถูกล็อกตามกฎ `BR-03`)
+    - `frontend/src/components/CancelBookingModal.jsx` (ป๊อปอัปให้ผู้ขายเลือกเหตุผลสำเร็จรูปหรือพิมพ์เหตุผลเพิ่มเติม และกดยืนยันการยกเลิกนัดหมาย)
+    - `frontend/src/components/BookingTrackingPanel.jsx` (แผงหลัก Mobile-First รวม Header, Stepper, Tracking Card, ปุ่มยกเลิก, แถบจำลองสถานะทดสอบ และป้ายเตือนออฟไลน์)
+  - **Frontend Automated Tests (`T-08`):**
+    - `frontend/tests/AC-S05-01.test.jsx` (Component test สำหรับ BookingSlotSelector และการส่งคำขอ: 2 passed)
+    - `frontend/tests/AC-S05-02.test.jsx` (Component test สำหรับ StatusTimelineStepper 5 ขั้น และสถานะ S8/S9: 3 passed)
+    - `frontend/tests/AC-S05-03.test.jsx` (Component test สำหรับ Pre-Transit Cancellation Guard BR-03: 2 passed)
+    - `frontend/tests/AC-S05-04.test.jsx` (Component test สำหรับ In-Transit ETA & Distance Display: 1 passed)
+    - `frontend/tests/AC-S05-05.test.jsx` (Component test สำหรับ CancelBookingModal และการส่งเหตุผลยกเลิก: 3 passed)
+  - **Task Tracking:**
+    - `specs/seller/05-booking-and-status-tracking/tasks.md` (ปรับสถานะเป็น `completed` และเช็คผ่าน `[DONE]` ครบทุกงาน `T-01` ถึง `T-08`)
+- **ผลการทดสอบ (Verification & Regression):**
+  - **Backend (Pytest):** 127 passed, 0 failed (รวมทุกชุดทดสอบของ Seller 01, 02, 03, 04, 05, 06, 07, 08, 09)
+  - **Frontend (Vitest):** 47 test files passed, 114 tests passed, 0 failed
+  - **Zero Regressions:** ฟีเจอร์เดิมทั้งหมดในระบบยังคงทำงานได้อย่างถูกต้อง 100%
+- **สถานะ:** ฟีเจอร์ Seller 05 พัฒนาและตรวจสอบคุณภาพเสร็จสมบูรณ์ 100% พร้อมใช้งาน

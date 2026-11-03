@@ -61,6 +61,7 @@ def test_AC_S06_03_seller_confirms_payment(method):
     assert re.fullmatch(r"REC-\d{8}-\d{4}", data["receipt_no"])
 
     order = supabase_store.get_order(order_id)
+    assert order is not None
     assert order["status"] == "S7"
     assert order["payment_method"] == method
 
@@ -77,7 +78,9 @@ def test_AC_S06_03_block_non_seller():
         json={"seller_id": "usr-saleng-pay", "payment_method": "CASH"},
     )
     assert resp.status_code == 403
-    assert supabase_store.get_order(order_id)["status"] == "S6"
+    order_after = supabase_store.get_order(order_id)
+    assert order_after is not None
+    assert order_after["status"] == "S6"
 
 
 @pytest.mark.parametrize("status", ["S5", "S8"])

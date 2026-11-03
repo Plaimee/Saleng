@@ -89,6 +89,7 @@ def test_e2e_buyer_search_and_selection_lifecycle():
 
     # ขั้นตอนที่ 6: ตรวจสอบสถานะในฐานข้อมูลและ Audit Log
     updated_order = supabase_store.get_order(order_id)
+    assert updated_order is not None
     assert updated_order["status"] == "S2"
     assert updated_order["assigned_saleng_id"] == saleng_id
 
