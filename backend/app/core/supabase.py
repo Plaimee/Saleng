@@ -28,6 +28,10 @@ class SupabaseStore:
         self.safety_evidences: Dict[str, dict] = {}
         self.emergency_contacts: Dict[str, dict] = {}
         self.sos_alerts: Dict[str, dict] = {}
+        self.sellers: Dict[str, dict] = {}
+        self.seller_otps: List[dict] = []
+        self.seller_sessions: Dict[str, dict] = {}
+        self.pickup_locations: Dict[str, dict] = {}
         self.audit_logs: List[dict] = []
         self._seed_default_benchmark_prices()
 
@@ -173,13 +177,19 @@ class SupabaseStore:
                 return r
         return None
 
-    def add_audit_log(self, action: str, entity_id: str, actor_id: str, details: dict):
+    def add_audit_log(self, action: str | dict, entity_id: str = "", actor_id: str = "", details: dict = None):
+        if isinstance(action, dict):
+            entry = action
+            action = entry.get("action", "")
+            entity_id = entry.get("entity_id", "")
+            actor_id = entry.get("actor_id", "")
+            details = entry.get("details", {})
         log_entry = {
             "log_id": str(uuid.uuid4()),
             "action": action,
             "entity_id": entity_id,
             "actor_id": actor_id,
-            "details": details,
+            "details": details or {},
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
         self.audit_logs.append(log_entry)
@@ -420,6 +430,170 @@ class SupabaseStore:
             if a.get("order_id") == order_id
         ]
         return sorted(alerts, key=lambda x: x.get("created_at", ""), reverse=True)
+
+    # -------------------------------------------------------------
+    # Seller Account, OTP, Session & Location Methods (UC-01, UC-02)
+    # -------------------------------------------------------------
+    def save_seller_otp(self, otp_data: dict) -> dict:
+        """บันทึก OTP ชั่วคราว (AC-S01-01)"""
+        otp_id = otp_data.get("id") or str(uuid.uuid4())
+        otp_data["id"] = otp_id
+        if "created_at" not in otp_data:
+            otp_data["created_at"] = datetime.now(timezone.utc).isoformat()
+        if "is_used" not in otp_data:
+            otp_data["is_used"] = False
+        self.seller_otps.append(otp_data)
+        return otp_data
+
+    def get_latest_seller_otp(self, phone: str) -> Optional[dict]:
+        """ดึง OTP ล่าสุดของเบอร์โทรศัพท์ที่ยังไม่ถูกใช้"""
+        matching = [
+            o for o in self.seller_otps
+            if o.get("phone") == phone and not o.get("is_used")
+        ]
+        if not matching:
+            return None
+        return sorted(matching, key=lambda x: x.get("created_at", ""), reverse=True)[0]
+
+    def mark_seller_otp_used(self, otp_id: str):
+        """ระบุว่า OTP ถูกใช้แล้ว"""
+        for o in self.seller_otps:
+            if o.get("id") == otp_id:
+                o["is_used"] = True
+
+    def get_seller_by_phone(self, phone: str) -> Optional[dict]:
+        """ค้นหาผู้ขายจากเบอร์โทรศัพท์"""
+        for s in self.sellers.values():
+            if s.get("phone") == phone:
+                return s
+        return None
+
+    def get_seller(self, seller_id: str) -> Optional[dict]:
+        """ค้นหาผู้ขายจาก seller_id"""
+        return self.sellers.get(seller_id)
+
+    def create_seller(self, seller_data: dict) -> dict:
+        """สร้างข้อมูลบัญชีผู้ขายใหม่ (AC-S01-01)"""
+        seller_id = seller_data.get("seller_id") or f"SEL-{uuid.uuid4().hex[:8].upper()}"
+        seller_data["seller_id"] = seller_id
+        if "status" not in seller_data:
+            seller_data["status"] = "ACTIVE"
+        now = datetime.now(timezone.utc).isoformat()
+        if "created_at" not in seller_data:
+            seller_data["created_at"] = now
+        if "updated_at" not in seller_data:
+            seller_data["updated_at"] = now
+        self.sellers[seller_id] = seller_data
+        return seller_data
+
+    def update_seller(self, seller_id: str, update_data: dict) -> Optional[dict]:
+        """แก้ไขข้อมูลบัญชีผู้ขาย"""
+        seller = self.sellers.get(seller_id)
+        if not seller:
+            return None
+        seller.update(update_data)
+        seller["updated_at"] = datetime.now(timezone.utc).isoformat()
+        return seller
+
+    def create_seller_session(self, session_data: dict) -> dict:
+        """สร้างเซสชันการเข้าสู่ระบบ (AC-S01-01, AC-S01-04)"""
+        token = session_data.get("session_token") or str(uuid.uuid4())
+        session_data["session_token"] = token
+        if "created_at" not in session_data:
+            session_data["created_at"] = datetime.now(timezone.utc).isoformat()
+        self.seller_sessions[token] = session_data
+        return session_data
+
+    def get_seller_session(self, session_token: str) -> Optional[dict]:
+        """ดึงเซสชันจาก token"""
+        return self.seller_sessions.get(session_token)
+
+    def delete_seller_session(self, session_token: str) -> bool:
+        """ลบเซสชัน (Logout)"""
+        if session_token in self.seller_sessions:
+            del self.seller_sessions[session_token]
+            return True
+        return False
+
+    def create_pickup_location(self, loc_data: dict) -> dict:
+        """เพิ่มที่อยู่นัดหมายรับของเก่า (AC-S01-02, MD-DOM-04)"""
+        loc_id = loc_data.get("location_id") or f"LOC-{uuid.uuid4().hex[:8].upper()}"
+        loc_data["location_id"] = loc_id
+        seller_id = loc_data["seller_id"]
+        now = datetime.now(timezone.utc).isoformat()
+        if "created_at" not in loc_data:
+            loc_data["created_at"] = now
+        if "updated_at" not in loc_data:
+            loc_data["updated_at"] = now
+
+        # ถ้าตั้งค่าเป็น default ให้ปลด default ของที่อยู่อื่นของผู้ขายรายนี้
+        if loc_data.get("is_default"):
+            for l in self.pickup_locations.values():
+                if l.get("seller_id") == seller_id:
+                    l["is_default"] = False
+
+        self.pickup_locations[loc_id] = loc_data
+        return loc_data
+
+    def get_pickup_location(self, location_id: str) -> Optional[dict]:
+        """ดึงข้อมูลที่อยู่นัดหมาย"""
+        return self.pickup_locations.get(location_id)
+
+    def get_pickup_locations_by_seller(self, seller_id: str) -> List[dict]:
+        """ดึงรายการที่อยู่นัดหมายทั้งหมดของผู้ขาย"""
+        locs = [
+            l for l in self.pickup_locations.values()
+            if l.get("seller_id") == seller_id
+        ]
+        # ให้ default ขึ้นก่อน ตามด้วยวันที่สร้าง
+        return sorted(
+            locs,
+            key=lambda x: (not x.get("is_default", False), x.get("created_at", "")),
+        )
+
+    def update_pickup_location(self, location_id: str, update_data: dict) -> Optional[dict]:
+        """แก้ไขข้อมูลที่อยู่นัดหมาย"""
+        loc = self.pickup_locations.get(location_id)
+        if not loc:
+            return None
+        seller_id = loc["seller_id"]
+
+        # ถ้าสลับเป็น default ให้ปลดอันอื่น
+        if update_data.get("is_default"):
+            for l in self.pickup_locations.values():
+                if l.get("seller_id") == seller_id and l.get("location_id") != location_id:
+                    l["is_default"] = False
+
+        loc.update(update_data)
+        loc["updated_at"] = datetime.now(timezone.utc).isoformat()
+        return loc
+
+    def delete_pickup_location(self, location_id: str) -> bool:
+        """ลบที่อยู่นัดหมาย"""
+        if location_id in self.pickup_locations:
+            del self.pickup_locations[location_id]
+            return True
+        return False
+
+    def set_default_pickup_location(self, seller_id: str, location_id: str) -> Optional[dict]:
+        """กำหนดที่อยู่นี้เป็นที่อยู่เริ่มต้น (AC-S01-02, Q-03)"""
+        target = self.pickup_locations.get(location_id)
+        if not target or target.get("seller_id") != seller_id:
+            return None
+        for l in self.pickup_locations.values():
+            if l.get("seller_id") == seller_id:
+                l["is_default"] = (l.get("location_id") == location_id)
+        target["updated_at"] = datetime.now(timezone.utc).isoformat()
+        return target
+
+    def get_default_pickup_location(self, seller_id: str) -> Optional[dict]:
+        """ดึงที่อยู่เริ่มต้นสำหรับเตรียมส่งต่อให้ UC-02 (P-06)"""
+        locs = self.get_pickup_locations_by_seller(seller_id)
+        for l in locs:
+            if l.get("is_default"):
+                return l
+        # หากไม่มี default ให้คืนที่อยู่อันแรกถ้ามี
+        return locs[0] if locs else None
 
 
 # Singleton instance สำหรับเข้าถึง Database

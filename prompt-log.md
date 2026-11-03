@@ -836,3 +836,101 @@
   3. **การอ้างอิง ID:** ฟังก์ชัน คอมโพเนนต์ และชุดทดสอบทุกไฟล์ระบุรหัส `UC-09`, `UC-13`, `REQ-SEC-001`, `REQ-SEC-002`, `REQ-QA-001`, `REQ-UX-001`, `REQ-FN-006`, `CC-01..06`, `AC-S09-01..05`, `P-01..P-06`, `T-01..T-08` ครบถ้วนตามกฎของ `AGENTS.md`
   4. **Non-goals & Open Questions:** ขอบเขตตรงตามสเปก v2.0 ไม่ทำ AI Audio Surveillance ดักฟังอัตโนมัติ, ไม่ทำ in-app VoIP calling, และไม่เชื่อมต่อ API ตำรวจ 191 โดยตรง
   5. **การบันทึกสถานะ:** อัปเดตงานย่อย `T-01..T-08` เป็น `[DONE]` ใน `tasks.md` และบันทึกลง `prompt-log.md` เรียบร้อย
+
+---
+
+## บันทึก #42 — `/clarify specs/seller/01-account-and-access/spec.md` (การตรวจสอบความสอดคล้องกับสารบัญกลางและการขยายสเปก v2.0)
+- **วันที่:** 2026-11-03
+- **คำสั่งที่ใช้:** `/clarify specs/seller/01-account-and-access/spec.md`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/seller/01-account-and-access/spec.md` (ปรับปรุงเป็น Version `2.0`, สถานะ `reviewed-post-clarify`, ปรับ Use Case เป็น `UC-01`, เชื่อมโยง `REQ-SEC-001`, `REQ-SEC-002`, `REQ-UX-001/002`, `REQ-QA-001`, `REQ-OP-001`, หลักฐาน `EV-08`, `EV-09`, `DR-02`, `D-01`, ขยายเกณฑ์การยอมรับเป็น 5 ข้อ `AC-S01-01` ถึง `AC-S01-05`, และกำหนด Non-goals ชัดเจน)
+- **ประเด็นสำคัญที่ทีมเห็นชอบ:**
+  1. **`CC-01` (Use Case Alignment):** แก้ไขรหัส Use Case ให้สอดคล้องกับสารบัญกลางใน `docs/srs/use-cases.md` เป็น **`UC-01: ลงทะเบียน เข้าสู่ระบบ และยืนยันตัวตน (KYC / บัญชีผู้ใช้) ฝั่งผู้ขาย`** โดยกำหนดให้การมีบัญชีและที่อยู่นัดหมาย (`PickupLocation`) เป็น Precondition ก่อนการสร้างคำขอใน `UC-02`
+  2. **`CC-02` (Requirements Catalogue & Evidence Mapping):** ปลดรหัส `CT-01` และเชื่อมโยงรหัสกลาง `REQ-SEC-001` (Audit Log), `REQ-SEC-002` (PDPA Masking & PII Protection), `REQ-UX-001/002` (Mobile-First SPA), `REQ-QA-001` (< 2.0s), `REQ-OP-001` (Offline Persistence) และหลักฐาน `EV-08`, `EV-09`, `DR-02`
+  3. **`CC-03` (State Machine Preconditions):** การมีบัญชีผู้ขายที่เข้าสู่ระบบและมีที่อยู่นัดหมายอย่างน้อย 1 รายการ เป็นเงื่อนไขจำเป็นก่อนเปลี่ยนสถานะคำขอจาก `S1 (Draft)` สู่ `S2 (Pending/Open)`
+  4. **มติในคำถามเปิด `Q-01` ถึง `Q-05` (เลือกทางเลือก A ทั้งหมด):**
+     - `Q-01` (Authentication Mechanism): ใช้เบอร์โทรศัพท์มือถือ + OTP verification 6 หลัก (Option A)
+     - `Q-02` (Pickup Location Input): รองรับทั้งปุ่มดึงพิกัด GPS ปัจจุบันและฟอร์มระบุตำบล/แขวงและบ้านเลขที่ (Option A)
+     - `Q-03` (Multiple Pickup Locations): รองรับการบันทึกที่อยู่นัดหมายหลายแห่งและกำหนดเป็นที่อยู่เริ่มต้น (Default Location) ได้ (Option A)
+     - `Q-04` (PDPA & PII Protection): แสดงเบอร์โทรศัพท์แบบ Masking `08X-XXX-XXXX` และแยกฟิลด์ `subDistrict` ออกจาก `addressText` และ `geoPoint` อย่างชัดเจน (Option A)
+     - `Q-05` (Non-goals): ไม่ทำ KYC บัตรประชาชนผู้ขาย (D-01), ไม่ทำ Social Login ภายนอก, ไม่ทำระบบกู้คืนบัญชีข้ามเบอร์โทรศัพท์ (Option A)
+- **สถานะ:** สเปก `spec.md` ได้รับการรับรองและอัปเดตเป็น Version 2.0 (`reviewed-post-clarify`) พร้อมสำหรับขั้นตอน `/plan`
+
+---
+
+## บันทึก #43 — `/plan specs/seller/01-account-and-access/spec.md` (แผนสถาปัตยกรรม เทคโนโลยี และการปฏิบัติตาม Constraints ครบทั้ง 13 ข้อ)
+- **วันที่:** 2026-11-03
+- **คำสั่งที่ใช้:** `/plan specs/seller/01-account-and-access/spec.md`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/seller/01-account-and-access/plan.md` (Version `1.0`, สถานะ `ready-for-tasks`, ออกแบบสถาปัตยกรรม Service Layer, กำหนดการตัดสินใจ `P-01` ถึง `P-06`, กำหนด DDL Schema และ Pydantic Models, ออกแบบ API 11 เส้นทาง, แผนพัฒนาหน้าจอ 5 คอมโพเนนต์, และตารางตรวจสอบ Constraints ครบทั้ง 13 ข้อ)
+- **ประเด็นสำคัญใน plan.md:**
+  1. **เทคโนโลยีที่ใช้:** ระบุกำกับชัดเจนว่า `"ทีมเลือกเอง ไม่ได้มาจาก spec"` (FastAPI, Supabase/PostgreSQL, React 18 + TailwindCSS, Pytest, Vitest + RTL + JSDOM)
+  2. **การตัดสินใจเชิงสถาปัตยกรรม (`P-01` ถึง `P-06`):**
+     - `P-01`: บริการ OTP Phone Authentication ออก Session Token 30 วัน ตอบสนอง `< 2.0 วินาที` (`AC-S01-01`)
+     - `P-02`: บริการจัดการที่อยู่นัดหมาย `PickupLocationService` และ GPS Pinning (`AC-S01-02`)
+     - `P-03`: ฟังก์ชัน Masking เบอร์โทรศัพท์ `08X-XXX-XXXX` และแยกฟิลด์ `sub_district` ออกจาก `address_text` (`AC-S01-03`)
+     - `P-04`: การคงสภาพ Token และแคชข้อมูลที่อยู่ใน `localStorage` เมื่อออฟไลน์ (`AC-S01-04`, `CC-05`, `REQ-OP-001`)
+     - `P-05`: การบันทึก Audit Log แบบ Append-only ทุกเหตุการณ์สำคัญ (`AC-S01-05`, `REQ-SEC-001`)
+     - `P-06`: Precondition Readiness สำหรับส่งต่อที่อยู่นัดหมายเริ่มต้นไปยังการสร้างคำขอใน `UC-02`
+  3. **ตารางตรวจ Constraints:** ครบทั้ง 13 ข้อตาม `specs/000-shared/constraints.md` พร้อมระบุเหตุผลข้อที่ไม่เกี่ยวข้อง
+- **สถานะ:** แผน `plan.md` พร้อมสำหรับการแตกงานย่อยในขั้นตอน `/tasks`
+
+---
+
+## บันทึก #44 — `/tasks specs/seller/01-account-and-access/plan.md` (รายการงานย่อยและ Two-way Traceability Matrix)
+- **วันที่:** 2026-11-03
+- **คำสั่งที่ใช้:** `/tasks specs/seller/01-account-and-access/plan.md`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/seller/01-account-and-access/tasks.md` (แตกงานย่อย 8 งาน `T-01` ถึง `T-08` ครบทั้ง 6 คอลัมน์, พร้อมตาราง Two-way Traceability Matrix ครบทุกข้อ `AC-S01-01..05`, และตาราง Constraints Traceability ครบทั้ง 13 ข้อ)
+- **ประเด็นสำคัญใน tasks.md:**
+  1. **งานย่อย 8 งาน (`T-01` ถึง `T-08`):**
+     - `T-01`: สร้าง Data Models และ Schema สำหรับระบบบัญชีและที่อยู่นัดหมาย (`account_models.py`, `supabase.py`)
+     - `T-02`: สร้าง Service และ API สำหรับลงทะเบียนและเข้าสู่ระบบด้วยเบอร์โทรศัพท์และ OTP (`SellerAuthService`, `AC-S01-01`)
+     - `T-03`: สร้าง Service และ API สำหรับจัดการที่อยู่นัดหมายและพิกัด GPS (`PickupLocationService`, `AC-S01-02`, `P-06`)
+     - `T-04`: สร้าง Service และ API สำหรับคุ้มครองข้อมูลส่วนบุคคลและ Masking เบอร์โทรศัพท์ `08X-XXX-XXXX` (`AC-S01-03`)
+     - `T-05`: สร้าง Service ตรวจสอบความถูกต้องของเซสชันและการบันทึก Audit Log (`AC-S01-04`, `AC-S01-05`, `REQ-SEC-001`)
+     - `T-06`: สร้าง Frontend API Client และระบบแคชข้อมูลบัญชีและที่อยู่ออฟไลน์ใน `localStorage` (`CC-05`, `REQ-OP-001`)
+     - `T-07`: พัฒนาคอมโพเนนต์ React ระบบบัญชีและการเข้าใช้งาน (`PhoneOtpLoginForm`, `SellerProfileCard`, `PickupLocationList`, `PickupLocationModal`, `AccountAccessPanel`)
+     - `T-08`: สร้างชุดทดสอบหน้าจอ Vitest Component Tests และ Backend Integration E2E Test Suite (`AC-S01-01..05`)
+  2. **Two-way Traceability Matrix:** เกณฑ์การยอมรับทุกข้อ (`AC-S01-01` ถึง `AC-S01-05`) เชื่อมโยงกับงานย่อยและชื่อไฟล์ชุดทดสอบอย่างครบถ้วน
+  3. **Constraints Traceability:** ตรวจสอบข้อจำกัดกลางทั้ง 13 ข้อตาม `specs/000-shared/constraints.md` ครบถ้วน
+- **สถานะ:** แตกงานย่อยเสร็จสมบูรณ์ พร้อมสำหรับการเริ่มพัฒนางานย่อยในขั้นตอน `/implement T-01..08`
+
+---
+
+## บันทึก #45 — `/implement T-01..08` (พัฒนาระบบบัญชีและการเข้าใช้งานของผู้ขาย Seller Account & Access ครบวงจร)
+- **วันที่:** 2026-11-03
+- **คำสั่งที่ใช้:** `/implement T-01..08`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `backend/app/models/account_models.py` (Pydantic models: `OtpRequest`, `OtpRequestResponse`, `OtpVerifyRequest`, `AuthSessionResponse`, `SellerProfileResponse`, `SellerProfileUpdateRequest`, `GeoPoint`, `PickupLocationCreateRequest`, `PickupLocationUpdateRequest`, `PickupLocationResponse`, `PickupLocationListResponse`, ฟังก์ชัน `mask_phone_number`)
+  - `backend/app/core/supabase.py` (ขยาย Supabase store: `sellers`, `seller_otps`, `seller_sessions`, `pickup_locations` พร้อม CRUD และการจัดการ Default Location, ปรับ `add_audit_log` ให้ยืดหยุ่น)
+  - `backend/app/services/account_service.py` (`SellerAuthService`, `PickupLocationService`, `verify_seller_session` พร้อม Audit Logging ทุกเหตุการณ์)
+  - `backend/app/api/v1/account.py` (FastAPI Router สำหรับ endpoints ขอ OTP, ยืนยัน OTP, โปรไฟล์, ที่อยู่นัดหมาย, และออกจากระบบ)
+  - `backend/app/api/v1/pricing.py` (ลงทะเบียน `account_router` ภายใต้ prefix `/api/v1`)
+  - `frontend/src/services/accountApi.js` (Frontend API Client พร้อมระบบแคชลง `localStorage` สำหรับ Token, Profile, และ Locations เมื่อออฟไลน์ CC-05, REQ-OP-001)
+  - `frontend/src/components/PhoneOtpLoginForm.jsx` (ฟอร์มขอ OTP และยืนยัน 6 หลัก มีตัวนับถอยหลัง Cooldown 60s REQ-UX-002, data-req="UC-01")
+  - `frontend/src/components/SellerProfileCard.jsx` (การ์ดโปรไฟล์ผู้ขาย แสดงเบอร์โทรศัพท์ Masked 08X-XXX-XXXX และปุ่มแก้ไขชื่อ displayName data-req="UC-01")
+  - `frontend/src/components/PickupLocationList.jsx` (รายการที่อยู่นัดหมาย แสดงป้าย Default Location ปุ่มแก้ไข/ลบ และปุ่มตั้งค่าเริ่มต้น data-req="UC-01")
+  - `frontend/src/components/PickupLocationModal.jsx` (ป๊อปอัปเพิ่ม/แก้ไขที่อยู่ พร้อมปุ่มปักหมุด GPS ดึงตำแหน่งปัจจุบัน data-req="UC-01")
+  - `frontend/src/components/AccountAccessPanel.jsx` (แผงรวมระบบบัญชีและที่อยู่ Mobile-First Dashboard data-req="UC-01")
+  - `backend/tests/test_T01_account_models.py` (Unit tests สำหรับ Pydantic Models และ Supabase Store: 4 passed)
+  - `backend/tests/test_AC_S01_01_seller_auth.py` (Backend test สำหรับ AC-S01-01: 3 passed)
+  - `backend/tests/test_AC_S01_02_pickup_locations.py` (Backend test สำหรับ AC-S01-02: 1 passed)
+  - `backend/tests/test_AC_S01_03_pii_masking.py` (Backend test สำหรับ AC-S01-03: 2 passed)
+  - `backend/tests/test_AC_S01_04_session_persistence.py` (Backend test สำหรับ AC-S01-04: 1 passed)
+  - `backend/tests/test_AC_S01_05_audit_logging.py` (Backend test สำหรับ AC-S01-05: 1 passed)
+  - `backend/tests/test_e2e_account_and_access.py` (Backend E2E Integration test สำหรับ AC-S01-01..05: 1 passed)
+  - `frontend/tests/accountApi.test.mjs` (Frontend API & Offline Cache test: 4 passed)
+  - `frontend/tests/AC-S01-01.test.jsx` (Vitest UI Component test: 2 passed)
+  - `frontend/tests/AC-S01-02.test.jsx` (Vitest UI Component test: 2 passed)
+  - `frontend/tests/AC-S01-03.test.jsx` (Vitest UI Component test: 2 passed)
+  - `specs/seller/01-account-and-access/tasks.md` (อัปเดตสถานะงาน `T-01` ถึง `T-08` เป็น `[DONE]` และอัปเดตสถานะรวมเป็น `completed`)
+- **ผลการตรวจ 5 ข้อหลังจบ Task:**
+  1. **ไฟล์ที่แตะ:** แตะเฉพาะไฟล์ที่กำหนดไว้ใน `tasks.md` (T-01 ถึง T-08)
+  2. **ผลการรัน Test:**
+     - รัน `npm test --prefix frontend` (Vitest): **`30 files passed, 76 passed in 2.21s`** (ผ่าน 100% ครอบคลุม UI Components และ Offline Cache)
+     - รัน `pytest backend/tests/` (Pytest): **`91 passed in 0.59s`** (ผ่าน 100% ครอบคลุม Unit, AC, และ E2E Lifecycle)
+     - **ยอดรวมทั้งระบบ: 167 tests ผ่านทั้งหมด 100% (Backend 91 + Frontend 76)**
+  3. **การอ้างอิง ID:** ฟังก์ชัน คอมโพเนนต์ และชุดทดสอบทุกไฟล์ระบุรหัส `UC-01`, `UC-02`, `MD-DOM-04`, `REQ-SEC-001`, `REQ-SEC-002`, `REQ-UX-001/002`, `REQ-QA-001`, `REQ-OP-001`, `CC-01..06`, `AC-S01-01..05`, `P-01..P-06`, `T-01..T-08` ครบถ้วนตามกฎของ `AGENTS.md`
+  4. **Non-goals & Open Questions:** ขอบเขตตรงตามสเปก v2.0 ไม่ทำ KYC บัตรประชาชนผู้ขาย (D-01), ไม่ทำ Social Login, และไม่ทำระบบกู้คืนบัญชีข้ามเบอร์
+  5. **การบันทึกสถานะ:** อัปเดตงานย่อย `T-01..T-08` เป็น `[DONE]` ใน `tasks.md` และบันทึกลง `prompt-log.md` เรียบร้อย
