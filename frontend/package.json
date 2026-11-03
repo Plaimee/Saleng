@@ -1,0 +1,17 @@
+{
+  "name": "saleng-seller-frontend",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@testing-library/react": "^16.3.3",
+    "jsdom": "^29.1.1",
+    "vitest": "^5.1.0"
+  }
+}
