@@ -95,11 +95,12 @@ from backend.app.api.v1.notifications_help import notifications_help_router
 from backend.app.api.v1.safety import safety_router
 from backend.app.api.v1.account import account_router
 from backend.app.api.v1.scrap_posting import scrap_posting_router
+from backend.app.api.v1.buyer_search import router as buyer_search_router
 
 # Application instance สำหรับทดสอบและเชื่อมต่อ Server
 app = FastAPI(
     title="Saleng Pricing & Decision API",
-    description="API ระบบราคาและการตัดสินใจ ฝั่งผู้ขาย (Seller Feature 01, 02, 04, 06, 07, 08 & 09)",
+    description="API ระบบราคาและการตัดสินใจ ฝั่งผู้ขาย (Seller Feature 01, 02, 03, 04, 06, 07, 08 & 09)",
     version="1.0.0"
 )
 app.include_router(pricing_router)
@@ -111,4 +112,5 @@ app.include_router(notifications_help_router)
 app.include_router(safety_router)
 app.include_router(account_router, prefix="/api/v1")
 app.include_router(scrap_posting_router, prefix="/api/v1")
+app.include_router(buyer_search_router, prefix="/api/v1")
 

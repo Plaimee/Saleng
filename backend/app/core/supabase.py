@@ -33,9 +33,11 @@ class SupabaseStore:
         self.seller_sessions: Dict[str, dict] = {}
         self.pickup_locations: Dict[str, dict] = {}
         self.scrap_categories: Dict[str, dict] = {}
+        self.saleng_profiles: Dict[str, dict] = {}
         self.audit_logs: List[dict] = []
         self._seed_default_benchmark_prices()
         self._seed_default_scrap_categories()
+        self._seed_default_saleng_profiles()
 
     def _seed_default_benchmark_prices(self):
         """กำหนดราคากลางตั้งต้นตามที่ระบุใน spec.md หัวข้อ 1.1 และ D-02"""
@@ -206,6 +208,135 @@ class SupabaseStore:
         ]
         for c in categories:
             self.scrap_categories[c["category_code"]] = c
+
+    def _seed_default_saleng_profiles(self):
+        """กำหนดรายชื่อซาเล้งตั้งต้นที่ผ่าน KYC และเปิดรับงาน (UC-03, REQ-QA-001, D-00-01)"""
+        profiles = [
+            {
+                "saleng_id": "saleng-01",
+                "display_name": "ลุงสมชาย ซาเล้งสุทธิสาร",
+                "phone": "081-234-5678",
+                "avatar_url": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150",
+                "verified": True,
+                "rating": 4.9,
+                "completed_jobs_count": 142,
+                "vehicle_type": "TRICYCLE",
+                "max_capacity_kg": 200.0,
+                "current_lat": 13.7900,
+                "current_lng": 100.5750,
+                "is_online": True,
+                "accepted_categories": [
+                    "MAT-CARDBOARD",
+                    "MAT-WHITE-PAPER",
+                    "MAT-GLASS-BOTTLE",
+                    "MAT-PLASTIC-BOTTLE",
+                    "BOXED-GLASS",
+                    "BOXED-PLASTIC",
+                ],
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            },
+            {
+                "saleng_id": "saleng-02",
+                "display_name": "พี่วิชัย รถกระบะรีไซเคิล",
+                "phone": "089-876-5432",
+                "avatar_url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150",
+                "verified": True,
+                "rating": 4.8,
+                "completed_jobs_count": 215,
+                "vehicle_type": "PICKUP_TRUCK",
+                "max_capacity_kg": 1000.0,
+                "current_lat": 13.7920,
+                "current_lng": 100.5770,
+                "is_online": True,
+                "accepted_categories": [
+                    "MAT-CARDBOARD",
+                    "MAT-PLASTIC-BOTTLE",
+                    "BOXED-GLASS",
+                    "BOXED-PLASTIC",
+                    "BULKY-APPLIANCE",
+                ],
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            },
+            {
+                "saleng_id": "saleng-03",
+                "display_name": "อนันต์ ซาเล้งพ่วงข้างใหญ่",
+                "phone": "086-555-1234",
+                "avatar_url": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150",
+                "verified": True,
+                "rating": 4.7,
+                "completed_jobs_count": 89,
+                "vehicle_type": "LARGE_SIDECAR",
+                "max_capacity_kg": 400.0,
+                "current_lat": 13.8050,
+                "current_lng": 100.5800,
+                "is_online": True,
+                "accepted_categories": [
+                    "MAT-CARDBOARD",
+                    "MAT-WHITE-PAPER",
+                    "BULKY-APPLIANCE",
+                ],
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            },
+            {
+                "saleng_id": "saleng-04",
+                "display_name": "นพดล ซาเล้ง (พักกะ)",
+                "phone": "082-111-2222",
+                "avatar_url": None,
+                "verified": True,
+                "rating": 4.5,
+                "completed_jobs_count": 50,
+                "vehicle_type": "TRICYCLE",
+                "max_capacity_kg": 200.0,
+                "current_lat": 13.7910,
+                "current_lng": 100.5760,
+                "is_online": False,  # ออฟไลน์ ปิดรับงาน
+                "accepted_categories": ["MAT-CARDBOARD"],
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            },
+            {
+                "saleng_id": "saleng-05",
+                "display_name": "เอกชัย ยังไม่ยืนยัน",
+                "phone": "083-333-4444",
+                "avatar_url": None,
+                "verified": False,  # ยังไม่ผ่าน KYC ห้ามแสดงผล
+                "rating": 3.0,
+                "completed_jobs_count": 5,
+                "vehicle_type": "TRICYCLE",
+                "max_capacity_kg": 200.0,
+                "current_lat": 13.7905,
+                "current_lng": 100.5755,
+                "is_online": True,
+                "accepted_categories": ["MAT-CARDBOARD"],
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            },
+        ]
+        for p in profiles:
+            self.saleng_profiles[p["saleng_id"]] = p
+
+        # Seed favorite เบื้องต้นสำหรับ seller-01 -> saleng-01
+        self.seller_favorites.append({
+            "id": str(uuid.uuid4()),
+            "seller_id": "seller-01",
+            "collector_id": "saleng-01",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        })
+
+    def get_saleng_profile(self, saleng_id: str) -> Optional[dict]:
+        """ดึงข้อมูลโปรไฟล์ซาเล้งตาม ID (AC-S03-01)"""
+        return self.saleng_profiles.get(saleng_id)
+
+    def get_all_saleng_profiles(self) -> List[dict]:
+        """ดึงรายการโปรไฟล์ซาเล้งทั้งหมดในระบบ"""
+        return list(self.saleng_profiles.values())
+
+    def update_saleng_profile(self, saleng_id: str, data: dict) -> Optional[dict]:
+        """อัปเดตข้อมูลโปรไฟล์ซาเล้ง"""
+        profile = self.saleng_profiles.get(saleng_id)
+        if not profile:
+            return None
+        profile.update(data)
+        profile["updated_at"] = datetime.now(timezone.utc).isoformat()
+        return profile
 
     def get_scrap_categories(self) -> List[dict]:
         """ดึงรายการหมวดหมู่และคู่มือภาพทั้งหมด (AC-S02-01)"""
@@ -421,19 +552,19 @@ class SupabaseStore:
         initial_len = len(self.seller_favorites)
         self.seller_favorites = [
             fav for fav in self.seller_favorites
-            if not (fav["seller_id"] == seller_id and fav["collector_id"] == collector_id)
+            if not (fav["seller_id"] == seller_id and (fav.get("collector_id") == collector_id or fav.get("saleng_id") == collector_id))
         ]
         return len(self.seller_favorites) < initial_len
 
     def is_favorite(self, seller_id: str, collector_id: str) -> bool:
         return any(
-            fav["seller_id"] == seller_id and fav["collector_id"] == collector_id
+            fav["seller_id"] == seller_id and (fav.get("collector_id") == collector_id or fav.get("saleng_id") == collector_id)
             for fav in self.seller_favorites
         )
 
     def get_seller_favorites(self, seller_id: str) -> List[str]:
         return [
-            fav["collector_id"]
+            fav.get("collector_id") or fav.get("saleng_id")
             for fav in self.seller_favorites
             if fav["seller_id"] == seller_id
         ]

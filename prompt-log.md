@@ -1036,3 +1036,109 @@
   - **Frontend (Vitest):** 35 test files passed, 87 tests passed, 0 failed (รวมทุกคอมโพเนนต์และ API tests)
   - **Zero Regressions:** ไม่พบผลกระทบต่อฟีเจอร์เดิมของระบบ
 - **สถานะ:** ฟีเจอร์ Seller 02 พัฒนาและตรวจสอบคุณภาพเสร็จสมบูรณ์ 100% พร้อมใช้งาน
+
+
+---
+
+## บันทึก #50 — `/clarify specs/seller/03-buyer-search-and-selection/spec.md` (การตรวจสอบความสอดคล้องกับสารบัญกลางและการขยายสเปก v2.0)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/clarify specs/seller/03-buyer-search-and-selection/spec.md`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/seller/03-buyer-search-and-selection/spec.md` (ปรับปรุงเป็น Version `2.0`, สถานะ `reviewed-post-clarify`, ปรับ Use Case เป็น `UC-03`, เชื่อมโยง `REQ-FN-001`, `REQ-QA-001`, `REQ-UX-001`, `REQ-SEC-001`, `REQ-SEC-002`, `CC-03`, `Card 03`, หลักฐาน `EV-01`, `EV-02`, `EV-08`, `EV-09`, ขยายเกณฑ์การยอมรับเป็น 5 ข้อ `AC-S03-01` ถึง `AC-S03-05`, และบันทึกมติ `Q-01..05` พร้อม Non-goals ชัดเจน)
+- **ประเด็นสำคัญที่ทีมเห็นชอบ:**
+  1. **`CC-01` (Use Case Alignment):** กำหนด Use Case เป็น **`UC-03: ค้นหา เลือกผู้รับซื้อ และยืนยันนัดหมายพร้อมล็อกราคากลาง`** ตามสารบัญกลางใน `docs/srs/use-cases.md`
+  2. **`CC-02` (Requirements Catalogue & Evidence Mapping):** แก้ไขรหัสความต้องการเป็น `REQ-FN-001` (ค้นหาในรัศมี <= 5 กม.), `REQ-QA-001` (KYC Verified), `REQ-UX-001` (Top Pinning Favorites), `REQ-SEC-001` (Audit Log), `REQ-SEC-002` (PDPA Masking) และเชื่อมโยงหลักฐาน `EV-01`, `EV-02`, `EV-08`, `EV-09` ครบถ้วน
+  3. **`CC-03` (State Machine & Preconditions):** ฟีเจอร์นี้เชื่อมโยงจากฉบับร่าง `S1 (Draft)` ที่มีรายการของเก่าจาก `UC-02` และที่อยู่นัดหมายจาก `UC-01` เพื่อส่งคำขอนัดหมายแบบเจาะจงบุคคล (Direct Request) และเปลี่ยนผ่านสถานะสู่ `S2 (Matched / Pending)`
+  4. **มติในคำถามเปิด `Q-01` ถึง `Q-05` (เลือกทางเลือก A ทั้งหมด):**
+     - `Q-01` (Direct Request vs Open Broadcast): ส่งคำขอแบบ Direct Request ให้ซาเล้งที่เลือกก่อนพร้อมเวลารอตอบรับ 15 นาที หากปฏิเสธหรือหมดเวลาให้เลือกคนใหม่หรือเปิดเป็น Open Broadcast (Option A)
+     - `Q-02` (Sorting Logic): ตรึง "ซาเล้งที่เคยใช้บริการ" ไว้บนสุด (`REQ-UX-001`) จากนั้นเรียงตามระยะทางใกล้ที่สุด (`Distance ASC`) และคะแนนรีวิว (`Rating DESC`) (Option A)
+     - `Q-03` (Bulky Items Matching): ตรวจจับของชิ้นใหญ่ในตะกร้าอัตโนมัติ และแนะนำ/กรองเฉพาะซาเล้งที่มีรถกระบะหรือซาเล้งขนาดใหญ่ตาม `Card 03` (Option A)
+     - `Q-04` (PDPA Protection): ผู้ขายโทรสอบถามซาเล้งได้ แต่ระบบต้องซ่อนบ้านเลขที่และพิกัดละเอียดของผู้ขายจนกว่าซาเล้งจะกดยืนยันรับงาน (Option A)
+     - `Q-05` (Non-goals): ไม่ทำระบบ In-App VoIP, ไม่ทำประมูลราคาค่าเดินทาง, และไม่แสดงซาเล้ง Offline / Unverified (Option A)
+- **สถานะ:** สเปก `spec.md` ได้รับการรับรองและอัปเดตเป็น Version 2.0 (`reviewed-post-clarify`) พร้อมสำหรับขั้นตอน `/plan`
+
+
+---
+
+## บันทึก #51 — `/plan specs/seller/03-buyer-search-and-selection/spec.md` (แผนสถาปัตยกรรม เทคโนโลยี และการปฏิบัติตาม Constraints ครบทั้ง 13 ข้อ)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/plan specs/seller/03-buyer-search-and-selection/spec.md`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/seller/03-buyer-search-and-selection/plan.md` (Version `1.0`, สถานะ `ready-for-tasks`, ออกแบบสถาปัตยกรรม Service Layer, กำหนดการตัดสินใจ `P-01` ถึง `P-06`, กำหนด DDL Schema และ Pydantic Models, ออกแบบ API 5 เส้นทาง, แผนพัฒนาหน้าจอ 5 คอมโพเนนต์, และตารางตรวจสอบ Constraints ครบทั้ง 13 ข้อ)
+- **ประเด็นสำคัญใน plan.md:**
+  1. **เทคโนโลยีที่ใช้:** ระบุกำกับชัดเจนว่า `"ทีมเลือกเอง ไม่ได้มาจาก spec"` (FastAPI, Supabase/PostgreSQL, React 18 + TailwindCSS, Pytest, Vitest + RTL + JSDOM)
+  2. **การตัดสินใจเชิงสถาปัตยกรรม (`P-01` ถึง `P-06`):**
+     - `P-01`: บริการค้นหาซาเล้งที่ผ่าน KYC 100% พร้อมคำนวณระยะทาง Haversine × 1.35 ในรัศมี <= 5.0 กม. (`AC-S03-01`)
+     - `P-02`: บริการตรึงรายชื่อซาเล้งที่เคยใช้บริการ (Pinned Favorites) ไว้บนสุดเสมอ (`AC-S03-02`, `REQ-UX-001`, `Q-02`)
+     - `P-03`: บริการตรวจจับของชิ้นใหญ่ในคำขออัตโนมัติ และแนะนำ/กรองเฉพาะรถกระบะหรือซาเล้งขนาดใหญ่ (`Card 03`, `AC-S03-03`, `Q-03`)
+     - `P-04`: บริการโทรด่วนและแชตข้อความ พร้อมคุ้มครองข้อมูลส่วนบุคคล ซ่อนบ้านเลขที่และพิกัดละเอียดของผู้ขาย (`REQ-SEC-002`, `CC-06`, `AC-S03-04`, `Q-04`)
+     - `P-05`: บริการส่งคำขอนัดหมายเจาะจงบุคคล เปลี่ยนสถานะจาก S1 เป็น S2 พร้อมนับถอยหลัง 15 นาที และบันทึก Audit Log (`MD-STM-04`, `AC-S03-05`, `Q-01`)
+     - `P-06`: แคชรายชื่อซาเล้งล่าสุดใน `localStorage` (`saleng_cached_collectors`) รองรับโหมดออฟไลน์ (`CC-05`, `REQ-OP-001`)
+  3. **ตารางตรวจ Constraints:** ครบทั้ง 13 ข้อตาม `specs/000-shared/constraints.md` โดยเชื่อมโยงการตัดสินใจ `P-01` ถึง `P-06` ครบถ้วน
+- **สถานะ:** แผน `plan.md` พร้อมสำหรับการแตกงานย่อยในขั้นตอน `/tasks`
+
+
+---
+
+## บันทึก #52 — `/tasks specs/seller/03-buyer-search-and-selection/plan.md` (รายการงานย่อยและ Two-way Traceability Matrix)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/tasks specs/seller/03-buyer-search-and-selection/plan.md`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/seller/03-buyer-search-and-selection/tasks.md` (แตกงานย่อย 8 งาน `T-01` ถึง `T-08` ครบทั้ง 6 คอลัมน์, พร้อมตาราง Two-way Traceability Matrix ครบทุกข้อ `AC-S03-01..05`, และตาราง Constraints Traceability ครบทั้ง 13 ข้อ)
+- **ประเด็นสำคัญใน tasks.md:**
+  1. **งานย่อย 8 งาน (`T-01` ถึง `T-08`):**
+     - `T-01`: สร้าง Data Models และ Schema สำหรับระบบค้นหาและเลือกผู้รับซื้อ (`buyer_search_models.py`, `supabase.py`)
+     - `T-02`: สร้าง Service และ API สำหรับค้นหาซาเล้งที่ผ่าน KYC และคำนวณระยะทาง Haversine × 1.35 ในรัศมี <= 5.0 กม. (`AC-S03-01`, `P-01`)
+     - `T-03`: สร้าง Service และ API สำหรับตรึงซาเล้งที่เคยใช้บริการไว้บนสุด (`AC-S03-02`, `P-02`, `Q-02`)
+     - `T-04`: สร้าง Service และ API สำหรับตัวกรองหลายมิติและการจับคู่ของชิ้นใหญ่ตาม Card 03 (`AC-S03-03`, `P-03`, `Q-03`)
+     - `T-05`: สร้าง Service และ API สำหรับช่องทางติดต่อด่วนและส่งคำขอนัดหมายเจาะจงบุคคล เปลี่ยนสถานะ S2 พร้อม Audit Log (`AC-S03-04`, `AC-S03-05`, `P-04`, `P-05`, `Q-01`, `Q-04`)
+     - `T-06`: สร้าง Frontend API Client และระบบแคชซาเล้งออฟไลน์ใน `localStorage` (`CC-05`, `REQ-OP-001`)
+     - `T-07`: พัฒนาคอมโพเนนต์ React ระบบค้นหาและเลือกผู้รับซื้อ (`SalengProfileCard`, `FavoriteCollectorPinList`, `CollectorFilterPanel`, `DirectRequestModal`, `BuyerSearchPanel`)
+     - `T-08`: สร้างชุดทดสอบหน้าจอ Vitest Component Tests และ Backend Integration E2E Test Suite (`AC-S03-01..05`)
+  2. **Two-way Traceability Matrix:** เกณฑ์การยอมรับทุกข้อ (`AC-S03-01` ถึง `AC-S03-05`) เชื่อมโยงกับงานย่อยและชื่อไฟล์ชุดทดสอบอย่างครบถ้วน
+  3. **Constraints Traceability:** ตรวจสอบข้อจำกัดกลางทั้ง 13 ข้อตาม `specs/000-shared/constraints.md` ครบถ้วน
+- **สถานะ:** แตกงานย่อยเสร็จสมบูรณ์ พร้อมสำหรับการเริ่มพัฒนางานย่อยในขั้นตอน `/implement T-01..08`
+
+
+---
+
+## บันทึก #53 — `/implement T-01..08` (พัฒนาระบบค้นหาและเลือกผู้รับซื้อ Seller Feature 03 ครบถ้วน 100%)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/implement T-01..08` (อ้างอิง `specs/seller/03-buyer-search-and-selection/tasks.md`)
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - **Backend Models & Store (`T-01`):**
+    - `backend/app/models/buyer_search_models.py` (สร้าง Pydantic models: `SalengProfileResponse`, `CollectorSearchQuery`, `CollectorListResponse`, `DirectAppointmentRequest`, `DirectAppointmentResponse`, `FavoriteToggleResponse`)
+    - `backend/app/core/supabase.py` (ขยายตาราง `saleng_profiles` พร้อม Seed ข้อมูลซาเล้ง KYC 100%, พิกัด GPS, ยานพาหนะ, และระบบรายการโปรด `seller_favorites`)
+    - `backend/tests/test_T01_buyer_search_models.py` (Unit tests สำหรับ Pydantic validation และ Supabase seeding)
+  - **Backend Service & API (`T-02`, `T-03`, `T-04`, `T-05`):**
+    - `backend/app/services/buyer_search_service.py` (คำนวณระยะทาง Haversine × 1.35 รัศมี <= 5.0 กม. CC-03, คัดกรองเฉพาะ KYC 100% Online, Two-tier Sorting ตรึงคนโปรดไว้บนสุด, ตรวจจับของชิ้นใหญ่ในตะกร้าอัตโนมัติ Card 03, และส่ง Direct Request เปลี่ยนสถานะ S1 -> S2 พร้อมบันทึก Audit Log)
+    - `backend/app/api/v1/buyer_search.py` (FastAPI router ให้บริการ 5 endpoints: `GET /collectors`, `GET /collectors/{saleng_id}`, `GET /favorites`, `POST /favorites/{saleng_id}/toggle`, `POST /orders/{order_id}/direct-request`)
+    - `backend/app/api/v1/pricing.py` (เมานต์ buyer_search_router เข้ากับแอปพลิเคชันหลัก)
+  - **Backend Automated Tests:**
+    - `backend/tests/test_AC_S03_01_profile_and_kyc.py` (ทดสอบการแสดงโปรไฟล์และป้ายยืนยันตัวตน 100%)
+    - `backend/tests/test_AC_S03_02_top_pinning_favorites.py` (ทดสอบการตรึงซาเล้งคนโปรดไว้บนสุดเสมอ)
+    - `backend/tests/test_AC_S03_03_multi_criteria_filter.py` (ทดสอบตัวกรองยานพาหนะและแบนเนอร์ของชิ้นใหญ่)
+    - `backend/tests/test_AC_S03_04_direct_contact_pdpa.py` (ทดสอบเบอร์โทรซาเล้งและการซ่อนพิกัดละเอียดของผู้ขาย)
+    - `backend/tests/test_AC_S03_05_direct_request_transition.py` (ทดสอบการส่งคำขอเจาะจงบุคคล การเปลี่ยนสถานะ S2 และ Audit Log)
+    - `backend/tests/test_e2e_buyer_search.py` (E2E Integration test ครบวงจรตั้งแต่ค้นหา กรอง สลับคนโปรด สู่ S2)
+  - **Frontend API Client & Components (`T-06`, `T-07`):**
+    - `frontend/src/services/buyerSearchApi.js` (API client พร้อมระบบแคชออฟไลน์ใน localStorage: `saleng_cached_collectors`)
+    - `frontend/tests/buyerSearchApi.test.mjs` (Unit tests สำหรับ API client และ Offline cache: 3 passed)
+    - `frontend/src/components/SalengProfileCard.jsx` (การ์ดซาเล้ง แสดงรูป ป้าย KYC 100% สถิติ ยานพาหนะ ปุ่มโทรด่วน แชต และปุ่มเลือกซาเล้ง)
+    - `frontend/src/components/FavoriteCollectorPinList.jsx` (แถบแนวนอนตรึงซาเล้งที่เคยใช้บริการไว้บนสุด)
+    - `frontend/src/components/CollectorFilterPanel.jsx` (ชิปตัวกรองรัศมี ยานพาหนะ คะแนนรีวิว และแบนเนอร์แจ้งเตือนของชิ้นใหญ่ Card 03)
+    - `frontend/src/components/DirectRequestModal.jsx` (ป๊อปอัปยืนยันการส่งคำขอนัดหมายเจาะจงบุคคล พร้อมเวลานับถอยหลัง 15 นาที)
+    - `frontend/src/components/BuyerSearchPanel.jsx` (แผงหลัก Mobile-First Dashboard รวบรวมฟังก์ชันค้นหาทั้งหมด)
+  - **Frontend Automated Tests (`T-08`):**
+    - `frontend/tests/AC-S03-01.test.jsx` (Component test สำหรับ SalengProfileCard และ KYC Badge: 2 passed)
+    - `frontend/tests/AC-S03-02.test.jsx` (Component test สำหรับ FavoriteCollectorPinList: 2 passed)
+    - `frontend/tests/AC-S03-03.test.jsx` (Component test สำหรับ CollectorFilterPanel: 2 passed)
+    - `frontend/tests/AC-S03-04.test.jsx` (Component test สำหรับ Direct Contact hooks: 2 passed)
+    - `frontend/tests/AC-S03-05.test.jsx` (Component test สำหรับ DirectRequestModal: 2 passed)
+  - **Task Tracking:**
+    - `specs/seller/03-buyer-search-and-selection/tasks.md` (ปรับสถานะเป็น `completed` และเช็คผ่าน `[DONE]` ครบทุกงาน `T-01` ถึง `T-08`)
+- **ผลการทดสอบ (Verification & Regression):**
+  - **Backend (Pytest):** 116 passed, 0 failed (รวมทุกชุดทดสอบของ Seller 01, 02, 03, 04, 06, 07, 08, 09)
+  - **Frontend (Vitest):** 41 test files passed, 100 tests passed, 0 failed
+  - **Zero Regressions:** ไม่พบผลกระทบต่อฟีเจอร์เดิมของระบบ
+- **สถานะ:** ฟีเจอร์ Seller 03 พัฒนาและตรวจสอบคุณภาพเสร็จสมบูรณ์ 100% พร้อมใช้งาน
