@@ -25,6 +25,9 @@ class SupabaseStore:
         self.seller_favorites: List[dict] = []
         self.seller_notifications: Dict[str, dict] = {}
         self.support_tickets: Dict[str, dict] = {}
+        self.safety_evidences: Dict[str, dict] = {}
+        self.emergency_contacts: Dict[str, dict] = {}
+        self.sos_alerts: Dict[str, dict] = {}
         self.audit_logs: List[dict] = []
         self._seed_default_benchmark_prices()
 
@@ -360,6 +363,63 @@ class SupabaseStore:
             if t.get("seller_id") == seller_id
         ]
         return sorted(tickets, key=lambda x: x.get("created_at", ""), reverse=True)
+
+
+    # -------------------------------------------------------------------------
+    # ระบบความปลอดภัยขณะทำธุรกรรม (Safety Evidences & SOS - UC-09, AC-S09-01..05)
+    # -------------------------------------------------------------------------
+    def add_safety_evidence(self, evidence_data: dict) -> dict:
+        ev_id = evidence_data.get("id") or str(uuid.uuid4())
+        evidence_data["id"] = ev_id
+        if "is_locked" not in evidence_data:
+            evidence_data["is_locked"] = False
+        if "created_at" not in evidence_data or not evidence_data["created_at"]:
+            evidence_data["created_at"] = datetime.now(timezone.utc).isoformat()
+        self.safety_evidences[ev_id] = evidence_data
+        return evidence_data
+
+    def get_safety_evidences_by_order(self, order_id: str) -> List[dict]:
+        evs = [
+            e for e in self.safety_evidences.values()
+            if e.get("order_id") == order_id
+        ]
+        return sorted(evs, key=lambda x: x.get("created_at", ""))
+
+    def lock_safety_evidences_for_order(self, order_id: str) -> int:
+        """ล็อกหลักฐานของคำขอเป็น Read-only เมื่อเกิดข้อพิพาทหรือ SOS (REQ-FN-006, AC-S09-04)"""
+        count = 0
+        for e in self.safety_evidences.values():
+            if e.get("order_id") == order_id:
+                e["is_locked"] = True
+                count += 1
+        return count
+
+    def get_emergency_contact(self, seller_id: str) -> Optional[dict]:
+        return self.emergency_contacts.get(seller_id)
+
+    def upsert_emergency_contact(self, contact_data: dict) -> dict:
+        seller_id = contact_data["seller_id"]
+        if "updated_at" not in contact_data or not contact_data["updated_at"]:
+            contact_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+        self.emergency_contacts[seller_id] = contact_data
+        return contact_data
+
+    def create_sos_alert(self, sos_data: dict) -> dict:
+        alert_id = sos_data.get("id") or str(uuid.uuid4())
+        sos_data["id"] = alert_id
+        if "status" not in sos_data:
+            sos_data["status"] = "TRIGGERED"
+        if "created_at" not in sos_data or not sos_data["created_at"]:
+            sos_data["created_at"] = datetime.now(timezone.utc).isoformat()
+        self.sos_alerts[alert_id] = sos_data
+        return sos_data
+
+    def get_sos_alerts_by_order(self, order_id: str) -> List[dict]:
+        alerts = [
+            a for a in self.sos_alerts.values()
+            if a.get("order_id") == order_id
+        ]
+        return sorted(alerts, key=lambda x: x.get("created_at", ""), reverse=True)
 
 
 # Singleton instance สำหรับเข้าถึง Database

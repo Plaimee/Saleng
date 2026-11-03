@@ -743,4 +743,96 @@
   3. **การอ้างอิง ID:** ฟังก์ชัน คอมโพเนนต์ และชุดทดสอบทุกไฟล์ระบุรหัส `UC-08`, `UC-13`, `REQ-OP-001`, `REQ-SEC-001`, `REQ-SEC-002`, `CC-01..06`, `AC-S08-01..05`, `P-01..P-06`, `T-01..T-08` ครบถ้วนตามกฎของ `AGENTS.md`
   4. **Non-goals & Open Questions:** ขอบเขตตรงตามสเปก v2.0 ไม่ทำ AI Live Agent Chatbot 24 ชม., และไม่เชื่อมโยง Push Notifications ข้ามเครื่อง (APNs/FCM)
   5. **การบันทึกสถานะ:** อัปเดตงานย่อย `T-01..T-08` เป็น `[DONE]` ใน `tasks.md` และบันทึกลง `prompt-log.md` เรียบร้อย
+---
 
+## บันทึก #38 — `/clarify specs/seller/09-transaction-safety` (ระบบความปลอดภัยขณะทำธุรกรรม)
+- **วันที่:** 2026-11-03
+- **คำสั่งที่ใช้:** `/clarify specs/seller/09-transaction-safety/spec.md`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/seller/09-transaction-safety/spec.md` (ปรับปรุงเป็น Version 2.0 สถานะ `reviewed-post-clarify` หลังคลี่คลายจุดกำกวม CC-01..03 และคำถาม Q-01..05 ครบถ้วน)
+- **ประเด็นที่เคลียร์และข้อตกลงของทีม:**
+  1. **`CC-01`**: เชื่อมโยง Use Case หลักตามสารบัญกลาง `docs/srs/use-cases.md`: ใช้ **`UC-09: ดูแลความปลอดภัยขณะทำธุรกรรมและปุ่มฉุกเฉิน SOS`** และเชื่อมโยงกับการส่งต่อแจ้งเหตุด่วน/ข้อพิพาทไปยังศูนย์ดูแลระบบ **`UC-13`**
+  2. **`CC-02`**: ปรับรหัสความต้องการและหลักฐานให้สอดคล้องกับสารบัญกลาง: ปลดรหัส `EV-014` ที่อยู่นอกสารบัญ และเชื่อมโยงกับรหัสหลักฐานกลาง **`EV-08`** (ความปลอดภัยหน้างาน) และ **`EV-09`** (PDPA Masking) พร้อมผูกเข้ากับข้อกำหนด **`REQ-SEC-001`** (Audit Log), **`REQ-SEC-002`** (PDPA Masking), **`REQ-QA-001`** (Latency < 2.0 วินาที), **`REQ-UX-001`** (ปุ่มฉุกเฉิน >= 48px), และ **`REQ-FN-006`** (ล็อกหลักฐานห้ามแก้ไขเมื่อมีข้อพิพาท)
+  3. **`CC-03`**: ผังสถานะยึดตาม `MD-STM-04`: ปุ่ม **`SOS ฉุกเฉิน`** ใช้งานได้ในสถานะ **`S3..S6`** (ตั้งแต่ซาเล้งกำลังเดินทางมาจนถึงทำธุรกรรมเสร็จ) ส่วนการบันทึกเสียง/วิดีโอหลักฐาน ใช้งานได้ในสถานะหน้างาน **`S4..S6`** โดยไฟล์จะถูกล็อกห้ามลบ/แก้ไขทันทีเมื่อคำขอเปลี่ยนเป็นสถานะ **`S8: Disputed`**
+  4. **`Q-01` (ทางเลือก A)**: ระบบบันทึกเสียงและคลิปวิดีโอหลักฐานหน้างาน (In-App Media Evidence Recorder) ผ่าน MediaRecorder API แสดงตัวจับเวลา จำกัดขนาด 25 MB ต่อไฟล์ (`CC-01`) แนบไฟล์เข้ากับ `order_id` และบันทึก Audit Log ทุกครั้ง
+  5. **`Q-02` (ทางเลือก A)**: ปุ่มฉุกเฉิน SOS One-Tap Trigger ส่งพิกัดบ้าน ข้อมูลซาเล้ง และรหัสคำขอไปยังศูนย์ดูแลระบบ Admin ภายใน 2.0 วินาที (`REQ-QA-001`) พร้อมแสดงหน้าต่างโทรออกด่วน (`tel:`) ไปยังเบอร์ญาติหรือสายด่วน Saleng / 191
+  6. **`Q-03` (ทางเลือก A)**: การจัดการเบอร์ผู้ติดต่อฉุกเฉินที่ไว้ใจได้ (Trusted Emergency Contact) พร้อม PDPA Masking `08X-XXX-XXXX` (`REQ-SEC-002`) และมีค่าเริ่มต้นเป็นเบอร์ Saleng Hotline (`02-123-4567`)
+  7. **`Q-04` (ทางเลือก A)**: ล็อกหลักฐานความปลอดภัย (Evidence Immutability) เมื่อมีการกด SOS หรือเปลี่ยนเป็นสถานะ `S8: Disputed` ให้เป็น Read-only ทันทีตาม `REQ-FN-006` เพื่อส่งต่อให้ Admin ใน `UC-13`
+  8. **`Q-05` (ทางเลือก A)**: ยืนยัน Non-goals ชัดเจน ไม่ทำ AI Audio Surveillance ดักฟังอัตโนมัติ, ไม่ทำ in-app VoIP calling, และไม่เชื่อมต่อ API ตำรวจ 191 โดยตรง
+- **สถานะ:** สเปก `seller/09` ได้รับการรับรอง Version 2.0 และพร้อมสำหรับขั้นตอน `/plan`
+---
+
+## บันทึก #39 — `/plan specs/seller/09-transaction-safety/spec.md` (แผนสถาปัตยกรรมและเทคโนโลยี)
+- **วันที่:** 2026-11-03
+- **คำสั่งที่ใช้:** `/plan specs/seller/09-transaction-safety/spec.md`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/seller/09-transaction-safety/plan.md` (จัดทำแผนสถาปัตยกรรมระบบ 8 หัวข้อหลัก ครอบคลุม P-01 ถึง P-06, Tech Stack "ทีมเลือกเอง ไม่ได้มาจาก spec", Data Model, Endpoints, UI Plan, และตารางตรวจ Constraints 13 ข้อ)
+- **ประเด็นสำคัญในแผน:**
+  1. **Tech Stack:** Python 3.11 (FastAPI) + Supabase (PostgreSQL 15+) + React 18 (Vite + TailwindCSS) (`"ทีมเลือกเอง ไม่ได้มาจาก spec"`)
+  2. **สถาปัตยกรรม 6 การตัดสินใจ (`P-01` ถึง `P-06`):**
+     - `P-01`: MediaEvidenceService บันทึกเสียงและคลิปวิดีโอหน้างานในสถานะ S4..S6 จำกัดขนาด 25 MB ต่อไฟล์ (`UC-09`, `AC-S09-01`)
+     - `P-02`: EmergencySosService ระบบส่งสัญญาณฉุกเฉิน SOS ไปยัง Admin ภายใน 2.0 วินาที พร้อมพิกัดและข้อมูลซาเล้ง และปุ่มโทรด่วน `tel:` (`UC-09`, `REQ-QA-001`, `AC-S09-02`)
+     - `P-03`: EmergencyContactService ตาราง `emergency_contacts` เก็บข้อมูลผู้ติดต่อฉุกเฉินที่ไว้ใจได้ พร้อม PDPA Masking `08X-XXX-XXXX` และเบอร์สายด่วน Saleng เป็น Default (`UC-09`, `REQ-SEC-002`, `AC-S09-03`)
+     - `P-04`: Evidence Immutability ล็อกหลักฐานเป็น Read-only ทันทีเมื่อเกิดข้อพิพาท `S8` หรือกด SOS ตาม `REQ-FN-006` เพื่อส่งต่อให้ Admin ใน `UC-13` (`AC-S09-04`)
+     - `P-05`: Security Audit Logging for Safety Events บันทึกประวัติการเริ่ม/หยุดอัดเสียง, กด SOS, และแก้เบอร์ฉุกเฉิน (`REQ-SEC-001`, `AC-S09-05`)
+     - `P-06`: Mobile-First UI Architecture & Big SOS Button คอมโพเนนต์ React ปุ่ม SOS สีแดงเด่นชัด `height >= 48px` สำหรับจอมือถือ 375px–414px (`CC-01`, `REQ-UX-001`, `AC-S09-01..05`)
+  3. **ตารางตรวจ Constraints:** ครบทั้ง 13 ข้อตาม `specs/000-shared/constraints.md` พร้อมระบุเหตุผลข้อที่ไม่เกี่ยวข้อง
+- **สถานะ:** แผน `plan.md` พร้อมสำหรับการแตกงานย่อยในขั้นตอน `/tasks`
+---
+
+## บันทึก #40 — `/tasks specs/seller/09-transaction-safety/plan.md` (รายการงานย่อยและ Two-way Traceability Matrix)
+- **วันที่:** 2026-11-03
+- **คำสั่งที่ใช้:** `/tasks specs/seller/09-transaction-safety/plan.md`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/seller/09-transaction-safety/tasks.md` (แตกงานย่อย 8 งาน `T-01` ถึง `T-08` ครบทั้ง 6 คอลัมน์, พร้อมตาราง Two-way Traceability Matrix ครบทุกข้อ `AC-S09-01..05`, และตาราง Constraints Traceability ครบทั้ง 13 ข้อ)
+- **ประเด็นสำคัญใน tasks.md:**
+  1. **งานย่อย 8 งาน (`T-01` ถึง `T-08`):**
+     - `T-01`: สร้าง Data Models และ Schema สำหรับระบบความปลอดภัย (`safety_evidences`, `emergency_contacts`, `sos_alerts`)
+     - `T-02`: สร้าง Service และ API บันทึกเสียงและวิดีโอหลักฐานหน้างาน S4..S6 (`MediaEvidenceService`, `AC-S09-01`)
+     - `T-03`: สร้าง Service และ API ส่งสัญญาณฉุกเฉิน SOS Dispatch < 2.0s (`EmergencySosService`, `AC-S09-02`)
+     - `T-04`: สร้าง Service และ API ตั้งค่าเบอร์ผู้ติดต่อฉุกเฉิน พร้อม PDPA Masking `08X-XXX-XXXX` (`EmergencyContactService`, `AC-S09-03`)
+     - `T-05`: สร้าง Service และ API ล็อกหลักฐานห้ามแก้ไขเมื่อมีข้อพิพาท/SOS (`lock_evidence_for_order`, `AC-S09-04`)
+     - `T-06`: สร้าง Frontend API Client และระบบแคชข้อมูลความปลอดภัยออฟไลน์ใน `localStorage` (`AC-S09-01..04`)
+     - `T-07`: พัฒนาคอมโพเนนต์ React ความปลอดภัยและปุ่ม SOS (`EmergencySosButton`, `SosConfirmationModal`, `MediaEvidenceRecorder`, `EmergencyContactModal`, `TransactionSafetyPanel`)
+     - `T-08`: สร้างชุดทดสอบหน้าจอ Vitest Component Tests และ Backend Integration E2E Test Suite (`AC-S09-01..05`)
+  2. **Two-way Traceability Matrix:** เกณฑ์การยอมรับทุกข้อ (`AC-S09-01` ถึง `AC-S09-05`) เชื่อมโยงกับงานย่อยและชื่อไฟล์ชุดทดสอบอย่างครบถ้วน
+  3. **Constraints Traceability:** ตรวจสอบข้อจำกัดกลางทั้ง 13 ข้อตาม `specs/000-shared/constraints.md` ครบถ้วน
+- **สถานะ:** แตกงานย่อยเสร็จสมบูรณ์ พร้อมสำหรับการเริ่มพัฒนางานย่อยแรก `/implement T-01`
+---
+
+## บันทึก #41 — `/implement T-01..08` (พัฒนาระบบความปลอดภัยขณะทำธุรกรรม Transaction Safety & SOS ครบวงจร)
+- **วันที่:** 2026-11-03
+- **คำสั่งที่ใช้:** `/implement T-01..08`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `backend/app/models/safety_models.py` (Pydantic models สำหรับ Evidence, Emergency Contact, SOS Alert, Lock Evidence)
+  - `backend/app/core/supabase.py` (ขยาย Supabase store: `safety_evidences`, `emergency_contacts`, `sos_alerts`, ฟังก์ชัน `add_safety_evidence`, `lock_safety_evidences_for_order`, `upsert_emergency_contact`, `create_sos_alert`)
+  - `backend/app/services/safety_service.py` (`MediaEvidenceService`, `EmergencySosService`, `EmergencyContactService`, `EvidenceLockService` พร้อม Audit Logging)
+  - `backend/app/api/v1/safety.py` (FastAPI Router สำหรับ endpoints บันทึกหลักฐาน, ดึงหลักฐาน, ส่ง SOS, จัดการเบอร์ฉุกเฉิน, และล็อกหลักฐาน)
+  - `backend/app/api/v1/pricing.py` (ลงทะเบียน `safety_router`)
+  - `frontend/src/services/safetyApi.js` (Frontend API Client พร้อมระบบ LocalStorage Caching สำหรับเบอร์ติดต่อฉุกเฉินและข้อมูลสายด่วนเมื่อออฟไลน์ CC-05, REQ-OP-001)
+  - `frontend/src/components/EmergencySosButton.jsx` (ปุ่ม SOS ฉุกเฉิน สีแดงสะดุดตา ขนาดใหญ่ min-h-[48px] REQ-UX-001, data-req="UC-09")
+  - `frontend/src/components/SosConfirmationModal.jsx` (หน้าต่างยืนยันการส่งสัญญาณฉุกเฉิน แสดงพิกัดบ้านและปุ่มโทรออกด่วน tel: data-req="UC-09")
+  - `frontend/src/components/MediaEvidenceRecorder.jsx` (แผงอัดเสียง/วิดีโอหน้างาน S4..S6 มีตัวจับเวลา คลื่นเสียง Waveform ปุ่มเริ่ม/หยุด และรายการหลักฐาน data-req="UC-09")
+  - `frontend/src/components/EmergencyContactModal.jsx` (ฟอร์มตั้งค่าเบอร์ผู้ติดต่อฉุกเฉิน พร้อมแสดงผล PII Masking 08X-XXX-XXXX data-req="UC-09")
+  - `frontend/src/components/TransactionSafetyPanel.jsx` (แผงรวมระบบความปลอดภัยขณะทำธุรกรรม Mobile-First SPA data-req="UC-09")
+  - `backend/tests/test_T01_safety_models.py` (Unit tests สำหรับ Pydantic Models และ Supabase Store: 3 passed)
+  - `backend/tests/test_AC_S09_01_media_evidence.py` (Backend test สำหรับ AC-S09-01: 3 passed)
+  - `backend/tests/test_AC_S09_02_emergency_sos.py` (Backend test สำหรับ AC-S09-02: 2 passed)
+  - `backend/tests/test_AC_S09_03_emergency_contact.py` (Backend test สำหรับ AC-S09-03: 1 passed)
+  - `backend/tests/test_AC_S09_04_evidence_immutability.py` (Backend test สำหรับ AC-S09-04: 1 passed)
+  - `backend/tests/test_e2e_transaction_safety.py` (Backend E2E Integration test สำหรับ AC-S09-01..05: 1 passed)
+  - `frontend/tests/safetyApi.test.mjs` (Frontend API & Offline Cache test: 5 passed)
+  - `frontend/tests/AC-S09-01.test.jsx` (Vitest UI Component test: 2 passed)
+  - `frontend/tests/AC-S09-02.test.jsx` (Vitest UI Component test: 2 passed)
+  - `frontend/tests/AC-S09-03.test.jsx` (Vitest UI Component test: 1 passed)
+  - `frontend/tests/AC-S09-04.test.jsx` (Vitest UI Component test: 1 passed)
+  - `specs/seller/09-transaction-safety/tasks.md` (อัปเดตสถานะงาน `T-01` ถึง `T-08` เป็น `[DONE]` และอัปเดตสถานะรวมเป็น `completed`)
+- **ผลการตรวจ 5 ข้อหลังจบ Task:**
+  1. **ไฟล์ที่แตะ:** แตะเฉพาะไฟล์ที่กำหนดไว้ใน `tasks.md` (T-01 ถึง T-08)
+  2. **ผลการรัน Test:**
+     - รัน `npm test --prefix frontend` (Vitest): **`26 files passed, 66 passed in 1.95s`** (ผ่าน 100% ครอบคลุม UI Components และ Offline Cache)
+     - รัน `pytest backend/tests/` (Pytest): **`78 passed in 0.31s`** (ผ่าน 100% ครอบคลุม Unit, AC, และ E2E Lifecycle)
+     - **ยอดรวมทั้งระบบ: 144 tests ผ่านทั้งหมด 100% (Backend 78 + Frontend 66)**
+  3. **การอ้างอิง ID:** ฟังก์ชัน คอมโพเนนต์ และชุดทดสอบทุกไฟล์ระบุรหัส `UC-09`, `UC-13`, `REQ-SEC-001`, `REQ-SEC-002`, `REQ-QA-001`, `REQ-UX-001`, `REQ-FN-006`, `CC-01..06`, `AC-S09-01..05`, `P-01..P-06`, `T-01..T-08` ครบถ้วนตามกฎของ `AGENTS.md`
+  4. **Non-goals & Open Questions:** ขอบเขตตรงตามสเปก v2.0 ไม่ทำ AI Audio Surveillance ดักฟังอัตโนมัติ, ไม่ทำ in-app VoIP calling, และไม่เชื่อมต่อ API ตำรวจ 191 โดยตรง
+  5. **การบันทึกสถานะ:** อัปเดตงานย่อย `T-01..T-08` เป็น `[DONE]` ใน `tasks.md` และบันทึกลง `prompt-log.md` เรียบร้อย
