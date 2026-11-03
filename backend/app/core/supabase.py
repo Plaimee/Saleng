@@ -21,6 +21,8 @@ class SupabaseStore:
         self.orders: Dict[str, dict] = {}
         self.items: Dict[str, dict] = {}
         self.receipts: Dict[str, dict] = {}
+        self.collector_reviews: Dict[str, dict] = {}
+        self.seller_favorites: List[dict] = []
         self.audit_logs: List[dict] = []
         self._seed_default_benchmark_prices()
 
@@ -177,6 +179,94 @@ class SupabaseStore:
         }
         self.audit_logs.append(log_entry)
         return log_entry
+
+    # -------------------------------------------------------------------------
+    # ระบบรีวิวและให้คะแนนซาเล้ง (collector_reviews - UC-10, SC-05, AC-S07-01)
+    # -------------------------------------------------------------------------
+    def create_review(self, review_data: dict) -> dict:
+        order_id = review_data.get("order_id")
+        # ตรวจสอบความซ้ำซ้อน: 1 คำขอ รีวิวได้ 1 ครั้ง (P-01, Q-02)
+        if self.get_review_by_order(order_id):
+            raise ValueError(f"คำขอรหัส {order_id} ได้รับการส่งรีวิวแล้ว")
+
+        review_id = review_data.get("id") or str(uuid.uuid4())
+        review_data["id"] = review_id
+        if "created_at" not in review_data or not review_data["created_at"]:
+            review_data["created_at"] = datetime.now(timezone.utc).isoformat()
+
+        self.collector_reviews[review_id] = review_data
+        return review_data
+
+    def get_review_by_order(self, order_id: str) -> Optional[dict]:
+        for r in self.collector_reviews.values():
+            if r.get("order_id") == order_id:
+                return r
+        return None
+
+    def get_collector_reviews(self, collector_id: str) -> List[dict]:
+        return [r for r in self.collector_reviews.values() if r.get("collector_id") == collector_id]
+
+    def get_collector_rating_summary(self, collector_id: str) -> dict:
+        reviews = self.get_collector_reviews(collector_id)
+        if not reviews:
+            return {"average_rating": 0.0, "total_reviews": 0}
+        total = sum(r["rating"] for r in reviews)
+        return {
+            "average_rating": round(total / len(reviews), 2),
+            "total_reviews": len(reviews),
+        }
+
+    # -------------------------------------------------------------------------
+    # ระบบผู้รับซื้อประจำ (seller_favorites - UC-10, SC-05, AC-S07-02, Q-03)
+    # -------------------------------------------------------------------------
+    def add_favorite(self, seller_id: str, collector_id: str) -> dict:
+        for fav in self.seller_favorites:
+            if fav["seller_id"] == seller_id and fav["collector_id"] == collector_id:
+                return fav
+        fav_entry = {
+            "id": str(uuid.uuid4()),
+            "seller_id": seller_id,
+            "collector_id": collector_id,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        self.seller_favorites.append(fav_entry)
+        return fav_entry
+
+    def remove_favorite(self, seller_id: str, collector_id: str) -> bool:
+        initial_len = len(self.seller_favorites)
+        self.seller_favorites = [
+            fav for fav in self.seller_favorites
+            if not (fav["seller_id"] == seller_id and fav["collector_id"] == collector_id)
+        ]
+        return len(self.seller_favorites) < initial_len
+
+    def is_favorite(self, seller_id: str, collector_id: str) -> bool:
+        return any(
+            fav["seller_id"] == seller_id and fav["collector_id"] == collector_id
+            for fav in self.seller_favorites
+        )
+
+    def get_seller_favorites(self, seller_id: str) -> List[str]:
+        return [
+            fav["collector_id"]
+            for fav in self.seller_favorites
+            if fav["seller_id"] == seller_id
+        ]
+
+    # -------------------------------------------------------------------------
+    # ระบบประวัติการขายที่ปิดงานสำเร็จ (Sales History - REQ-FN-005, AC-S07-03)
+    # -------------------------------------------------------------------------
+    def get_completed_orders_for_seller(self, seller_id: str) -> List[dict]:
+        completed = []
+        for o in self.orders.values():
+            if o.get("seller_id") == seller_id and o.get("status") == "S7":
+                order_copy = dict(o)
+                order_copy["items"] = [
+                    item for item in self.items.values()
+                    if item.get("order_id") == o["order_id"]
+                ]
+                completed.append(order_copy)
+        return sorted(completed, key=lambda x: x.get("completed_at") or x.get("created_at") or "", reverse=True)
 
 
 # Singleton instance สำหรับเข้าถึง Database

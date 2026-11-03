@@ -90,15 +90,17 @@ def accept_order(order_id: str, buyer_id: str = "USR-BUYER-01"):
 
 
 from backend.app.api.v1.payment import payment_router, receipt_router
+from backend.app.api.v1.post_transaction import post_transaction_router
 
 # Application instance สำหรับทดสอบและเชื่อมต่อ Server
 app = FastAPI(
     title="Saleng Pricing & Decision API",
-    description="API ระบบราคาและการตัดสินใจ ฝั่งผู้ขาย (Seller Feature 04 & 06)",
+    description="API ระบบราคาและการตัดสินใจ ฝั่งผู้ขาย (Seller Feature 04, 06 & 07)",
     version="1.0.0"
 )
 app.include_router(pricing_router)
 app.include_router(orders_router)
 app.include_router(payment_router)
 app.include_router(receipt_router)
+app.include_router(post_transaction_router)
 

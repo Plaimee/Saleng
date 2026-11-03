@@ -503,3 +503,101 @@
   3. **การอ้างอิง ID:** ฟังก์ชันและชุดทดสอบทุกไฟล์ตั้งชื่อและอ้างอิงรหัส `AC-S06-01..05`, `REQ-FN-004..006`, `REQ-SEC-001..002`, `REQ-BR-002`, `P-01..P-06` ครบถ้วนตามกฎข้อ 7 และ 8 ของ `AGENTS.md`
   4. **Non-goals & Open Questions:** ชุดทดสอบทดสอบเฉพาะฟังก์ชันที่อยู่ในขอบเขต ไม่มีเคสที่เกินสเปก
   5. **การบันทึกผล:** อัปเดตสถานะ `T-08` เป็น `[DONE]` ใน `tasks.md`, สถานะภาพรวมเป็น `completed`, และบันทึกประวัติลง `prompt-log.md` เรียบร้อย
+
+
+---
+
+## บันทึก #30 — `/clarify specs/seller/07-post-transaction` (ระบบหลังทำธุรกรรม)
+- **วันที่:** 2026-11-03
+- **คำสั่งที่ใช้:** `/clarify specs/seller/07-post-transaction`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/seller/07-post-transaction/spec.md` (ปรับปรุงเป็น Version 2.0 สถานะ reviewed-post-clarify หลังเคลียร์จุดกำกวม CC-01..03 และคำถาม Q-01..05 ครบถ้วน)
+- **ประเด็นที่เคลียร์และข้อตกลงของทีม:**
+  1. **`CC-01`**: ปรับรหัส Use Case ให้ตรงกับสารบัญกลางใน `docs/srs/use-cases.md`: ใช้ `UC-10: ให้คะแนนรีวิว สรุปยอดรายวัน และจัดการหลังจบงาน` (เดิมระบุผิดเป็น `UC-11` ซึ่งเป็น Use Case ตรวจสอบ KYC ของแอดมิน)
+  2. **`CC-02`**: ปรับการเชื่อมโยงรหัส Requirement ตาม Catalogue กลาง: ยกเลิกการอ้างอิง `REQ-QA-001` และ `REQ-UX-001` ที่ไม่ตรงความหมาย โดยเชื่อมโยงกับ `UC-10` / `SC-05` (การให้คะแนนรีวิวและบันทึกผู้รับซื้อประจำ), `REQ-FN-005` (ใบเสร็จดิจิทัล), `REQ-SEC-002` (PDPA Masking `08X-XXX-XXXX`), `REQ-OP-001` / `CC-05` (Offline Cache ใน Local Storage), และ `REQ-SEC-001` (Audit Logging)
+  3. **`CC-03`**: ผังสถานะยึดตาม `MD-STM-04`: ดำเนินการในสถานะ `S7: สำเร็จ / ปิดงาน (Completed)` เท่านั้น
+  4. **`Q-01` (ทางเลือก A)**: การให้คะแนนรีวิวไม่บังคับ (Optional) มีปุ่ม *"ส่งรีวิว"* และปุ่ม *"ข้าม / ดูใบเสร็จ"* เพื่อไม่บล็อกผู้ขายที่เร่งรีบ
+  5. **`Q-02` (ทางเลือก A)**: โครงสร้างคะแนน 1–5 ดาว พร้อมข้อความความคิดเห็น (ไม่เกิน 500 ตัวอักษร) ส่งได้ 1 ครั้งต่อคำขอ ไม่อนุญาตให้แก้ไขย้อนหลัง เพื่อป้องกันการปั่นคะแนน
+  6. **`Q-03` (ทางเลือก A)**: บันทึกความสัมพันธ์ "ผู้รับซื้อประจำ" ลงในตาราง `seller_favorites` (`seller_id`, `collector_id`) รองรับการ Toggle เพิ่ม/ยกเลิกได้ตลอดเวลา
+  7. **`Q-04` (ทางเลือก A)**: หน้าประวัติการขายแสดงสถิติสรุปสะสม (ยอดเงินรวม, น้ำหนักรวม, จำนวนครั้งสำเร็จ) และรายการคำขอย้อนหลังพร้อม PII Masking และรองรับการเปิดดูใบเสร็จดิจิทัลแบบ Offline Read
+  8. **`Q-05`**: ยืนยันขอบเขต Non-goals ไม่ทำระบบให้ทิป (Tipping), ไม่ทำระบบแชทคุยต่อหลังจบงาน, และไม่ทำเว็บบอร์ดสนทนาสาธารณะ
+- **สถานะ:** สเปก `seller/07` ได้รับการรับรองและพร้อมสำหรับขั้นตอน `/plan`
+
+
+---
+
+## บันทึก #31 — `/plan specs/seller/07-post-transaction/spec.md` (แผนสถาปัตยกรรมและเทคโนโลยี)
+- **วันที่:** 2026-11-03
+- **คำสั่งที่ใช้:** `/plan specs/seller/07-post-transaction/spec.md`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/seller/07-post-transaction/plan.md` (จัดทำแผนสถาปัตยกรรมระบบ 8 หัวข้อหลัก ครอบคลุม P-01 ถึง P-06, Tech Stack "ทีมเลือกเอง ไม่ได้มาจาก spec", Data Model, Endpoints, UI Plan, และตารางตรวจ Constraints 13 ข้อ)
+- **ประเด็นสำคัญในแผน:**
+  1. **Tech Stack:** Python 3.11 (FastAPI) + Supabase (PostgreSQL 15+) + React 18 (Vite + TailwindCSS) (`"ทีมเลือกเอง ไม่ได้มาจาก spec"`)
+  2. **สถาปัตยกรรม 6 การตัดสินใจ (`P-01` ถึง `P-06`):**
+     - `P-01`: RatingReviewService บันทึกคะแนน 1–5 ดาว รีวิวไม่เกิน 500 ตัวอักษร จำกัด 1 ครั้งต่อคำขอ และมีปุ่มข้าม (`UC-10`, `SC-05`, `AC-S07-01`)
+     - `P-02`: FavoriteCollectorService ตาราง `seller_favorites` ระบบ Toggle Bookmark ผู้รับซื้อประจำ (`UC-10`, `SC-05`, `AC-S07-02`)
+     - `P-03`: SalesHistoryAggregationService สรุปยอดเงินรวม น้ำหนักรวม จำนวนครั้ง พร้อม PII Masking เบอร์โทร `08X-XXX-XXXX` (`REQ-FN-005`, `REQ-SEC-002`, `AC-S07-03`)
+     - `P-04`: Digital Receipt Inspection & Offline Access รองรับแคชประวัติและใบเสร็จใน Local Storage (`REQ-FN-005`, `REQ-OP-001`, `CC-05`, `AC-S07-04`)
+     - `P-05`: Audit Logging for Post-Transaction บันทึกประวัติการส่งรีวิวและเพิ่ม/ลบผู้รับซื้อประจำ (`REQ-SEC-001`, `AC-S07-05`)
+     - `P-06`: Mobile-First UI Architecture คอมโพเนนต์ React รองรับจอมือถือ 375px–414px (`CC-01`, `AC-S07-01..05`)
+  3. **ตารางตรวจ Constraints:** ครบทั้ง 13 ข้อตาม `specs/000-shared/constraints.md` พร้อมระบุเหตุผลข้อที่ไม่เกี่ยวข้อง
+- **สถานะ:** แผน `plan.md` พร้อมสำหรับการแตกงานย่อยในขั้นตอน `/tasks`
+
+
+---
+
+## บันทึก #32 — `/tasks specs/seller/07-post-transaction/plan.md` (รายการงานย่อยและ Two-way Traceability Matrix)
+- **วันที่:** 2026-11-03
+- **คำสั่งที่ใช้:** `/tasks specs/seller/07-post-transaction/plan.md`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/seller/07-post-transaction/tasks.md` (แตกงานย่อย 7 งาน `T-01` ถึง `T-07` ครบทั้ง 6 คอลัมน์, พร้อมตาราง Two-way Traceability Matrix ครบทุกข้อ `AC-S07-01..05`, และตาราง Constraints Traceability ครบทั้ง 13 ข้อ)
+- **ประเด็นสำคัญใน tasks.md:**
+  1. **งานย่อย 7 งาน (`T-01` ถึง `T-07`):**
+     - `T-01`: สร้าง Data Models และ Schema สำหรับระบบรีวิว (`collector_reviews`) และผู้รับซื้อประจำ (`seller_favorites`)
+     - `T-02`: สร้าง Service และ API ให้คะแนน 1–5 ดาวและรีวิวบริการซาเล้ง (`RatingReviewService`, `AC-S07-01`)
+     - `T-03`: สร้าง Service และ API จัดการผู้รับซื้อประจำ Bookmark (`FavoriteCollectorService`, `AC-S07-02`)
+     - `T-04`: สร้าง Service และ API สรุปประวัติการขาย สถิติสะสม และ PII Masking `08X-XXX-XXXX` (`SalesHistoryAggregationService`, `AC-S07-03`)
+     - `T-05`: สร้าง Frontend API Client และระบบแคชประวัติการขายออฟไลน์ใน `localStorage` (`AC-S07-04`)
+     - `T-06`: พัฒนาคอมโพเนนต์และหน้าจอ React Mobile-First SPA (`PostTransactionRatingModal`, `SalesSummaryCards`, `SalesOrderCard`, `SalesHistoryPage`)
+     - `T-07`: สร้างชุดทดสอบหน้าจอ Vitest Component Tests และ Backend Integration E2E Test Suite (`AC-S07-01..05`)
+  2. **Two-way Traceability Matrix:** เกณฑ์การยอมรับทุกข้อ (`AC-S07-01` ถึง `AC-S07-05`) เชื่อมโยงกับงานย่อยและชื่อไฟล์ชุดทดสอบอย่างครบถ้วน
+  3. **Constraints Traceability:** ตรวจสอบข้อจำกัดกลางทั้ง 13 ข้อตาม `specs/000-shared/constraints.md` ครบถ้วน
+- **สถานะ:** แตกงานย่อยเสร็จสมบูรณ์ พร้อมสำหรับการเริ่มพัฒนางานย่อยแรก `/implement T-01`
+
+
+---
+
+## บันทึก #33 — `/implement T-01..07` (พัฒนาระบบหลังทำธุรกรรมครบทุกงานย่อย T-01 ถึง T-07)
+- **วันที่:** 2026-11-03
+- **คำสั่งที่ใช้:** `/implement T-01..07`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `backend/app/models/post_transaction_models.py` (Pydantic models: ReviewCreateRequest, ReviewResponse, FavoriteCollectorRequest, FavoriteCollectorResponse, SalesSummaryResponse, SalesOrderHistoryItem, SalesHistoryResponse)
+  - `backend/app/core/supabase.py` (ขยาย Supabase store: collector_reviews, seller_favorites, create_review, get_review_by_order, get_collector_rating_summary, add_favorite, remove_favorite, is_favorite, get_completed_orders_for_seller)
+  - `backend/app/services/post_transaction_service.py` (Service Layer: PostTransactionService รองรับ submit_review, get_review, toggle_favorite, get_favorites, get_sales_history พร้อม PII Masking)
+  - `backend/app/api/v1/post_transaction.py` (API Router: endpoints สำหรับส่งรีวิว, จัดการผู้รับซื้อประจำ, และดึงประวัติการขาย)
+  - `backend/app/api/v1/pricing.py` (ลงทะเบียน post_transaction_router เข้าสู่ FastAPI app)
+  - `frontend/src/services/postTransactionApi.js` (Frontend API Client พร้อมระบบ Local Storage Cache สำหรับประวัติการขายและใบเสร็จดิจิทัล CC-05, REQ-OP-001)
+  - `frontend/src/components/PostTransactionRatingModal.jsx` (คอมโพเนนต์ให้คะแนนดาว 1–5 ดาว, ความคิดเห็น, ปุ่มทางลัดผู้รับซื้อประจำ, และปุ่มข้าม UC-10, Q-01, Q-02)
+  - `frontend/src/components/SalesSummaryCards.jsx` (คอมโพเนนต์แสดงสถิติสะสม 3 ด้าน: รายรับรวม, น้ำหนักรวม, จำนวนครั้งสำเร็จ UC-10)
+  - `frontend/src/components/SalesOrderCard.jsx` (คอมโพเนนต์แสดงรายการคำขอสำเร็จ พร้อม PII Masking เบอร์โทร 08X-XXX-XXXX, ไอคอนผู้รับซื้อประจำ, และปุ่มดูใบเสร็จ REQ-FN-005, REQ-SEC-002)
+  - `frontend/src/pages/SalesHistoryPage.jsx` (หน้าจอหลักรวมประวัติการขาย Mobile-First SPA พร้อมป้ายสถานะออฟไลน์แคชและ Modal ใบเสร็จดิจิทัล)
+  - `backend/tests/test_T01_post_transaction_models.py` (Unit tests สำหรับ Schema และ Validation)
+  - `backend/tests/test_AC_S07_01_rating_and_review.py` (Automated tests สำหรับรีวิว 1-5 ดาว, ตรวจสอบ S7, และบล็อกส่งซ้ำ 409)
+  - `backend/tests/test_AC_S07_02_favorite_collector.py` (Automated tests สำหรับ Toggle ผู้รับซื้อประจำ และ Audit Logs)
+  - `backend/tests/test_AC_S07_03_sales_history_and_masking.py` (Automated tests สำหรับประวัติการขาย, สรุปสถิติสะสม, และ PII Masking)
+  - `backend/tests/test_e2e_post_transaction.py` (Integration E2E Test ทดสอบครบวงจร S7 -> รีวิว -> ผู้รับซื้อประจำ -> ประวัติการขาย -> ใบเสร็จดิจิทัล -> Audit Logs AC-S07-05)
+  - `frontend/tests/postTransactionApi.test.mjs` (Unit tests สำหรับ Client & Offline Local Storage Cache)
+  - `frontend/tests/AC-S07-01.test.jsx` (Component Test: การให้คะแนนดาว, เขียนรีวิว, และการกดข้าม)
+  - `frontend/tests/AC-S07-02.test.jsx` (Component Test: ปุ่มบันทึกผู้รับซื้อประจำ และป้ายขาประจำ)
+  - `frontend/tests/AC-S07-03.test.jsx` (Component Test: สถิติสรุปสะสม และ PII Masking 08X-XXX-XXXX)
+  - `frontend/tests/AC-S07-04.test.jsx` (Component Test: การเปิดดูใบเสร็จดิจิทัล และป้ายแสดงออฟไลน์แคช)
+  - `specs/seller/07-post-transaction/tasks.md` (อัปเดตสถานะ T-01..T-07 เป็น [DONE] และสถานะรวมเป็น completed)
+- **ผลการตรวจ 5 ข้อหลังจบ Tasks (5 Checkpoints):**
+  1. **ไฟล์ที่แตะ:** สร้างและแก้ไขเฉพาะไฟล์ตามที่ระบุใน `tasks.md` (`T-01` ถึง `T-07`)
+  2. **ผลการรัน Test:**
+     - รัน Frontend Tests ทั้งหมด `npm test --prefix frontend`: **`16 files passed, 45 passed in 1.25s`** (100% ผ่านทุกการทดสอบ)
+     - รัน Backend Tests ทั้งหมด `.venv/bin/pytest backend/tests/`: **`57 passed in 0.28s`** (100% ผ่านทุกการทดสอบ)
+     - **ยอดรวมทั้งระบบ: 102 tests ผ่านทั้งหมด 100% (Backend 57 + Frontend 45)**
+  3. **การอ้างอิง ID:** ฟังก์ชันและชุดทดสอบทุกไฟล์ระบุรหัส `UC-10`, `SC-05`, `REQ-FN-005`, `REQ-SEC-001`, `REQ-SEC-002`, `REQ-OP-001`, `CC-01..06`, `AC-S07-01..05`, `P-01..P-06` ครบถ้วนตามกฎของ `AGENTS.md`
+  4. **Non-goals & Open Questions:** ขอบเขตตรงตามสเปก v2.0 ไม่ทำระบบให้ทิป (Tipping), ไม่ทำระบบแชทคุยต่อหลังจบงาน, และไม่ทำเว็บบอร์ดสาธารณะ
+  5. **การบันทึกสถานะ:** อัปเดตงานย่อย `T-01..T-07` เป็น `[DONE]` ใน `tasks.md` และบันทึกลง `prompt-log.md` เรียบร้อย
