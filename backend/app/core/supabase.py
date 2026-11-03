@@ -20,6 +20,7 @@ class SupabaseStore:
         self.benchmark_prices: Dict[str, dict] = {}
         self.orders: Dict[str, dict] = {}
         self.items: Dict[str, dict] = {}
+        self.receipts: Dict[str, dict] = {}
         self.audit_logs: List[dict] = []
         self._seed_default_benchmark_prices()
 
@@ -130,6 +131,40 @@ class SupabaseStore:
             items = [item for item in self.items.values() if item["order_id"] == order_id]
             order["items"] = items
         return order
+
+    def update_order(self, order_id: str, updates: dict) -> dict:
+        order = self.orders.get(order_id)
+        if not order:
+            raise ValueError(f"ไม่พบคำขอรหัส: {order_id}")
+        order.update(updates)
+        order["version"] = order.get("version", 1) + 1
+        self.orders[order_id] = order
+        return self.get_order(order_id)
+
+    def update_item(self, item_id: str, updates: dict) -> dict:
+        item = self.items.get(item_id)
+        if not item:
+            raise ValueError(f"ไม่พบรายการรหัส: {item_id}")
+        item.update(updates)
+        self.items[item_id] = item
+        return item
+
+    def create_digital_receipt(self, receipt_data: dict) -> dict:
+        receipt_id = receipt_data.get("receipt_id") or str(uuid.uuid4())
+        receipt_data["receipt_id"] = receipt_id
+        if "issued_at" not in receipt_data or not receipt_data["issued_at"]:
+            receipt_data["issued_at"] = datetime.now(timezone.utc).isoformat()
+        self.receipts[receipt_id] = receipt_data
+        return receipt_data
+
+    def get_receipt(self, receipt_id: str) -> Optional[dict]:
+        return self.receipts.get(receipt_id)
+
+    def get_receipt_by_order(self, order_id: str) -> Optional[dict]:
+        for r in self.receipts.values():
+            if r.get("order_id") == order_id:
+                return r
+        return None
 
     def add_audit_log(self, action: str, entity_id: str, actor_id: str, details: dict):
         log_entry = {

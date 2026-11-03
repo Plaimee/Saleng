@@ -283,3 +283,223 @@
   3. **การอ้างอิง ID:** โค้ดและฟังก์ชันทดสอบอ้างอิง `REQ-QA-001`, `REQ-BR-002`, `REQ-FN-001`, `REQ-FN-006`, `REQ-SEC-001`, `AC-S04-01..05`, `D-01..D-06` ครบถ้วน
   4. **Non-goals & Open Questions:** ตรวจสอบ Price Snapshot คงเดิมแม้ราคากลางวันถัดไปจะเปลี่ยนแปลง ไม่มีฟังก์ชันนอกขอบเขต
   5. **การบันทึกผล:** อัปเดตสถานะ `T-08` เป็น `[DONE]` และสถานะของ `tasks.md` เป็น `completed` พร้อมบันทึกลง `prompt-log.md` เรียบร้อย
+
+
+---
+
+## บันทึก #19 — `/clarify specs/seller/06-payment-and-verification` (ระบบชำระเงินและตรวจสอบ)
+- **วันที่:** 2026-11-03
+- **คำสั่งที่ใช้:** `/clarify specs/seller/06-payment-and-verification`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/seller/06-payment-and-verification/spec.md` (ปรับปรุงขึ้นเป็น Version 2.0 หลังเคลียร์จุดกำกวม CC-01..03 และคำถาม Q-01..05 ครบถ้วน)
+- **ประเด็นที่เคลียร์และข้อตกลงของทีม:**
+  1. **`CC-01`**: เชื่อมโยงรหัส Requirement ตาม Catalogue กลาง: ใช้ `REQ-FN-004` (ตรวจสอบและยืนยันน้ำหนักชั่งจริง บล็อก 100% หากยังไม่กดยืนยัน) และ `REQ-FN-005` (สร้างใบเสร็จดิจิทัลเมื่อจบงาน)
+  2. **`CC-02`**: ปรับรหัส Use Case ให้ตรงกับสารบัญกลาง: `UC-06` (ยืนยันผลชั่ง/ราคา) และ `UC-07` (ชำระเงินและออกใบเสร็จดิจิทัล)
+  3. **`CC-03`**: ผังสถานะยึดตาม `MD-STM-04`: `S4 (Weighing)` -> `S5 (Re-Quote / Weight Confirmed)` -> `S6 (Settled / Pending Payment)` -> `S7 (Completed)` และทางเลือกข้อพิพาท `S8 (Disputed)`
+  4. **`Q-01` (ทางเลือก A)**: บังคับผู้ขายกดยืนยันตัวเลขน้ำหนักบนหน้าจอของตนเอง 100% ทุกครั้ง (Gate ก่อนเข้า `S6`) เพื่อความโปร่งใสและเป็นหลักฐาน
+  5. **`Q-02` (ทางเลือก A)**: กรณีผลชั่งไม่ถูกต้อง มีปุ่ม "ขอให้ชั่งซ้ำ" และปุ่ม "ปฏิเสธผลชั่ง / แจ้งข้อพิพาท" (เปลี่ยนสถานะเป็น `S8: Disputed` ตาม `REQ-FN-006` พร้อมล็อกภาพตาชั่งส่งแอดมิน)
+  6. **`Q-03` (ทางเลือก A)**: ผู้ขายเป็นผู้กดยืนยันรับเงิน (เงินสดหรือ PromptPay) บนหน้าจอของตนเอง คำขอจึงจะเปลี่ยนเป็น `S7: Completed` และออกใบเสร็จดิจิทัล
+  7. **`Q-04` (ทางเลือก A)**: โครงสร้างใบเสร็จดิจิทัล (`DigitalReceipt`) ครบถ้วน: รหัสใบเสร็จ, วันที่เวลา, ข้อมูลผู้ขายและซาเล้งพร้อม PII Masking (`REQ-SEC-002`), รายการของเก่า น้ำหนักจริง ราคาที่ล็อกไว้ (`REQ-BR-002`), ยอดสุทธิ, วิธีชำระเงิน, ปุ่มบันทึกภาพ/ดาวน์โหลด
+  8. **`Q-05`**: ยืนยันขอบเขต ไม่ทำ In-App Wallet หรือ Payment Gateway ตัดบัตรเครดิต (ใช้เงินสด/PromptPay ภายนอก) และระบบรีวิวตัดไปอยู่ใน `seller/07`
+- **สถานะ:** สเปก `seller/06` ได้รับการรับรองและพร้อมสำหรับขั้นตอน `/plan`
+
+
+---
+
+## บันทึก #20 — `/plan specs/seller/06-payment-and-verification/spec.md` (แผนสถาปัตยกรรมและเทคโนโลยี)
+- **วันที่:** 2026-11-03
+- **คำสั่งที่ใช้:** `/plan specs/seller/06-payment-and-verification/spec.md`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/seller/06-payment-and-verification/plan.md` (จัดทำแผนสถาปัตยกรรมระบบ 8 หัวข้อหลัก ครอบคลุม P-01 ถึง P-06, Tech Stack "ทีมเลือกเอง ไม่ได้มาจาก spec", Data Model, Endpoints, UI Plan, และตารางตรวจ Constraints 13 ข้อ)
+- **ประเด็นสำคัญในแผน:**
+  1. **Tech Stack:** Python 3.11 (FastAPI) + Supabase (PostgreSQL 15+) + React 18 (Vite + TailwindCSS) (`"ทีมเลือกเอง ไม่ได้มาจาก spec"`)
+  2. **สถาปัตยกรรม 6 การตัดสินใจ (`P-01` ถึง `P-06`):**
+     - `P-01`: WeightConfirmationService และ 100% Confirmation Gate (`REQ-FN-004`, `AC-S06-01`)
+     - `P-02`: Dispute & Re-Weigh Service รองรับปุ่มขอชั่งซ้ำ และแจ้งข้อพิพาทเข้า `S8: Disputed` (`REQ-FN-006`, `AC-S06-02`)
+     - `P-03`: SettlementCalculationService คำนวณยอดเงินสุทธิจาก `actual_quantity * locked_unit_price` (`REQ-BR-002`, `AC-S06-03`)
+     - `P-04`: Payment Confirmation Flow รองรับเงินสด/PromptPay โดยผู้ขายเป็นผู้กดยืนยันรับเงินก่อนเข้า `S7` (`UC-07`, `AC-S06-03`)
+     - `P-05`: ReceiptGenerationService สร้างใบเสร็จดิจิทัล พร้อม PII Masking `08X-XXX-XXXX` (`REQ-FN-005`, `REQ-SEC-002`, `AC-S06-04`)
+     - `P-06`: State Machine & Audit Logging ควบคุมสถานะ `S4 -> S5 -> S6 -> S7` (`REQ-SEC-001`, `AC-S06-05`)
+  3. **ตารางตรวจ Constraints:** ครบทั้ง 13 ข้อตาม `specs/000-shared/constraints.md` พร้อมระบุเหตุผลข้อที่ไม่เกี่ยวข้อง
+- **สถานะ:** แผน `plan.md` พร้อมสำหรับการแตกงานย่อยในขั้นตอน `/tasks`
+
+
+---
+
+## บันทึก #21 — `/tasks specs/seller/06-payment-and-verification/plan.md` (รายการงานย่อยและ Two-way Traceability Matrix)
+- **วันที่:** 2026-11-03
+- **คำสั่งที่ใช้:** `/tasks specs/seller/06-payment-and-verification/plan.md`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/seller/06-payment-and-verification/tasks.md` (แตกงานย่อย 8 งาน `T-01` ถึง `T-08` ครบทั้ง 6 คอลัมน์, พร้อมตาราง Two-way Traceability Matrix ครบทุกข้อ `AC-S06-01..05`, และตาราง Constraints Traceability ครบทั้ง 13 ข้อ)
+- **ประเด็นสำคัญใน tasks.md:**
+  1. **งานย่อย 8 งาน (`T-01` ถึง `T-08`):**
+     - `T-01`: ขยาย Data Models, Schema, และ In-memory Supabase store สำหรับค่าน้ำหนักชั่งจริง ยอดสุทธิ และใบเสร็จ
+     - `T-02`: สร้าง Service บันทึกผลชั่งจริงและคำนวณยอดเงินสุทธิหน้างาน (`actual_quantity * locked_unit_price`)
+     - `T-03`: สร้าง Service ตรวจสอบและบังคับ Seller Confirmation Gate 100% (`AC-S06-01`, `REQ-FN-004`)
+     - `T-04`: สร้าง Service รองรับการขอชั่งซ้ำ และแจ้งข้อพิพาทเข้าสถานะ `S8: Disputed` (`AC-S06-02`, `REQ-FN-006`)
+     - `T-05`: สร้าง Service ยืนยันการรับเงิน (เงินสด/PromptPay) และออกใบเสร็จดิจิทัล พร้อม PII Masking (`AC-S06-03`, `AC-S06-04`)
+     - `T-06`: สร้าง Frontend API Client (`paymentApi.js`) และระบบแคชใบเสร็จออฟไลน์ (`CC-05`, `REQ-OP-001`)
+     - `T-07`: พัฒนาคอมโพเนนต์ React Mobile-First SPA (`WeightVerificationCard`, `PaymentConfirmationCard`, `DigitalReceiptCard`, `PaymentVerificationPage`)
+     - `T-08`: สร้างชุดทดสอบ Vitest Component Tests (`AC-S06-01..04`) และ E2E Integration Test (`AC-S06-05`)
+  2. **Traceability:** ทุก `AC`, `REQ`, `BR` และ `CC` เชื่อมโยงกลับไปยังงานและไฟล์ทดสอบชัดเจน 100%
+- **สถานะ:** แตกงานย่อยเสร็จสมบูรณ์ พร้อมเริ่มขั้นตอนการพัฒนาจริง `/implement T-01`
+
+
+---
+
+## บันทึก #22 — `/implement T-01` (ขยาย Data Models และ Schema สำหรับระบบชำระเงินและตรวจสอบ)
+- **วันที่:** 2026-11-03
+- **คำสั่งที่ใช้:** `/implement T-01`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `backend/app/models/payment_models.py` (สร้าง Pydantic Models: ActualWeightItemInput, RecordWeighingRequest, WeighingRecordResponse, WeightConfirmationRequest, WeightConfirmationResponse, DisputeRequest, DisputeResponse, PaymentConfirmationRequest, DigitalReceiptResponse, DigitalReceiptItem)
+  - `backend/app/core/supabase.py` (เพิ่มโครงสร้างเก็บ `receipts`, เมธอด `update_order`, `update_item`, `create_digital_receipt`, `get_receipt`, `get_receipt_by_order`)
+  - `backend/tests/test_T01_payment_models.py` (ชุดทดสอบอัตโนมัติ Unit Test 4 เคส ตรวจสอบ Validation และฟังก์ชันใน Store)
+- **ผลการตรวจ 5 ข้อหลังจบ Task:**
+  1. **ไฟล์ที่แตะ:** แตะเฉพาะไฟล์ที่กำหนดใน `T-01`
+  2. **ผลการรัน Test:**
+     - รัน `pytest backend/tests/test_T01_payment_models.py`: **`4 passed in 0.05s`** (ผ่าน 100%)
+     - รัน Full Backend Regression `pytest backend/tests/`: **`25 passed in 0.20s`** (ผ่าน 100% รวมของเดิม 21 + ใหม่ 4)
+  3. **การอ้างอิง ID:** โค้ดและฟังก์ชันทดสอบอ้างอิง `MD-DOM-04`, `REQ-FN-004`, `REQ-FN-005`, `REQ-FN-006`, `REQ-BR-002`, `REQ-SEC-002`, `CC-04`, `P-03`, `P-05` ครบถ้วน
+  4. **Non-goals & Open Questions:** รองรับเฉพาะ CASH และ PROMPTPAY ตามมติ ไม่ทำ Payment Gateway
+  5. **การบันทึกผล:** อัปเดตสถานะ `T-01` เป็น `[DONE]` ใน `tasks.md` และบันทึกลง `prompt-log.md` เรียบร้อย
+
+
+---
+
+## บันทึก #23 — `/implement T-02` (สร้าง Service บันทึกผลชั่งจริงและคำนวณยอดเงินสุทธิหน้างาน)
+- **วันที่:** 2026-11-03
+- **คำสั่งที่ใช้:** `/implement T-02`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `backend/app/services/payment_service.py` (สร้างเมธอด `record_weighing` คำนวณยอดเงินสุทธิจาก actual_quantity * locked_unit_price พร้อมบันทึกภาพตาชั่งและอัปเดตสถานะเป็น S5)
+  - `backend/app/api/v1/payment.py` (เปิด Endpoint `POST /api/v1/orders/{order_id}/record-weighing`)
+  - `backend/app/api/v1/pricing.py` (เชื่อมต่อ `payment_router` เข้ากับ FastAPI app)
+  - `backend/tests/test_weighing_and_settlement.py` (ชุดทดสอบอัตโนมัติ 3 เคส: ตรวจสอบการคำนวณยอดเงินสุทธิหลายรายการ, ตรวจสอบสถานะใบงานไม่ถูกต้อง, ตรวจสอบ item_id ไม่พบ)
+- **ผลการตรวจ 5 ข้อหลังจบ Task:**
+  1. **ไฟล์ที่แตะ:** แตะเฉพาะไฟล์ที่กำหนดใน `T-02` และไฟล์เชื่อมเราเตอร์
+  2. **ผลการรัน Test:**
+     - รัน `pytest backend/tests/test_weighing_and_settlement.py`: **`3 passed in 0.13s`** (ผ่าน 100%)
+     - รัน Full Backend Regression `pytest backend/tests/`: **`28 passed in 0.18s`** (ผ่าน 100%)
+  3. **การอ้างอิง ID:** โค้ดและฟังก์ชันทดสอบอ้างอิง `REQ-BR-002`, `REQ-FN-004`, `REQ-SEC-001`, `P-03`, `D-04` ครบถ้วน
+  4. **Non-goals & Open Questions:** คำนวณยอดเงินสุทธิจากราคาที่ล็อกไว้จริง ณ วันนัดหมาย ไม่มีการเปลี่ยนราคาตามวันถัดไป
+  5. **การบันทึกผล:** อัปเดตสถานะ `T-02` เป็น `[DONE]` ใน `tasks.md` และบันทึกลง `prompt-log.md` เรียบร้อย
+
+
+---
+
+## บันทึก #24 — `/implement T-03` (สร้าง Service ตรวจสอบและบังคับ Seller Confirmation Gate 100%)
+- **วันที่:** 2026-11-03
+- **คำสั่งที่ใช้:** `/implement T-03`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `backend/app/services/payment_service.py` (สร้างเมธอด `confirm_weights` ตรวจสอบสิทธิ์ผู้ขาย seller_id, บล็อก 100% หากผู้ขายยังไม่กดยืนยัน, เปลี่ยนสถานะเป็น S6 และบันทึก Audit Log)
+  - `backend/app/api/v1/payment.py` (เปิด Endpoint `POST /api/v1/orders/{order_id}/confirm-weights`)
+  - `backend/tests/test_AC_S06_01_weight_confirmation.py` (ชุดทดสอบอัตโนมัติ 4 เคส: ยืนยันน้ำหนักสำเร็จเปลี่ยนเป็น S6, บล็อกผู้ใช้คนอื่น HTTP 403, บล็อกคำขอที่ยังไม่อยู่ใน S5, และทดสอบ 100% Confirmation Gate)
+- **ผลการตรวจ 5 ข้อหลังจบ Task:**
+  1. **ไฟล์ที่แตะ:** แตะเฉพาะไฟล์ที่กำหนดใน `T-03`
+  2. **ผลการรัน Test:**
+     - รัน `pytest backend/tests/test_AC_S06_01_weight_confirmation.py`: **`4 passed in 0.12s`** (ผ่าน 100%)
+     - รัน Full Backend Regression `pytest backend/tests/`: **`32 passed in 0.19s`** (ผ่าน 100%)
+  3. **การอ้างอิง ID:** โค้ดและฟังก์ชันทดสอบอ้างอิง `REQ-FN-004`, `REQ-SEC-001`, `AC-S06-01`, `P-01`, `Q-01` ครบถ้วน
+  4. **Non-goals & Open Questions:** บังคับให้ผู้ขายเป็นผู้กดยืนยันตัวเลขน้ำหนัก 100% ตามมติ เพื่อความโปร่งใสและหลักฐานก่อนชำระเงิน
+  5. **การบันทึกผล:** อัปเดตสถานะ `T-03` เป็น `[DONE]` ใน `tasks.md` และบันทึกลง `prompt-log.md` เรียบร้อย
+
+
+---
+
+## บันทึก #25 — `/implement T-04` (สร้าง Service รองรับการขอชั่งซ้ำ และแจ้งข้อพิพาทผลชั่ง)
+- **วันที่:** 2026-11-03
+- **คำสั่งที่ใช้:** `/implement T-04`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `backend/app/models/payment_models.py` (เพิ่ม Model `RequestReweighResponse`)
+  - `backend/app/services/payment_service.py` (สร้างเมธอด `request_reweigh` คืนสถานะกลับสู่ S4 เพื่อชั่งใหม่ และ `raise_dispute` เปลี่ยนสถานะเป็น S8 พร้อมล็อกหลักฐานภาพตาชั่งและราคาตาม REQ-FN-006)
+  - `backend/app/api/v1/payment.py` (เปิด Endpoints `POST /api/v1/orders/{order_id}/request-reweigh` และ `POST /api/v1/orders/{order_id}/dispute`)
+  - `backend/tests/test_AC_S06_02_dispute_and_reweigh.py` (ชุดทดสอบอัตโนมัติ 4 เคส: ขอชั่งซ้ำสำเร็จ, แจ้งข้อพิพาท S8 สำเร็จพร้อมล็อกหลักฐาน, บล็อกผู้ใช้คนอื่น HTTP 403, บล็อกสถานะไม่ถูกต้อง HTTP 400)
+- **ผลการตรวจ 5 ข้อหลังจบ Task:**
+  1. **ไฟล์ที่แตะ:** แตะเฉพาะไฟล์ที่กำหนดใน `T-04`
+  2. **ผลการรัน Test:**
+     - รัน `pytest backend/tests/test_AC_S06_02_dispute_and_reweigh.py`: **`4 passed in 0.13s`** (ผ่าน 100%)
+     - รัน Full Backend Regression `pytest backend/tests/`: **`36 passed in 0.19s`** (ผ่าน 100%)
+  3. **การอ้างอิง ID:** โค้ดและฟังก์ชันทดสอบอ้างอิง `REQ-FN-006`, `REQ-SEC-001`, `AC-S06-02`, `P-02`, `Q-02` ครบถ้วน
+  4. **Non-goals & Open Questions:** ล็อกหลักฐานภาพตาชั่ง `is_frozen = True` สำหรับส่งให้แอดมินตาม REQ-FN-006 ไม่มีโค้ดส่วนเกิน
+  5. **การบันทึกผล:** อัปเดตสถานะ `T-04` เป็น `[DONE]` ใน `tasks.md` และบันทึกลง `prompt-log.md` เรียบร้อย
+
+
+---
+
+## บันทึก #26 — `/implement T-05` (ยืนยันการรับเงินและออกใบเสร็จดิจิทัล พร้อม PII Masking)
+- **วันที่:** 2026-11-03
+- **คำสั่งที่ใช้:** `/implement T-05`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `backend/app/services/payment_service.py` (เพิ่ม `mask_phone`, `_generate_receipt_no`, `confirm_payment` (S6 -> S7 + สร้างใบเสร็จ + Audit Log), `get_receipt`)
+  - `backend/app/api/v1/payment.py` (เพิ่ม `POST /api/v1/orders/{order_id}/confirm-payment` และ `receipt_router` สำหรับ `GET /api/v1/receipts/{order_id}`)
+  - `backend/app/api/v1/pricing.py` (ลงทะเบียน `receipt_router`)
+  - `backend/tests/test_AC_S06_03_payment_and_receipt.py` (10 เคส: ยืนยันรับเงิน CASH/PROMPTPAY, บล็อกผู้ที่ไม่ใช่ผู้ขาย 403, บล็อกสถานะ S5/S8, บล็อกยืนยันซ้ำ, เนื้อหาใบเสร็จ+Masking, รหัสใบเสร็จไม่ซ้ำ, 404 เมื่อยังไม่มีใบเสร็จ, ฟังก์ชัน mask_phone)
+- **ผลการตรวจ 5 ข้อหลังจบ Task:**
+  1. **ไฟล์ที่แตะ:** แตะเฉพาะไฟล์ใน `T-05` และไฟล์ลงทะเบียนเราเตอร์ `pricing.py`
+  2. **ผลการรัน Test:** `pytest backend/tests/` ได้ **`46 passed in 0.22s`** (ใหม่ 10 ข้อ ผ่าน 100%)
+  3. **การอ้างอิง ID:** `UC-07`, `REQ-FN-005`, `REQ-SEC-001`, `REQ-SEC-002`, `AC-S06-03`, `AC-S06-04`, `P-04`, `P-05`, `Q-03`, `Q-04`
+  4. **Non-goals & Open Questions:** รองรับเฉพาะ CASH/PROMPTPAY ไม่มี Payment Gateway/Wallet (`Q-05`) — ไม่ได้สร้าง PromptPay QR Payload ในงานนี้ (อยู่ในส่วน UI `T-07`)
+  5. **การบันทึกผล:** อัปเดต `T-05` เป็น `[DONE]` ใน `tasks.md` และบันทึกลง `prompt-log.md` แล้ว
+- **ข้อสังเกตที่ต้องให้ทีมยืนยัน (ยังไม่สร้าง ID ใหม่ตาม Rule 5):**
+  - ยังไม่มีตาราง/ที่มาของเบอร์โทรผู้ใช้ในสเปก ระบบจึงอ่านจากฟิลด์ `seller_phone` / `buyer_phone` ของใบงาน หากไม่มีข้อมูลจะแสดง `XXX-XXX-XXXX` (ปกปิดทั้งหมด ไม่เดาค่า)
+  - รูปแบบ Masking ใช้ตามตัวอย่างใน `Q-04` คือคง 2 หลักแรกและ 4 หลักท้าย (`08X-XXX-1234`)
+
+
+---
+
+## บันทึก #27 — `/implement T-06` (สร้าง Frontend API Client และระบบแคชใบเสร็จดิจิทัลออฟไลน์)
+- **วันที่:** 2026-11-03
+- **คำสั่งที่ใช้:** `/implement T-06`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `frontend/src/services/paymentApi.js` (สร้างโมดูลเรียก API: recordWeighing, confirmWeights, requestReweigh, raiseDispute, confirmPayment, fetchReceipt พร้อมระบบ Local Storage Cache สำหรับใบเสร็จดิจิทัล CC-05, REQ-OP-001)
+  - `frontend/tests/paymentApi.test.mjs` (ชุดทดสอบอัตโนมัติ Vitest 9 เคส: ครอบคลุมทุก API endpoint, Error handling, และการเปิดดูใบเสร็จโหมดออฟไลน์)
+- **ผลการตรวจ 5 ข้อหลังจบ Task:**
+  1. **ไฟล์ที่แตะ:** แตะเฉพาะไฟล์ที่กำหนดใน `T-06`
+  2. **ผลการรัน Test:**
+     - รัน `npm test --prefix frontend` (Vitest): **`7 files passed, 24 passed in 0.73s`** (ผ่าน 100% รวม paymentApi.test.mjs 9 passed)
+     - รัน Full Backend Regression `pytest backend/tests/`: **`46 passed in 0.23s`** (ผ่าน 100%)
+  3. **การอ้างอิง ID:** โค้ดและฟังก์ชันทดสอบอ้างอิง `CC-01`, `CC-05`, `REQ-OP-001`, `AC-S06-01..05` ครบถ้วน
+  4. **Non-goals & Open Questions:** รองรับแคชแบบ Offline Read สำหรับใบเสร็จดิจิทัลที่เคยเปิดแล้ว ไม่มีโค้ดส่วนเกิน
+  5. **การบันทึกผล:** อัปเดตสถานะ `T-06` เป็น `[DONE]` ใน `tasks.md` และบันทึกลง `prompt-log.md` เรียบร้อย
+
+
+---
+
+## บันทึก #28 — `/implement T-07` (พัฒนาคอมโพเนนต์และหน้าจอ React Mobile-First SPA)
+- **วันที่:** 2026-11-03
+- **คำสั่งที่ใช้:** `/implement T-07`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `frontend/src/components/WeightVerificationCard.jsx` (คอมโพเนนต์แสดงผลชั่งจริง, รูปตาชั่งดิจิทัล REQ-FN-002, ปุ่มยืนยันน้ำหนัก REQ-FN-004, ปุ่มขอชั่งซ้ำและปุ่มแจ้งข้อพิพาท REQ-FN-006)
+  - `frontend/src/components/PaymentConfirmationCard.jsx` (คอมโพเนนต์เลือกวิธีรับเงิน เงินสด/PromptPay QR พร้อมปุ่มยืนยันรับเงิน UC-07, Q-03)
+  - `frontend/src/components/DigitalReceiptCard.jsx` (คอมโพเนนต์ใบเสร็จดิจิทัล REQ-FN-005 พร้อม PII Masking เบอร์โทร 08X-XXX-XXXX REQ-SEC-002, ป้ายออฟไลน์ CC-05)
+  - `frontend/src/pages/PaymentVerificationPage.jsx` (หน้าจอหลักเชื่อมโยงโฟลว์การทำงาน S5 -> S6 -> S7 หรือ S8 ควบคุมผ่าน State Machine)
+- **ผลการตรวจ 5 ข้อหลังจบ Task:**
+  1. **ไฟล์ที่แตะ:** แตะเฉพาะไฟล์ที่กำหนดใน `T-07`
+  2. **ผลการรัน Test:**
+     - รัน `npm test --prefix frontend` (Vitest): **`7 files passed, 24 passed in 0.58s`** (ผ่าน 100%)
+     - รัน Full Backend Regression `pytest backend/tests/`: **`46 passed in 0.21s`** (ผ่าน 100%)
+  3. **การอ้างอิง ID:** คอมโพเนนต์ทุกชิ้นมี `data-req="REQ-..."` กำกับตรงตามสเปกและ Mockup
+  4. **Non-goals & Open Questions:** ไม่มีฟังก์ชัน Wallet หรือการชำระเงินตัดบัตรนอกขอบเขต
+  5. **การบันทึกผล:** อัปเดตสถานะ `T-07` เป็น `[DONE]` ใน `tasks.md` และบันทึกลง `prompt-log.md` เรียบร้อย
+
+
+---
+
+## บันทึก #29 — `/implement T-08` (สร้างชุดทดสอบหน้าจอ Component Tests และ Integration E2E Test)
+- **วันที่:** 2026-11-03
+- **คำสั่งที่ใช้:** `/implement T-08`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `frontend/tests/AC-S06-01.test.jsx` (Vitest UI Component Test: ตรวจสอบ 100% Weight Confirmation Gate ตาม `REQ-FN-004`, `AC-S06-01`)
+  - `frontend/tests/AC-S06-02.test.jsx` (Vitest UI Component Test: ตรวจสอบการขอชั่งซ้ำ และการแจ้งข้อพิพาท `S8: Disputed` ตาม `REQ-FN-006`, `AC-S06-02`)
+  - `frontend/tests/AC-S06-03.test.jsx` (Vitest UI Component Test: ตรวจสอบการเลือกชำระเงิน CASH / PROMPTPAY และปุ่มยืนยันรับเงินตาม `UC-07`, `AC-S06-03`)
+  - `frontend/tests/AC-S06-04.test.jsx` (Vitest UI Component Test: ตรวจสอบการแสดงใบเสร็จดิจิทัล และ PII Masking `08X-XXX-XXXX` ตาม `REQ-FN-005`, `REQ-SEC-002`, `AC-S06-04`)
+  - `backend/tests/test_e2e_payment_and_verification.py` (Pytest Integration E2E Test: ครอบคลุมวงจรเต็มตั้งแต่ชั่งจริง -> ตรวจสอบเกต -> ยืนยันน้ำหนัก -> ชำระเงิน PromptPay -> รับเงิน -> ออกใบเสร็จดิจิทัล ตรวจสอบ Audit Log `AC-S06-05` และ Price Snapshot Integrity `REQ-BR-002`)
+  - `specs/seller/06-payment-and-verification/tasks.md` (อัปเดตสถานะ `T-08` เป็น `[DONE]` และอัปเดตสถานะรวมของ Tasks เป็น `completed`)
+- **ผลการตรวจ 5 ข้อหลังจบ Task:**
+  1. **ไฟล์ที่แตะ:** แตะเฉพาะไฟล์ทดสอบและเอกสาร Tasks ตามที่ระบุใน `T-08`
+  2. **ผลการรัน Test:**
+     - รัน `npm test --prefix frontend` (Vitest): **`11 files passed, 32 passed in 0.90s`** (ผ่าน 100% ครบทุก Component Tests)
+     - รัน Full Backend Suite `.venv/bin/pytest backend/tests/`: **`47 passed in 0.26s`** (ผ่าน 100% ครบทุก E2E และ AC tests)
+     - ยอดรวมชุดทดสอบทั้งระบบ: **79 tests ผ่าน 100% (Backend 47 + Frontend 32)**
+  3. **การอ้างอิง ID:** ฟังก์ชันและชุดทดสอบทุกไฟล์ตั้งชื่อและอ้างอิงรหัส `AC-S06-01..05`, `REQ-FN-004..006`, `REQ-SEC-001..002`, `REQ-BR-002`, `P-01..P-06` ครบถ้วนตามกฎข้อ 7 และ 8 ของ `AGENTS.md`
+  4. **Non-goals & Open Questions:** ชุดทดสอบทดสอบเฉพาะฟังก์ชันที่อยู่ในขอบเขต ไม่มีเคสที่เกินสเปก
+  5. **การบันทึกผล:** อัปเดตสถานะ `T-08` เป็น `[DONE]` ใน `tasks.md`, สถานะภาพรวมเป็น `completed`, และบันทึกประวัติลง `prompt-log.md` เรียบร้อย
