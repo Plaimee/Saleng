@@ -32,8 +32,10 @@ class SupabaseStore:
         self.seller_otps: List[dict] = []
         self.seller_sessions: Dict[str, dict] = {}
         self.pickup_locations: Dict[str, dict] = {}
+        self.scrap_categories: Dict[str, dict] = {}
         self.audit_logs: List[dict] = []
         self._seed_default_benchmark_prices()
+        self._seed_default_scrap_categories()
 
     def _seed_default_benchmark_prices(self):
         """กำหนดราคากลางตั้งต้นตามที่ระบุใน spec.md หัวข้อ 1.1 และ D-02"""
@@ -101,6 +103,174 @@ class SupabaseStore:
         ]
         for p in default_prices:
             self.benchmark_prices[p["category_code"]] = p
+
+    def _seed_default_scrap_categories(self):
+        """กำหนดหมวดหมู่ของเก่าและคู่มือภาพ 3 กลุ่มหลักตาม spec.md และ Card 03"""
+        categories = [
+            # 1. หมวดชั่งกิโลกรัมทั่วไป (GENERAL_WEIGHT)
+            {
+                "category_code": "MAT-CARDBOARD",
+                "category_group": "GENERAL_WEIGHT",
+                "name": "กระดาษลัง",
+                "icon": "📦",
+                "unit": "kg",
+                "min_price_per_unit": 3.0,
+                "max_price_per_unit": 4.0,
+                "sub_categories": None,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            },
+            {
+                "category_code": "MAT-WHITE-PAPER",
+                "category_group": "GENERAL_WEIGHT",
+                "name": "กระดาษขาวดำ",
+                "icon": "📄",
+                "unit": "kg",
+                "min_price_per_unit": 6.0,
+                "max_price_per_unit": 7.0,
+                "sub_categories": None,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            },
+            {
+                "category_code": "MAT-PET-BOTTLE",
+                "category_group": "GENERAL_WEIGHT",
+                "name": "ขวดพลาสติกใส PET",
+                "icon": "🧴",
+                "unit": "kg",
+                "min_price_per_unit": 5.0,
+                "max_price_per_unit": 8.0,
+                "sub_categories": None,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            },
+            {
+                "category_code": "MAT-ALU-CAN",
+                "category_group": "GENERAL_WEIGHT",
+                "name": "กระป๋องอลูมิเนียม",
+                "icon": "🥫",
+                "unit": "kg",
+                "min_price_per_unit": 30.0,
+                "max_price_per_unit": 40.0,
+                "sub_categories": None,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            },
+            {
+                "category_code": "MAT-SCRAP-IRON",
+                "category_group": "GENERAL_WEIGHT",
+                "name": "เศษเหล็กทั่วไป",
+                "icon": "⚙️",
+                "unit": "kg",
+                "min_price_per_unit": 4.0,
+                "max_price_per_unit": 6.0,
+                "sub_categories": None,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            },
+            # 2. หมวดวัสดุบรรจุลัง/กระสอบแยกเฉพาะ (BOXED_CRATE_ITEMS - Card 03)
+            {
+                "category_code": "BOXED-GLASS",
+                "category_group": "BOXED_CRATE_ITEMS",
+                "name": "ขวดแก้วบรรจุลัง",
+                "icon": "🍾",
+                "unit": "crate",
+                "min_price_per_unit": 15.0,
+                "max_price_per_unit": 25.0,
+                "sub_categories": ["ขวดเบียร์ลัง", "ขวดน้ำปลาลัง", "ขวดซอส/น้ำหวานลัง"],
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            },
+            {
+                "category_code": "BOXED-PLASTIC",
+                "category_group": "BOXED_CRATE_ITEMS",
+                "name": "ขวดพลาสติกบรรจุกระสอบ",
+                "icon": "🛍️",
+                "unit": "bag",
+                "min_price_per_unit": 20.0,
+                "max_price_per_unit": 30.0,
+                "sub_categories": ["พลาสติกใสกระสอบ", "พลาสติกรวมกระสอบ"],
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            },
+            # 3. หมวดของชิ้นใหญ่แบบเหมาจ่าย (BULKY_FLAT_RATE - Card 03)
+            {
+                "category_code": "BULKY-APPLIANCE",
+                "category_group": "BULKY_FLAT_RATE",
+                "name": "ของชิ้นใหญ่แบบเหมาจ่าย",
+                "icon": "🧊",
+                "unit": "piece",
+                "min_price_per_unit": 100.0,
+                "max_price_per_unit": 500.0,
+                "sub_categories": [
+                    "ตู้เย็น",
+                    "เครื่องซักผ้า",
+                    "แอร์/คอมเพรสเซอร์",
+                    "โซฟา/เฟอร์นิเจอร์",
+                ],
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            },
+        ]
+        for c in categories:
+            self.scrap_categories[c["category_code"]] = c
+
+    def get_scrap_categories(self) -> List[dict]:
+        """ดึงรายการหมวดหมู่และคู่มือภาพทั้งหมด (AC-S02-01)"""
+        return list(self.scrap_categories.values())
+
+    def get_scrap_category(self, category_code: str) -> Optional[dict]:
+        """ดึงข้อมูลหมวดหมู่ตามรหัส"""
+        return self.scrap_categories.get(category_code)
+
+    def add_item_to_order(self, order_id: str, item_data: dict) -> dict:
+        """เพิ่มรายการของเก่าลงในคำขอ (AC-S02-01..03)"""
+        item_id = item_data.get("item_id") or str(uuid.uuid4())
+        item_data["item_id"] = item_id
+        item_data["order_id"] = order_id
+        if "created_at" not in item_data:
+            item_data["created_at"] = datetime.now(timezone.utc).isoformat()
+        if "photo_urls" not in item_data:
+            item_data["photo_urls"] = []
+        self.items[item_id] = item_data
+
+        # คำนวณช่วงราคาประเมินรวมใหม่ของคำขอ
+        self._recalculate_order_totals(order_id)
+        return item_data
+
+    def delete_item_from_order(self, order_id: str, item_id: str) -> bool:
+        """ลบรายการของเก่าออกจากคำขอ"""
+        if item_id in self.items and self.items[item_id].get("order_id") == order_id:
+            del self.items[item_id]
+            self._recalculate_order_totals(order_id)
+            return True
+        return False
+
+    def attach_photo_to_item(self, item_id: str, photo_url: str) -> Optional[dict]:
+        """แนบรูปถ่ายของเก่า (AC-S02-04)"""
+        item = self.items.get(item_id)
+        if not item:
+            return None
+        if "photo_urls" not in item:
+            item["photo_urls"] = []
+        if len(item["photo_urls"]) >= 5:
+            raise ValueError("สามารถแนบรูปถ่ายได้สูงสุดไม่เกิน 5 รูปต่อรายการ")
+        item["photo_urls"].append(photo_url)
+        return item
+
+    def delete_photo_from_item(self, item_id: str, photo_idx: int) -> Optional[dict]:
+        """ลบรูปถ่ายของเก่า (AC-S02-04)"""
+        item = self.items.get(item_id)
+        if not item or "photo_urls" not in item:
+            return None
+        if 0 <= photo_idx < len(item["photo_urls"]):
+            item["photo_urls"].pop(photo_idx)
+            return item
+        raise IndexError("ไม่พบดัชนีรูปภาพที่ระบุ")
+
+    def _recalculate_order_totals(self, order_id: str):
+        """คำนวณยอดเงินประเมินรวม Min-Max ใหม่ของคำขอ"""
+        order = self.orders.get(order_id)
+        if not order:
+            return
+        order_items = [i for i in self.items.values() if i.get("order_id") == order_id]
+        total_min = sum(i.get("est_min_price", 0.0) for i in order_items)
+        total_max = sum(i.get("est_max_price", 0.0) for i in order_items)
+        order["total_est_min_price"] = total_min
+        order["total_est_max_price"] = total_max
+        order["updated_at"] = datetime.now(timezone.utc).isoformat()
 
     def get_benchmark_prices(self) -> List[dict]:
         return list(self.benchmark_prices.values())

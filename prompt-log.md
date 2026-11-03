@@ -934,3 +934,105 @@
   3. **การอ้างอิง ID:** ฟังก์ชัน คอมโพเนนต์ และชุดทดสอบทุกไฟล์ระบุรหัส `UC-01`, `UC-02`, `MD-DOM-04`, `REQ-SEC-001`, `REQ-SEC-002`, `REQ-UX-001/002`, `REQ-QA-001`, `REQ-OP-001`, `CC-01..06`, `AC-S01-01..05`, `P-01..P-06`, `T-01..T-08` ครบถ้วนตามกฎของ `AGENTS.md`
   4. **Non-goals & Open Questions:** ขอบเขตตรงตามสเปก v2.0 ไม่ทำ KYC บัตรประชาชนผู้ขาย (D-01), ไม่ทำ Social Login, และไม่ทำระบบกู้คืนบัญชีข้ามเบอร์
   5. **การบันทึกสถานะ:** อัปเดตงานย่อย `T-01..T-08` เป็น `[DONE]` ใน `tasks.md` และบันทึกลง `prompt-log.md` เรียบร้อย
+
+---
+
+## บันทึก #46 — `/clarify specs/seller/02-scrap-posting/spec.md` (การตรวจสอบความสอดคล้องกับสารบัญกลางและการขยายสเปก v2.0)
+- **วันที่:** 2026-11-03
+- **คำสั่งที่ใช้:** `/clarify specs/seller/02-scrap-posting/spec.md`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/seller/02-scrap-posting/spec.md` (ปรับปรุงเป็น Version `2.0`, สถานะ `reviewed-post-clarify`, ปรับ Use Case เป็น `UC-02`, เชื่อมโยง `Card 03`, `REQ-UX-002`, `REQ-FN-003`, `REQ-FN-004`, `REQ-DAT-001`, `REQ-SEC-001`, หลักฐาน `EV-01`, `EV-03`, `EV-08`, ขยายเกณฑ์การยอมรับเป็น 5 ข้อ `AC-S02-01` ถึง `AC-S02-05`, และกำหนด Non-goals ชัดเจน)
+- **ประเด็นสำคัญที่ทีมเห็นชอบ:**
+  1. **`CC-01` (Use Case Alignment):** แก้ไขรหัส Use Case ให้สอดคล้องกับสารบัญกลางใน `docs/srs/use-cases.md` เป็น **`UC-02: โพสต์ขายของเก่า ประเมินน้ำหนัก และอัปโหลดรูปถ่าย`** ซึ่งครอบคลุมคู่มือภาพ, การประเมินราคาของชิ้นใหญ่เหมาจ่ายและวัสดุบรรจุลังตาม Card 03, การอัปโหลดรูปถ่าย, และบริการขอคนช่วยยก
+  2. **`CC-02` (Requirements Catalogue & Evidence Mapping):** ปลดรหัส `EV-008` และ `EV-011` ที่อยู่นอกสารบัญ และเชื่อมโยงรหัสกลาง `REQ-UX-002` (Visual Scrap Guide), `REQ-FN-003` (Bulky & Boxed Items), `REQ-FN-004` (Photos & Lifting Help), `REQ-DAT-001`, `REQ-SEC-001` และหลักฐาน `EV-01`, `EV-03`, `EV-08`, และ `Card 03`
+  3. **`CC-03` (State Machine & Preconditions):** การโพสต์ขายของเก่าทำงานในสถานะ `S1 (Draft)` โดยผูกกับที่อยู่นัดหมายเริ่มต้นของผู้ขายจาก `UC-01` อัตโนมัติเป็น Precondition ก่อนส่งต่อเข้าสู่การคำนวณและตรวจสอบเกณฑ์ขั้นต่ำใน `UC-04 / S2`
+  4. **มติในคำถามเปิด `Q-01` ถึง `Q-05` (เลือกทางเลือก A ทั้งหมด):**
+     - `Q-01` (Visual Scrap Guide & Category Hierarchy): จัดหมวดหมู่ 3 กลุ่มหลักชัดเจนพร้อมไอคอนและรูปตัวอย่าง (Option A)
+     - `Q-02` (Missing Sub-Category Guard): บล็อกและแจ้งเตือนเมื่อเลือกของชิ้นใหญ่เหมาจ่ายแต่ไม่ระบุประเภทย่อย (Option A)
+     - `Q-03` (Photo Upload Limits): แนบรูปได้สูงสุด 5 รูป (ขนาด <= 5 MB) พร้อม Thumbnail และปุ่มลบรูป (Option A)
+     - `Q-04` (Lifting Help Request): มีตัวเลือกขอคนช่วยยกของหนัก พร้อมช่องระบุหมายเหตุ และติดป้ายสัญลักษณ์เตือนซาเล้ง (Option A)
+     - `Q-05` (Non-goals): ไม่ทำ AI Computer Vision ตรวจจับรูปภาพ, ไม่คิดค่าบริการช่วยยกในรอบนี้, ไม่ทำประมูลราคา (Option A)
+- **สถานะ:** สเปก `spec.md` ได้รับการรับรองและอัปเดตเป็น Version 2.0 (`reviewed-post-clarify`) พร้อมสำหรับขั้นตอน `/plan`
+
+---
+
+## บันทึก #47 — `/plan specs/seller/02-scrap-posting/spec.md` (แผนสถาปัตยกรรม เทคโนโลยี และการปฏิบัติตาม Constraints ครบทั้ง 13 ข้อ)
+- **วันที่:** 2026-11-03
+- **คำสั่งที่ใช้:** `/plan specs/seller/02-scrap-posting/spec.md`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/seller/02-scrap-posting/plan.md` (Version `1.0`, สถานะ `ready-for-tasks`, ออกแบบสถาปัตยกรรม Service Layer, กำหนดการตัดสินใจ `P-01` ถึง `P-06`, กำหนด DDL Schema และ Pydantic Models, ออกแบบ API 8 เส้นทาง, แผนพัฒนาหน้าจอ 5 คอมโพเนนต์, และตารางตรวจสอบ Constraints ครบทั้ง 13 ข้อ)
+- **ประเด็นสำคัญใน plan.md:**
+  1. **เทคโนโลยีที่ใช้:** ระบุกำกับชัดเจนว่า `"ทีมเลือกเอง ไม่ได้มาจาก spec"` (FastAPI, Supabase/PostgreSQL, React 18 + TailwindCSS, Pytest, Vitest + RTL + JSDOM)
+  2. **การตัดสินใจเชิงสถาปัตยกรรม (`P-01` ถึง `P-06`):**
+     - `P-01`: บริการ Catalog คู่มือภาพ 3 หมวดหลัก (`GENERAL_WEIGHT`, `BOXED_CRATE_ITEMS`, `BULKY_FLAT_RATE`) พร้อมช่วงราคาอ้างอิง (`AC-S02-01`)
+     - `P-02`: บริการประเมินราคาของชิ้นใหญ่เหมาจ่าย พร้อม Missing Sub-Category Guard บล็อกเมื่อไม่ระบุประเภทย่อยตาม Card 03 (`AC-S02-02`, `AC-S02-03`)
+     - `P-03`: บริการประเมินราคาวัสดุบรรจุลัง/กระสอบแยกเฉพาะ (`Card 03 Alt Case`, `AC-S02-02`)
+     - `P-04`: บริการแนบรูปถ่ายของเก่าสูงสุด 5 รูป (ขนาด <= 5 MB) พร้อมภาพตัวอย่าง Thumbnail (`AC-S02-04`)
+     - `P-05`: บริการบันทึกตัวเลือกขอคนช่วยยกของหนัก (`needLiftingHelp`) พร้อมข้อจำกัดหน้างาน และติดป้ายเตือนซาเล้ง (`AC-S02-05`)
+     - `P-06`: บริการสร้างฉบับร่างคำขอ `S1 Draft` ผูกกับที่อยู่นัดหมายเริ่มต้นจาก `UC-01` เป็น Precondition
+  3. **ตารางตรวจ Constraints:** ครบทั้ง 13 ข้อตาม `specs/000-shared/constraints.md` พร้อมระบุเหตุผลข้อที่ไม่เกี่ยวข้อง
+- **สถานะ:** แผน `plan.md` พร้อมสำหรับการแตกงานย่อยในขั้นตอน `/tasks`
+
+---
+
+## บันทึก #48 — `/tasks specs/seller/02-scrap-posting/plan.md` (รายการงานย่อยและ Two-way Traceability Matrix)
+- **วันที่:** 2026-11-03
+- **คำสั่งที่ใช้:** `/tasks specs/seller/02-scrap-posting/plan.md`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/seller/02-scrap-posting/tasks.md` (แตกงานย่อย 8 งาน `T-01` ถึง `T-08` ครบทั้ง 6 คอลัมน์, พร้อมตาราง Two-way Traceability Matrix ครบทุกข้อ `AC-S02-01..05`, และตาราง Constraints Traceability ครบทั้ง 13 ข้อ)
+- **ประเด็นสำคัญใน tasks.md:**
+  1. **งานย่อย 8 งาน (`T-01` ถึง `T-08`):**
+     - `T-01`: สร้าง Data Models และ Schema สำหรับระบบโพสต์ขายของเก่า (`scrap_posting_models.py`, `supabase.py`)
+     - `T-02`: สร้าง Service และ API สำหรับคู่มือภาพและการคำนวณราคา 3 หมวดหลัก (`AC-S02-01`, `P-01`)
+     - `T-03`: สร้าง Service และ API สำหรับของชิ้นใหญ่เหมาจ่าย และ Missing Sub-Category Guard ตาม Card 03 (`AC-S02-02`, `AC-S02-03`, `P-02`, `P-03`)
+     - `T-04`: สร้าง Service และ API สำหรับแนบรูปถ่ายของเก่าและตรวจสอบขีดจำกัดไฟล์ (สูงสุด 5 รูป, <= 5 MB) (`AC-S02-04`, `P-04`)
+     - `T-05`: สร้าง Service และ API สำหรับตัวเลือกขอคนช่วยยกของหนักและหมายเหตุหน้างาน (`AC-S02-05`, `P-05`)
+     - `T-06`: สร้าง Frontend API Client และระบบแคชฉบับร่างออฟไลน์ใน `localStorage` (`CC-05`, `REQ-OP-001`)
+     - `T-07`: พัฒนาคอมโพเนนต์ React ระบบโพสต์ขายของเก่า (`VisualScrapGuide`, `BulkyItemSelector`, `PhotoUploadManager`, `LiftingHelpToggle`, `ScrapPostingPanel`)
+     - `T-08`: สร้างชุดทดสอบหน้าจอ Vitest Component Tests และ Backend Integration E2E Test Suite (`AC-S02-01..05`)
+  2. **Two-way Traceability Matrix:** เกณฑ์การยอมรับทุกข้อ (`AC-S02-01` ถึง `AC-S02-05`) เชื่อมโยงกับงานย่อยและชื่อไฟล์ชุดทดสอบอย่างครบถ้วน
+  3. **Constraints Traceability:** ตรวจสอบข้อจำกัดกลางทั้ง 13 ข้อตาม `specs/000-shared/constraints.md` ครบถ้วน
+- **สถานะ:** แตกงานย่อยเสร็จสมบูรณ์ พร้อมสำหรับการเริ่มพัฒนางานย่อยในขั้นตอน `/implement T-01..08`
+
+
+---
+
+## บันทึก #49 — `/implement T-01..08` (พัฒนาระบบโพสต์ขายของเก่าของผู้ขาย Seller Feature 02 ครบถ้วน 100%)
+- **วันที่:** 2026-11-03
+- **คำสั่งที่ใช้:** `/implement T-01..08` (อ้างอิง `specs/seller/02-scrap-posting/tasks.md`)
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - **Backend Models & Store (`T-01`):**
+    - `backend/app/models/scrap_posting_models.py` (สร้าง Pydantic models: `ScrapCategoryResponse`, `CategoryCatalogResponse`, `WasteItemCreateRequest`, `WasteItemResponse`, `LiftingHelpUpdateRequest`, `DraftOrderCreateRequest`, `DraftOrderResponse`)
+    - `backend/app/core/supabase.py` (ขยายตาราง `scrap_categories`, `waste_pickup_orders`, `waste_items` พร้อม Seed ข้อมูลคู่มือภาพ 3 หมวดหมู่ และรองรับ positional/keyword argument ใน `add_audit_log`)
+    - `backend/tests/test_T01_scrap_posting_models.py` (Unit tests สำหรับ Pydantic validation และ Supabase seeding)
+  - **Backend Service & API (`T-02`, `T-03`, `T-04`, `T-05`):**
+    - `backend/app/services/scrap_posting_service.py` (จัดการ Visual Scrap Guide, ตะกร้าของเก่า, การคิดราคาเหมาตู้เย็น 200–300 บ. ตาม Card 03, Guard แจ้งเตือนเมื่อไม่ระบุประเภทย่อยของชิ้นใหญ่, การแนบรูปถ่ายไม่เกิน 5 รูป/ไม่เกิน 5 MB, การขอคนช่วยยกพร้อมหมายเหตุหน้างาน, และการบันทึก Audit Logs)
+    - `backend/app/api/v1/scrap_posting.py` (FastAPI router ให้บริการ 8 endpoints: `GET /categories`, `POST /drafts`, `GET /drafts/{id}`, `POST /drafts/{id}/items`, `DELETE /drafts/{id}/items/{item_id}`, `POST /drafts/{id}/items/{item_id}/photos`, `DELETE /drafts/{id}/items/{item_id}/photos/{photo_idx}`, `PATCH /drafts/{id}/lifting-help`)
+    - `backend/app/api/v1/pricing.py` (รวมและเมานต์ scrap_posting router)
+  - **Backend Automated Tests:**
+    - `backend/tests/test_AC_S02_01_visual_scrap_guide.py` (ทดสอบหมวดหมู่คู่มือภาพและราคาประเมิน)
+    - `backend/tests/test_AC_S02_02_bulky_and_boxed_items.py` (ทดสอบราคาเหมาตู้เย็นและวัสดุบรรจุลังตาม Card 03)
+    - `backend/tests/test_AC_S02_03_missing_bulky_sub_category.py` (ทดสอบ Missing Sub-Category Guard บล็อก HTTP 422)
+    - `backend/tests/test_AC_S02_04_photo_attachment.py` (ทดสอบการแนบรูปถ่ายสูงสุด 5 รูปและจำกัดขนาด 5 MB)
+    - `backend/tests/test_AC_S02_05_lifting_help_badge.py` (ทดสอบตัวเลือกขอคนช่วยยกและป้ายเตือนซาเล้ง)
+    - `backend/tests/test_e2e_scrap_posting.py` (E2E Integration test ครบวงจรตั้งแต่ S1 Draft จนถึง Audit Log)
+  - **Frontend API Client & Components (`T-06`, `T-07`):**
+    - `frontend/src/services/scrapPostingApi.js` (API client พร้อม fallback แคชออฟไลน์ใน localStorage: `saleng_draft_order`)
+    - `frontend/tests/scrapPostingApi.test.mjs` (Unit test สำหรับ API client)
+    - `frontend/src/components/VisualScrapGuide.jsx` (แท็บ 3 หมวดหมู่ ไอคอนใหญ่ แตะเลือกง่ายไม่ต้องพิมพ์ `REQ-UX-002`)
+    - `frontend/src/components/BulkyItemSelector.jsx` (ตัวเลือกชิ้นใหญ่เหมาจ่าย พร้อม Guard แสดงกล่องแจ้งเตือนสีแดงเมื่อไม่เลือกประเภทย่อย)
+    - `frontend/src/components/PhotoUploadManager.jsx` (อัปโหลดรูป แสดง Thumbnail สูงสุด 5 รูป และปุ่มลบรูป)
+    - `frontend/src/components/LiftingHelpToggle.jsx` (ช่องติ๊กขอคนช่วยยก กล่องระบุหมายเหตุหน้างาน และป้ายเตือน `⚠️ ขอคนช่วยยก`)
+    - `frontend/src/components/ScrapPostingPanel.jsx` (แผงหลักรวมตะกร้า คำนวณราคาประเมินรวม Min-Max และผูกกับที่อยู่นัดหมายเริ่มต้น)
+  - **Frontend Automated Tests (`T-08`):**
+    - `frontend/tests/AC-S02-01.test.jsx` (Component test สำหรับ VisualScrapGuide)
+    - `frontend/tests/AC-S02-02.test.jsx` (Component test สำหรับ BulkyItemSelector และ Guard)
+    - `frontend/tests/AC-S02-04.test.jsx` (Component test สำหรับ PhotoUploadManager)
+    - `frontend/tests/AC-S02-05.test.jsx` (Component test สำหรับ LiftingHelpToggle)
+  - **Task Tracking:**
+    - `specs/seller/02-scrap-posting/tasks.md` (ปรับสถานะเป็น `completed` และเช็คผ่าน `[DONE]` ครบทุกงาน `T-01` ถึง `T-08`)
+- **ผลการทดสอบ (Verification & Regression):**
+  - **Backend (Pytest):** 102 passed, 0 failed (ครอบคลุมทั้ง Seller 01, Seller 02, Seller 04, 06, 07, 08, 09, และระบบส่วนกลาง)
+  - **Frontend (Vitest):** 35 test files passed, 87 tests passed, 0 failed (รวมทุกคอมโพเนนต์และ API tests)
+  - **Zero Regressions:** ไม่พบผลกระทบต่อฟีเจอร์เดิมของระบบ
+- **สถานะ:** ฟีเจอร์ Seller 02 พัฒนาและตรวจสอบคุณภาพเสร็จสมบูรณ์ 100% พร้อมใช้งาน
