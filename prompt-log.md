@@ -1249,3 +1249,109 @@
   - **Frontend (Vitest):** 47 test files passed, 114 tests passed, 0 failed
   - **Zero Regressions:** ฟีเจอร์เดิมทั้งหมดในระบบยังคงทำงานได้อย่างถูกต้อง 100%
 - **สถานะ:** ฟีเจอร์ Seller 05 พัฒนาและตรวจสอบคุณภาพเสร็จสมบูรณ์ 100% พร้อมใช้งาน
+
+
+---
+
+## บันทึก #58 — `/clarify specs/buyer/01-account-and-kyc/spec.md` (การตรวจสอบความสอดคล้องกับสารบัญกลางและการขยายสเปก v2.0)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/clarify specs/buyer/01-account-and-kyc/spec.md`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/buyer/01-account-and-kyc/spec.md` (อัปเดตเป็น Version 2.0 สถานะ `reviewed-post-clarify`, แก้ไข Phantom Requirement ID จาก `REQ-CON-003` เป็น `REQ-FN-001`, `BR-03`, `MD-DOM-04` และ `D-00-01`, ปรับรหัส AC ให้เป็น `AC-B01-01` ถึง `AC-B01-05`, ระบุขอบเขตการทำงานร่วมกับ Seller 03 และ Buyer 04, และตอบคำถามเปิด `Q-01` ถึง `Q-06`)
+- **ประเด็นสำคัญที่พบและแก้ไข:**
+  1. **การแก้ไขข้อขัดแย้งของรหัสความต้องการ (Consistency Fix):**
+     - `CC-01`: นำรหัสอุปโลกน์ `REQ-CON-003` ออก และแทนที่ด้วยความต้องการจริงในสารบัญกลาง ได้แก่ `REQ-FN-001`, `BR-03`, `MD-DOM-04: Saleng.maxCapacityKg` และ `D-00-01`
+     - `CC-02`: จัดกลุ่มและเปลี่ยนรหัสเกณฑ์การยอมรับจาก `AC-04-08` มาเป็น `AC-B01-01` ถึง `AC-B01-05` ให้สอดคล้องกับโครงสร้างรหัส Buyer Feature
+     - `CC-03`: บังคับใช้เงื่อนไขเบื้องต้น `D-00-01` (Precondition: KYC ต้องผ่านก่อนรับงาน) โดยกำหนดให้ซาเล้งที่ไม่ผ่าน KYC ถูกบล็อกด้วย HTTP 403 เมื่อกดรับงาน
+  2. **ข้อสรุปแนวทางในคำถามเปิด (`Q-01` ถึง `Q-06`):**
+     - `Q-01` (Buyer Registration & Login): ใช้วิธีลงทะเบียนและเข้าสู่ระบบด้วยเบอร์โทรศัพท์และ Phone OTP 6 หลัก (Mock `123456`) พร้อมบันทึก Session Token ลงใน `localStorage`
+     - `Q-02` (Thai-ID / DBD-ID KYC Submission): ซาเล้งต้องกรอกเลขบัตรประชาชน 13 หลัก, ชื่อ-นามสกุลจริง, พร้อมอัปโหลดรูปถ่าย 4 จุด (หน้าบัตร ปชช., เซลฟี่คู่กับบัตร, และรูปถ่ายรถพร้อมป้ายทะเบียน)
+     - `Q-03` (KYC Lifecycle States): วงจรชีวิต KYC มี 4 สถานะ: `UNVERIFIED` ➔ `PENDING_REVIEW` ➔ `VERIFIED` (หรือ `REJECTED` พร้อมเหตุผลและเปิดให้ส่งใหม่)
+     - `Q-04` (Vehicle Types & Max Capacity): กำหนดยานพาหนะมาตรฐาน 3 รูปแบบ (`TRICYCLE` 150 กก., `SIDE_CAR_MOTORCYCLE` 300 กก., `PICKUP_TRUCK` 1,000 กก.) และเปิดให้ปรับแต่งความจุจริง (`max_capacity_kg > 0`)
+     - `Q-05` (Unverified Collector Gate): ซาเล้งที่ยังไม่ผ่าน KYC สามารถเปิดดูแอปและแผนที่งานได้ แต่เมื่อกด "รับงาน" ระบบจะบล็อกด้วย HTTP 403 ทันทีตามกฎ `D-00-01`
+     - `Q-06` (Mock Admin Approval): เปิด Endpoint จำลอง `POST /api/v1/collectors/{id}/mock-kyc-approval` และ `rejection` เพื่อความคล่องตัวในการรัน Automated Test และ UAT
+- **สถานะ:** สเปก `spec.md` ได้รับการรับรองและอัปเดตเป็น Version 2.0 (`reviewed-post-clarify`) พร้อมสำหรับขั้นตอน `/plan`
+
+---
+
+## บันทึก #59 — `/plan specs/buyer/01-account-and-kyc/spec.md` (แผนสถาปัตยกรรม เทคโนโลยี และการปฏิบัติตาม Constraints ครบทั้ง 13 ข้อ)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/plan specs/buyer/01-account-and-kyc/spec.md`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/buyer/01-account-and-kyc/plan.md` (Version `1.0`, สถานะ `ready-for-tasks`, ออกแบบสถาปัตยกรรม Service Layer, กำหนดการตัดสินใจ `P-01` ถึง `P-06`, ออกแบบ DDL Schema และ Pydantic Models, ออกแบบ API 11 เส้นทาง, แผนพัฒนาหน้าจอ Mobile-First 6 คอมโพเนนต์, และตารางตรวจสอบ Constraints ครบทั้ง 13 ข้อ)
+- **ประเด็นสำคัญใน plan.md:**
+  1. **เทคโนโลยีที่ใช้:** ระบุกำกับชัดเจนว่า `"ทีมเลือกเอง ไม่ได้มาจาก spec"` (Python 3.11 + FastAPI, Supabase/PostgreSQL, React 18 + TailwindCSS, Pytest, Vitest + RTL + JSDOM)
+  2. **การตัดสินใจเชิงสถาปัตยกรรม (`P-01` ถึง `P-06`):**
+     - `P-01`: ระบบยืนยันตัวตนซาเล้งด้วยเบอร์โทรและรหัส OTP 6 หลัก พร้อมออก Session Token จัดเก็บใน `localStorage` รองรับการใช้งานต่อเนื่องและออฟไลน์ (`AC-B01-01`, `Q-01`)
+     - `P-02`: รองรับการตั้งค่ายานพาหนะ 3 รูปแบบมาตรฐาน (`TRICYCLE` 150 กก., `SIDE_CAR_MOTORCYCLE` 300 กก., `PICKUP_TRUCK` 1,000 กก.) และปรับความจุจริงเพื่อใช้ใน `UC-04` (`AC-B01-02`, `Q-04`, `REQ-FN-001`, `BR-03`)
+     - `P-03`: ระบบส่งเอกสาร Thai-ID / DBD-ID ตรวจสอบเลข ปชช. 13 หลัก และรูปถ่ายหลักฐาน 4 จุด (`AC-B01-03`, `Q-02`, `SC-04`)
+     - `P-04`: ควบคุมสถานะวงจร KYC 4 ขั้นตอน (`UNVERIFIED` ➔ `PENDING_REVIEW` ➔ `VERIFIED` / `REJECTED`) พร้อมระบบแจ้งเหตุผลและเปิดให้ส่งใหม่ได้ (`AC-B01-03`, `Q-03`, `D-00-01`)
+     - `P-05`: การบังคับใช้กฎเหล็ก Unverified Gate บล็อกการกดรับงานด้วย `HTTP 403 Forbidden` หาก `verified = false` ตามกฎความปลอดภัยกลาง `D-00-01` (`AC-B01-04`, `Q-05`)
+     - `P-06`: เปิด Endpoint จำลอง `mock-kyc-approval` และ `rejection` สำหรับการทดสอบ และบันทึกประวัติลง `AuditLog` แบบ Append-only (`AC-B01-05`, `Q-06`, `REQ-SEC-001`)
+  3. **ตารางตรวจ Constraints:** ครบทั้ง 13 ข้อตาม `specs/000-shared/constraints.md` โดยเชื่อมโยงการตัดสินใจ `P-01` ถึง `P-06` ครบถ้วน
+- **สถานะ:** แผน `plan.md` พร้อมสำหรับการแตกงานย่อยในขั้นตอน `/tasks`
+
+---
+
+## บันทึก #60 — `/tasks specs/buyer/01-account-and-kyc/plan.md` (รายการงานย่อยและ Two-way Traceability Matrix)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/tasks specs/buyer/01-account-and-kyc/plan.md`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/buyer/01-account-and-kyc/tasks.md` (แตกงานย่อย 8 งาน `T-01` ถึง `T-08` ครบทั้ง 6 คอลัมน์, พร้อมตาราง Two-way Traceability Matrix ครบทุกข้อ `AC-B01-01..05`, และตาราง Constraints Traceability ครบทั้ง 13 ข้อ)
+- **ประเด็นสำคัญใน tasks.md:**
+  1. **งานย่อย 8 งาน (`T-01` ถึง `T-08`):**
+     - `T-01`: สร้าง Data Models และ Schema สำหรับระบบบัญชีซาเล้ง ข้อมูลยานพาหนะ และการยืนยันตัวตน KYC (`collector_account_models.py`, `supabase.py`)
+     - `T-02`: สร้าง Service และ API สำหรับลงทะเบียนและเข้าสู่ระบบของซาเล้งด้วยเบอร์โทรศัพท์และ Phone OTP (`AC-B01-01`, `P-01`, `Q-01`)
+     - `T-03`: สร้าง Service และ API สำหรับตั้งค่าโปรไฟล์ยานพาหนะ 3 รูปแบบ และควบคุมน้ำหนักบรรทุกสูงสุดตามกฎ BR-03 (`AC-B01-02`, `P-02`, `Q-04`)
+     - `T-04`: สร้าง Service และ API สำหรับส่งเอกสารยืนยันตัวตน Thai-ID/DBD-ID และจัดการสถานะวงจร KYC 4 ขั้นตอน (`AC-B01-03`, `P-03`, `P-04`, `Q-02`, `Q-03`)
+     - `T-05`: สร้าง Service และ API บังคับใช้กฎเหล็ก Unverified Collector Job Claim Gate บล็อกด้วย HTTP 403 ตามกฎ D-00-01 พร้อมบันทึก Audit Log (`AC-B01-04`, `AC-B01-05`, `P-05`, `P-06`, `Q-05`)
+     - `T-06`: สร้าง Frontend API Client และระบบแคชข้อมูลซาเล้งออฟไลน์ใน `localStorage` (`CC-05`, `REQ-OP-001`)
+     - `T-07`: พัฒนาคอมโพเนนต์ React ระบบบัญชีและการยืนยันตัวตนซาเล้ง (Mobile-First SPA Viewport 375px–414px, ปุ่ม >= 48px ตาม `REQ-UX-001`)
+     - `T-08`: สร้างชุดทดสอบหน้าจอ Vitest Component Tests และ Backend Integration E2E Test Suite (`AC-B01-01..05`)
+  2. **Two-way Traceability Matrix:** เกณฑ์การยอมรับทุกข้อ (`AC-B01-01` ถึง `AC-B01-05`) เชื่อมโยงกับงานย่อยและชื่อไฟล์ชุดทดสอบอย่างครบถ้วน
+  3. **Constraints Traceability:** ตรวจสอบข้อจำกัดกลางทั้ง 13 ข้อตาม `specs/000-shared/constraints.md` ครบถ้วน
+- **สถานะ:** แตกงานย่อยเสร็จสมบูรณ์ พร้อมสำหรับการเริ่มพัฒนางานย่อยในขั้นตอน `/implement T-01..08`
+
+---
+
+## บันทึก #61 — `/implement T-01..08` (พัฒนาระบบบัญชีและการยืนยันตัวตนซาเล้ง Buyer 01 ครบถ้วน 8 งานย่อย)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/implement T-01..08`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - **Data Models & Schema (`T-01`):**
+    - `backend/app/models/collector_account_models.py` (`CollectorOtpRequest`, `CollectorOtpVerifyRequest`, `CollectorAuthResponse`, `CollectorProfileUpdateRequest`, `VehicleProfileUpdateRequest`, `KycSubmissionRequest`, `KycStatusResponse`, `JobClaimGateCheckResponse`, `MockKycReviewRequest`, `mask_phone_number`, `validate_thai_id`)
+    - `backend/app/core/supabase.py` (ขยาย Store สำหรับ `collector_otps`, `collector_sessions`, `collector_kyc_submissions` และฟังก์ชันจัดการโปรไฟล์/KYC ของซาเล้ง)
+    - `backend/tests/test_T01_collector_account_models.py` (7 passed)
+  - **Service Layer & API Routers (`T-02`, `T-03`, `T-04`, `T-05`):**
+    - `backend/app/services/collector_account_service.py` (`CollectorAuthService`, `CollectorVehicleService`, `CollectorKycService`)
+    - `backend/app/api/v1/collector_account.py` (เปิด API 11 เส้นทางสำหรับ Authentication, Profile, Vehicle, KYC, Gate Check, และ Mock Helpers)
+    - `backend/app/api/v1/pricing.py` (เมานต์ `collector_account_router` ภายใต้ prefix `/api/v1`)
+    - `backend/tests/test_AC_B01_01_collector_auth.py` (6 passed)
+    - `backend/tests/test_AC_B01_02_vehicle_profile.py` (4 passed)
+    - `backend/tests/test_AC_B01_03_kyc_submission.py` (2 passed)
+    - `backend/tests/test_AC_B01_04_unverified_gate.py` (4 passed)
+    - `backend/tests/test_AC_B01_05_collector_audit_logging.py` (1 passed)
+  - **Frontend Client & Components (`T-06`, `T-07`):**
+    - `frontend/src/services/collectorAccountApi.js` (API Client พร้อมแคชออฟไลน์ใน `localStorage` ตาม `CC-05`, `REQ-OP-001`)
+    - `frontend/src/components/CollectorPhoneLoginForm.jsx` (ฟอร์มเบอร์โทร + OTP 6 หลัก + Cooldown 60s)
+    - `frontend/src/components/CollectorProfileCard.jsx` (การ์ดโปรไฟล์ + เบอร์โทร Masked `08X-XXX-XXXX` + สถานะ KYC + Rating)
+    - `frontend/src/components/VehicleConfigCard.jsx` (แผงเลือกยานพาหนะ 3 รูปแบบมาตรฐาน + ระบุทะเบียนและความจุน้ำหนัก)
+    - `frontend/src/components/KycStatusBanner.jsx` (แบนเนอร์แจ้งสถานะ KYC 4 ขั้นตอน: `UNVERIFIED`, `PENDING_REVIEW`, `VERIFIED`, `REJECTED`)
+    - `frontend/src/components/KycSubmissionModal.jsx` (ป๊อปอัปยื่นเลข ปชช. 13 หลัก พร้อมภาพถ่าย 4 จุด)
+    - `frontend/src/components/CollectorAccountPanel.jsx` (แผงหลักรวมคอมโพเนนต์ + ปุ่มทดสอบ Claim Job Gate + Mock Dev Helpers)
+    - `frontend/tests/collectorAccountApi.test.mjs` (7 passed)
+  - **Automated Tests & E2E Integration Suite (`T-08`):**
+    - `frontend/tests/AC-B01-01.test.jsx` (3 passed)
+    - `frontend/tests/AC-B01-02.test.jsx` (3 passed)
+    - `frontend/tests/AC-B01-03.test.jsx` (2 passed)
+    - `frontend/tests/AC-B01-04.test.jsx` (2 passed)
+    - `backend/tests/test_e2e_collector_account_and_kyc.py` (1 passed)
+  - **Task Tracking:**
+    - `specs/buyer/01-account-and-kyc/tasks.md` (ปรับสถานะเป็น `completed` และมาร์ก `T-01` ถึง `T-08` เป็น `[DONE]`)
+- **ผลการทดสอบและการตรวจรับ 5 ด่าน:**
+  1. **Backend Tests:** 153 passed 100% (รวม 25 backend tests สำหรับ Buyer 01 และ 128 tests เดิม)
+  2. **Frontend Tests:** 131 passed across 52 test files 100% (รวม 17 frontend tests สำหรับ Buyer 01)
+  3. **Zero Regressions:** ฟีเจอร์เดิมทั้งหมดของระบบ (Seller 01..09) ทำงานได้ปกติ 100%
+  4. **PDPA & Security:** บังคับใช้ Phone Masking `08X-XXX-XXXX`, กฎเหล็ก Unverified Collector Block Gate `D-00-01` (HTTP 403), และบันทึก Security Audit Log ครบทุกเหตุการณ์
+  5. **UX Mobile-First:** ปุ่มบนหน้าจอมีขนาดความสูง `>= 48px` ตามข้อกำหนด `REQ-UX-001`
+- **สถานะ:** พัฒนาฟีเจอร์ Buyer 01 เสร็จสมบูรณ์ พร้อมส่งมอบและพร้อมสำหรับฟีเจอร์ถัดไป (`specs/buyer/02-search-and-filtering/`)

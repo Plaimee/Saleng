@@ -3,9 +3,10 @@ Supabase Client & Data Access Layer
 รองรับ CC-04 (Relational Concurrency / ACID), REQ-DAT-001, REQ-SEC-001
 """
 
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Dict, List, Optional
 import uuid
+import re
 from backend.app.core.config import settings
 
 
@@ -34,6 +35,9 @@ class SupabaseStore:
         self.pickup_locations: Dict[str, dict] = {}
         self.scrap_categories: Dict[str, dict] = {}
         self.saleng_profiles: Dict[str, dict] = {}
+        self.collector_otps: List[dict] = []
+        self.collector_sessions: Dict[str, dict] = {}
+        self.collector_kyc_submissions: Dict[str, dict] = {}
         self.audit_logs: List[dict] = []
         self._seed_default_benchmark_prices()
         self._seed_default_scrap_categories()
@@ -216,11 +220,14 @@ class SupabaseStore:
                 "saleng_id": "saleng-01",
                 "display_name": "ลุงสมชาย ซาเล้งสุทธิสาร",
                 "phone": "081-234-5678",
+                "phone_masked": "08X-XXX-5678",
                 "avatar_url": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150",
                 "verified": True,
+                "kyc_status": "VERIFIED",
                 "rating": 4.9,
                 "completed_jobs_count": 142,
                 "vehicle_type": "TRICYCLE",
+                "license_plate": "1กข-9999",
                 "max_capacity_kg": 200.0,
                 "current_lat": 13.7900,
                 "current_lng": 100.5750,
@@ -239,11 +246,14 @@ class SupabaseStore:
                 "saleng_id": "saleng-02",
                 "display_name": "พี่วิชัย รถกระบะรีไซเคิล",
                 "phone": "089-876-5432",
+                "phone_masked": "08X-XXX-5432",
                 "avatar_url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150",
                 "verified": True,
+                "kyc_status": "VERIFIED",
                 "rating": 4.8,
                 "completed_jobs_count": 215,
                 "vehicle_type": "PICKUP_TRUCK",
+                "license_plate": "2ฒณ-8888",
                 "max_capacity_kg": 1000.0,
                 "current_lat": 13.7920,
                 "current_lng": 100.5770,
@@ -261,11 +271,14 @@ class SupabaseStore:
                 "saleng_id": "saleng-03",
                 "display_name": "อนันต์ ซาเล้งพ่วงข้างใหญ่",
                 "phone": "086-555-1234",
+                "phone_masked": "08X-XXX-1234",
                 "avatar_url": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150",
                 "verified": True,
+                "kyc_status": "VERIFIED",
                 "rating": 4.7,
                 "completed_jobs_count": 89,
                 "vehicle_type": "LARGE_SIDECAR",
+                "license_plate": "3จจ-7777",
                 "max_capacity_kg": 400.0,
                 "current_lat": 13.8050,
                 "current_lng": 100.5800,
@@ -281,11 +294,14 @@ class SupabaseStore:
                 "saleng_id": "saleng-04",
                 "display_name": "นพดล ซาเล้ง (พักกะ)",
                 "phone": "082-111-2222",
+                "phone_masked": "08X-XXX-2222",
                 "avatar_url": None,
                 "verified": True,
+                "kyc_status": "VERIFIED",
                 "rating": 4.5,
                 "completed_jobs_count": 50,
                 "vehicle_type": "TRICYCLE",
+                "license_plate": "4ขข-6666",
                 "max_capacity_kg": 200.0,
                 "current_lat": 13.7910,
                 "current_lng": 100.5760,
@@ -297,11 +313,14 @@ class SupabaseStore:
                 "saleng_id": "saleng-05",
                 "display_name": "เอกชัย ยังไม่ยืนยัน",
                 "phone": "083-333-4444",
+                "phone_masked": "08X-XXX-4444",
                 "avatar_url": None,
                 "verified": False,  # ยังไม่ผ่าน KYC ห้ามแสดงผล
+                "kyc_status": "UNVERIFIED",
                 "rating": 3.0,
                 "completed_jobs_count": 5,
                 "vehicle_type": "TRICYCLE",
+                "license_plate": None,
                 "max_capacity_kg": 200.0,
                 "current_lat": 13.7905,
                 "current_lng": 100.5755,
@@ -895,6 +914,179 @@ class SupabaseStore:
                 return l
         # หากไม่มี default ให้คืนที่อยู่อันแรกถ้ามี
         return locs[0] if locs else None
+
+    # -------------------------------------------------------------
+    # ระบบบัญชีและการยืนยันตัวตนซาเล้ง (Buyer 01: Account & KYC)
+    # -------------------------------------------------------------
+    def get_collector_by_phone(self, phone: str) -> Optional[dict]:
+        """ค้นหาข้อมูลซาเล้งจากเบอร์โทรศัพท์ (P-01)"""
+        cleaned_target = re.sub(r"\D", "", phone or "")
+        for c in self.saleng_profiles.values():
+            c_phone = re.sub(r"\D", "", c.get("phone", ""))
+            if c_phone == cleaned_target:
+                return c
+        return None
+
+    def create_collector_otp(self, phone: str, otp_code: str, expires_in_seconds: int = 300) -> dict:
+        """บันทึกรหัส OTP สำหรับซาเล้ง (AC-B01-01)"""
+        now = datetime.now(timezone.utc)
+        otp_data = {
+            "id": str(uuid.uuid4()),
+            "phone": phone,
+            "otp_code": otp_code,
+            "expires_at": (now + timedelta(seconds=expires_in_seconds)).isoformat(),
+            "is_used": False,
+            "created_at": now.isoformat(),
+        }
+        self.collector_otps.append(otp_data)
+        return otp_data
+
+    def get_latest_collector_otp(self, phone: str) -> Optional[dict]:
+        """ดึง OTP ล่าสุดของซาเล้งที่ยังไม่ถูกใช้"""
+        matching = [
+            o for o in self.collector_otps
+            if o.get("phone") == phone and not o.get("is_used")
+        ]
+        if not matching:
+            return None
+        return sorted(matching, key=lambda x: x.get("created_at", ""), reverse=True)[0]
+
+    def mark_collector_otp_used(self, otp_id: str):
+        """ระบุว่า OTP ของซาเล้งถูกใช้แล้ว"""
+        for o in self.collector_otps:
+            if o.get("id") == otp_id:
+                o["is_used"] = True
+
+    def create_collector_session(self, saleng_id: str, expires_in_days: int = 30) -> dict:
+        """สร้างเซสชันโทเคนสำหรับซาเล้ง (AC-B01-01)"""
+        token = f"saleng_tok_{uuid.uuid4().hex}"
+        now = datetime.now(timezone.utc)
+        session_data = {
+            "token": token,
+            "saleng_id": saleng_id,
+            "created_at": now.isoformat(),
+            "expires_at": (now + timedelta(days=expires_in_days)).isoformat(),
+            "is_active": True,
+        }
+        self.collector_sessions[token] = session_data
+        return session_data
+
+    def get_collector_session(self, token: str) -> Optional[dict]:
+        """ดึงเซสชันซาเล้งจาก Token"""
+        session = self.collector_sessions.get(token)
+        if not session or not session.get("is_active"):
+            return None
+        return session
+
+    def delete_collector_session(self, token: str) -> bool:
+        """ยกเลิกเซสชันซาเล้ง (Logout)"""
+        if token in self.collector_sessions:
+            self.collector_sessions[token]["is_active"] = False
+            del self.collector_sessions[token]
+            return True
+        return False
+
+    def create_collector_profile(self, phone: str, display_name: Optional[str] = None) -> dict:
+        """สร้างโปรไฟล์ซาเล้งใหม่เมื่อเข้าใช้งานครั้งแรก (P-01, AC-B01-01)"""
+        saleng_id = f"saleng-{uuid.uuid4().hex[:6]}"
+        from backend.app.models.collector_account_models import mask_phone_number
+        phone_masked = mask_phone_number(phone)
+        name = display_name or f"ซาเล้ง {phone_masked[-4:]}"
+        now = datetime.now(timezone.utc).isoformat()
+        profile = {
+            "saleng_id": saleng_id,
+            "display_name": name,
+            "phone": phone,
+            "phone_masked": phone_masked,
+            "avatar_url": None,
+            "vehicle_type": "TRICYCLE",
+            "license_plate": None,
+            "max_capacity_kg": 150.0,
+            "verified": False,
+            "kyc_status": "UNVERIFIED",
+            "rejection_reason": None,
+            "rating": 5.0,
+            "completed_jobs_count": 0,
+            "current_lat": 13.7563,
+            "current_lng": 100.5018,
+            "is_online": False,
+            "accepted_categories": [
+                "MAT-CARDBOARD",
+                "MAT-WHITE-PAPER",
+                "MAT-GLASS-BOTTLE",
+                "MAT-PLASTIC-BOTTLE",
+            ],
+            "created_at": now,
+            "updated_at": now,
+        }
+        self.saleng_profiles[saleng_id] = profile
+        return profile
+
+    def submit_collector_kyc(self, saleng_id: str, kyc_data: dict) -> dict:
+        """บันทึกคำขอส่งเอกสารยืนยันตัวตน KYC (AC-B01-03, P-03)"""
+        submission_id = str(uuid.uuid4())
+        now = datetime.now(timezone.utc).isoformat()
+        submission = {
+            "id": submission_id,
+            "saleng_id": saleng_id,
+            "id_card_no": kyc_data["id_card_no"],
+            "full_name": kyc_data["full_name"],
+            "id_card_photo_url": kyc_data["id_card_photo_url"],
+            "selfie_photo_url": kyc_data["selfie_photo_url"],
+            "vehicle_photo_url": kyc_data.get("vehicle_photo_url"),
+            "status": "PENDING_REVIEW",
+            "rejection_reason": None,
+            "submitted_at": now,
+            "reviewed_at": None,
+            "reviewed_by": None,
+        }
+        self.collector_kyc_submissions[submission_id] = submission
+
+        # อัปเดตสถานะใน saleng_profiles
+        if saleng_id in self.saleng_profiles:
+            self.saleng_profiles[saleng_id]["kyc_status"] = "PENDING_REVIEW"
+            self.saleng_profiles[saleng_id]["rejection_reason"] = None
+            self.saleng_profiles[saleng_id]["updated_at"] = now
+        return submission
+
+    def get_collector_latest_kyc(self, saleng_id: str) -> Optional[dict]:
+        """ดึงประวัติการส่งเอกสาร KYC ล่าสุดของซาเล้ง (AC-B01-03)"""
+        matching = [
+            sub for sub in self.collector_kyc_submissions.values()
+            if sub.get("saleng_id") == saleng_id
+        ]
+        if not matching:
+            return None
+        return sorted(matching, key=lambda x: x.get("submitted_at", ""), reverse=True)[0]
+
+    def update_collector_kyc_status(
+        self,
+        saleng_id: str,
+        status: str,
+        rejection_reason: Optional[str] = None,
+        reviewed_by: str = "SYSTEM_ADMIN"
+    ) -> Optional[dict]:
+        """อัปเดตผลการตรวจสอบ KYC (อนุมัติ/ปฏิเสธ) (AC-B01-03, Q-06, P-06)"""
+        profile = self.saleng_profiles.get(saleng_id)
+        if not profile:
+            return None
+
+        now = datetime.now(timezone.utc).isoformat()
+        is_verified = (status == "VERIFIED")
+        profile["kyc_status"] = status
+        profile["verified"] = is_verified
+        profile["rejection_reason"] = rejection_reason if status == "REJECTED" else None
+        profile["updated_at"] = now
+
+        # อัปเดตใน submission ล่าสุดด้วย
+        latest_sub = self.get_collector_latest_kyc(saleng_id)
+        if latest_sub:
+            latest_sub["status"] = status
+            latest_sub["rejection_reason"] = rejection_reason if status == "REJECTED" else None
+            latest_sub["reviewed_at"] = now
+            latest_sub["reviewed_by"] = reviewed_by
+
+        return profile
 
 
 # Singleton instance สำหรับเข้าถึง Database
