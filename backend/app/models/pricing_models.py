@@ -52,6 +52,14 @@ class WasteItemEstimateInput(BaseModel):
         return v
 
 
+class CalculationEstimateRequest(BaseModel):
+    """
+    Request Payload สำหรับคำนวณราคาประเมิน
+    รองรับ Card 01, AC-S04-02, D-06
+    """
+    items: List[WasteItemEstimateInput] = Field(..., min_length=1, description="รายการของเก่าที่ต้องการประเมินราคา")
+
+
 class WasteItemEstimateOutput(BaseModel):
     category_code: str
     category_name: str

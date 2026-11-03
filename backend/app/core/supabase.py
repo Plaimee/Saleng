@@ -100,7 +100,8 @@ class SupabaseStore:
         category_code = price_data["category_code"]
         if "id" not in price_data or not price_data["id"]:
             price_data["id"] = str(uuid.uuid4())
-        price_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+        if "updated_at" not in price_data or not price_data["updated_at"]:
+            price_data["updated_at"] = datetime.now(timezone.utc).isoformat()
         self.benchmark_prices[category_code] = price_data
         return price_data
 

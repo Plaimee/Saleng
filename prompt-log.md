@@ -148,3 +148,138 @@
   3. **การอ้างอิง ID:** โค้ดและ Test มีคอมเมนต์อ้างอิง `REQ-DAT-001`, `REQ-FN-001`, `REQ-FN-006`, `BR-01`, `AC-S04-01..05`, `D-01..D-04` ชัดเจน
   4. **Non-goals & Open Questions:** ไม่มีการสร้างโค้ดส่วนเกินจาก Non-goals และค่าเกณฑ์ต่าง ๆ ถูกแยกเป็น Config ใน `config.py`
   5. **การบันทึกผล:** อัปเดตสถานะ `T-01` เป็น `[DONE]` ใน `tasks.md` และบันทึกลง `prompt-log.md` เรียบร้อย
+
+---
+
+## บันทึก #12 — `/implement T-02` (สร้าง Service และ API ราคากลางประจำวัน พร้อม Scheduled Refresh)
+- **วันที่:** 2026-11-03
+- **คำสั่งที่ใช้:** `/implement T-02`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `backend/app/services/pricing_service.py` (สร้าง PricingService ดึงและรีเฟรชราคากลางรายวันตาม `REQ-DAT-001`, `AC-S04-01`, `D-04`)
+  - `backend/app/cron/daily_price_updater.py` (สร้าง Scheduled Worker อัปเดตราคากลางประจำวัน 06:00 น. พร้อมบันทึก Audit Log ตาม `REQ-SEC-001`, `D-04`)
+  - `backend/app/api/v1/pricing.py` (เปิด Endpoint `GET /api/v1/pricing/benchmark-prices`)
+  - `backend/app/core/supabase.py` (ปรับปรุง `upsert_benchmark_price` ให้รักษา timestamp อัปเดตที่ระบุ)
+  - `backend/tests/test_AC_S04_01_benchmark_price.py` (ชุดทดสอบอัตโนมัติสำหรับ `AC-S04-01`)
+- **ผลการตรวจ 5 ข้อหลังจบ Task:**
+  1. **ไฟล์ที่แตะ:** แตะเฉพาะไฟล์ที่กำหนดใน `T-02` และไฟล์แพ็กเกจ `__init__.py` ที่เกี่ยวข้อง
+  2. **ผลการรัน Test:** รัน `pytest backend/tests/` ได้ผล: **`6 passed in 0.11s`** (ผ่าน 100% ครอบคลุมทั้ง `T-01` 4 passed และ `T-02` 2 passed)
+  3. **การอ้างอิง ID:** โค้ดและ Test อ้างอิง `REQ-DAT-001`, `AC-S04-01`, `P-04`, `D-04` และตั้งชื่อฟังก์ชันทดสอบตามรหัส AC
+  4. **Non-goals & Open Questions:** ไม่มีฟีเจอร์นอกขอบเขต ราคากลางอัปเดตเวลา 06:00 น. ตามคอนฟิก
+  5. **การบันทึกผล:** อัปเดตสถานะ `T-02` เป็น `[DONE]` ใน `tasks.md` และบันทึกลง `prompt-log.md` เรียบร้อย
+
+---
+
+## บันทึก #13 — `/implement T-03` (สร้าง Service และ API คำนวณช่วงราคาประเมินและ Multi-Item Basket)
+- **วันที่:** 2026-11-03
+- **คำสั่งที่ใช้:** `/implement T-03`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `backend/app/models/pricing_models.py` (เพิ่ม `CalculationEstimateRequest` สำหรับรับรายการของเก่าในตะกร้า)
+  - `backend/app/services/pricing_service.py` (พัฒนาฟังก์ชัน `calculate_estimate()` คำนวณช่วงราคาประเมิน Min-Max, รวมยอด Multi-Item Basket, รองรับหน่วยกระสอบตาม `Card 01`, `BR-01`, `AC-S04-02`, `AC-S04-05`, `D-02`, `D-06`)
+  - `backend/app/api/v1/pricing.py` (เปิด Endpoint `POST /api/v1/pricing/calculate-estimate`)
+  - `backend/tests/test_AC_S04_02_instant_calculation.py` (ชุดทดสอบคำนวณราคาประเมินทันที <= 3 วินาที และ Multi-Item Basket สำหรับ `AC-S04-02`)
+  - `backend/tests/test_AC_S04_04_invalid_quantity.py` (ชุดทดสอบบล็อกปริมาณ <= 0 แจ้งเตือน 'กรุณากรอกปริมาณมากกว่า 0' สำหรับ `AC-S04-04`)
+  - `backend/tests/test_AC_S04_05_bag_unit_pricing.py` (ชุดทดสอบราคาเหมาต่อกระสอบสำหรับขวดแก้วและขวดพลาสติก สำหรับ `AC-S04-05`)
+- **ผลการตรวจ 5 ข้อหลังจบ Task:**
+  1. **ไฟล์ที่แตะ:** แตะเฉพาะไฟล์ที่กำหนดใน `T-03`
+  2. **ผลการรัน Test:** รัน `pytest backend/tests/` ได้ผล: **`14 passed in 0.14s`** (ผ่าน 100% ครอบคลุมทั้ง `T-01` 4 passed, `T-02` 2 passed, และ `T-03` 8 passed)
+  3. **การอ้างอิง ID:** โค้ดและ Test มีคอมเมนต์อ้างอิง `Card 01`, `BR-01`, `AC-S04-02`, `AC-S04-04`, `AC-S04-05`, `P-01`, `P-02`, `P-06`, `D-02`, `D-06` ครบถ้วน
+  4. **Non-goals & Open Questions:** ตรวจสอบข้อความกำกับ 'ราคาจริงขึ้นกับสภาพของหน้างาน' ตามกฎ `BR-01` ครบถ้วน
+  5. **การบันทึกผล:** อัปเดตสถานะ `T-03` เป็น `[DONE]` ใน `tasks.md` และบันทึกลง `prompt-log.md` เรียบร้อย
+
+---
+
+## บันทึก #14 — `/implement T-04` (สร้าง Service ตรวจสอบเกณฑ์ขั้นต่ำ 500 บาท และ API ส่งคำขอนัดหมาย)
+- **วันที่:** 2026-11-03
+- **คำสั่งที่ใช้:** `/implement T-04`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `backend/app/services/order_submission_service.py` (สร้าง OrderSubmissionService พร้อม Guard ตรวจสอบ `min_price >= 500.0` หรือขวด `>= 2 กระสอบ`, บล็อกคำขอเดี่ยวหากไม่ถึงเกณฑ์, รองรับทางเลือกฝากรวมทางผ่าน `isRouteDropIn` และจุดรับรวมอาคาร `isBuildingGroupDrop`, บันทึก Audit Log และเปลี่ยนสถานะเป็น `S2 Pending` ตาม `REQ-FN-001`, `REQ-FN-006`, `REQ-SEC-001`, `AC-S04-03`, `D-01`, `D-03`)
+  - `backend/app/api/v1/pricing.py` (เปิด Endpoint `POST /api/v1/orders/validate-and-submit`)
+  - `backend/tests/test_AC_S04_03_minimum_threshold.py` (ชุดทดสอบอัตโนมัติสำหรับ `AC-S04-03` ครอบคลุม Pass Case, Blocked Case, และทางเลือกทั้ง 2 รูปแบบ)
+- **ผลการตรวจ 5 ข้อหลังจบ Task:**
+  1. **ไฟล์ที่แตะ:** แตะเฉพาะไฟล์ที่กำหนดใน `T-04`
+  2. **ผลการรัน Test:** รัน `pytest backend/tests/` ได้ผล: **`19 passed in 0.15s`** (ผ่าน 100% ครอบคลุมทั้ง `T-01` 4 passed, `T-02` 2 passed, `T-03` 8 passed, และ `T-04` 5 passed)
+  3. **การอ้างอิง ID:** โค้ดและ Test มีการอ้างอิง `REQ-FN-001`, `REQ-FN-006`, `REQ-SEC-001`, `AC-S04-03`, `P-03`, `P-05`, `D-01`, `D-03` ครบถ้วน
+  4. **Non-goals & Open Questions:** สถานะถูกตั้งเป็น `S2` รอผู้รับซื้อตอบรับ ไม่มีโค้ดส่วนเกินจาก Non-goals
+  5. **การบันทึกผล:** อัปเดตสถานะ `T-04` เป็น `[DONE]` ใน `tasks.md` และบันทึกลง `prompt-log.md` เรียบร้อย
+
+---
+
+## บันทึก #15 — `/implement T-05` (สร้าง Frontend API Client และโมดูล Local Cache)
+- **วันที่:** 2026-11-03
+- **คำสั่งที่ใช้:** `/implement T-05`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `frontend/src/services/pricingApi.js` (สร้างโมดูลเรียก API `fetchBenchmarkPrices`, `calculateEstimate`, `submitOrder` พร้อมระบบ Local Storage Cache สำรองข้อมูลราคากลางเมื่อออฟไลน์ตาม `CC-01`, `CC-05`, `REQ-OP-001`, `AC-S04-01..05`)
+  - `frontend/tests/pricingApi.test.mjs` (ชุดทดสอบอัตโนมัติ Unit Test สำหรับ `pricingApi.js`)
+- **ผลการตรวจ 5 ข้อหลังจบ Task:**
+  1. **ไฟล์ที่แตะ:** แตะเฉพาะไฟล์ที่กำหนดใน `T-05`
+  2. **ผลการรัน Test:**
+     - รัน `node --test frontend/tests/pricingApi.test.mjs` ได้ผล: **`5 passed in 33ms`** (ผ่าน 100%)
+     - รัน Regression Check ฝั่งหลังบ้าน `pytest backend/tests/` ได้ผล: **`19 passed in 0.14s`** (ผ่าน 100%)
+  3. **การอ้างอิง ID:** โค้ดและฟังก์ชันทดสอบอ้างอิง `CC-01`, `CC-05`, `REQ-OP-001`, `AC-S04-01..05`, `D-01..D-06` ครบถ้วน
+  4. **Non-goals & Open Questions:** รองรับการทำงานแบบ Offline Cache โดยไม่มีโค้ดส่วนเกิน
+  5. **การบันทึกผล:** อัปเดตสถานะ `T-05` เป็น `[DONE]` ใน `tasks.md` และบันทึกลง `prompt-log.md` เรียบร้อย
+
+---
+
+## บันทึก #16 — `/implement T-06` (พัฒนาหน้าจอและคอมโพเนนต์ React Mobile-First SPA)
+- **วันที่:** 2026-11-03
+- **คำสั่งที่ใช้:** `/implement T-06`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `frontend/src/components/BenchmarkPriceTable.jsx` (คอมโพเนนต์ตารางราคากลางพร้อมป้ายอัปเดต 06:00 น. และป้ายออฟไลน์ตาม `REQ-DAT-001`, `AC-S04-01`, `CC-05`, `D-04`)
+  - `frontend/src/components/ItemPriceCalculator.jsx` (ฟอร์มเลือกของเก่า สลับหน่วย กก./กระสอบ และตรวจสอบปริมาณ > 0 ตาม `Card 01`, `AC-S04-02`, `AC-S04-04`, `AC-S04-05`, `D-02`)
+  - `frontend/src/components/MultiItemBasketSummary.jsx` (สรุปรายการในตะกร้าและช่วงราคารวม Min-Max พร้อมป้ายกำกับตาม `BR-01`, `AC-S04-02`, `D-06`)
+  - `frontend/src/components/ThresholdGuardModal.jsx` (ป๊อปอัปบล็อกเมื่อ < 500 บาท พร้อมปุ่มทางเลือกฝากรวมทางผ่านและจุดรับรวมอาคารตาม `REQ-FN-001`, `REQ-FN-006`, `AC-S04-03`, `D-01`, `D-03`)
+  - `frontend/src/pages/PricingDecisionPage.jsx` (หน้าจอหลักแบบ Mobile-First SPA รองรับขนาดจอมือถือตาม `CC-01`)
+- **ผลการตรวจ 5 ข้อหลังจบ Task:**
+  1. **ไฟล์ที่แตะ:** แตะเฉพาะไฟล์ที่กำหนดใน `T-06` และไฟล์คอนฟิกแพ็กเกจ `frontend/package.json`
+  2. **ผลการรัน Test:**
+     - รัน `node --test frontend/tests/pricingApi.test.mjs` ได้ผล: **`5 passed`**
+     - รัน Regression Check ฝั่งหลังบ้าน `pytest backend/tests/` ได้ผล: **`19 passed in 0.13s`** (ผ่าน 100% รวม 24 ข้อ)
+  3. **การอ้างอิง ID:** คอมโพเนนต์ทุกชิ้นมี `data-req="REQ-..."` กำกับตรงตามที่ระบุในสเปก
+  4. **Non-goals & Open Questions:** ไม่มีฟังก์ชันซาเล้งคนโปรดในหน้านี้ตามขอบเขตที่ตัดออก
+  5. **การบันทึกผล:** อัปเดตสถานะ `T-06` เป็น `[DONE]` ใน `tasks.md` และบันทึกลง `prompt-log.md` เรียบร้อย
+
+
+---
+
+## บันทึก #17 — `/implement T-07` (สร้างชุดทดสอบหน้าจอ Component & Integration Tests)
+- **วันที่:** 2026-11-03
+- **คำสั่งที่ใช้:** `/implement T-07`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `frontend/tests/AC-S04-01.test.jsx` (ทดสอบการแสดงผลตารางช่วงราคากลาง และป้ายเวลาอัปเดต 06:00 น. ตาม `AC-S04-01`)
+  - `frontend/tests/AC-S04-02.test.jsx` (ทดสอบการคำนวณราคาของเก่าทันทีแบบ Multi-Item Basket และป้ายกำกับตาม `AC-S04-02`, `BR-01`)
+  - `frontend/tests/AC-S04-03.test.jsx` (ทดสอบ Threshold Guard Modal ป๊อปอัปบล็อกเมื่อ < 500 บาท และปุ่มทางเลือกฝากรวมทางผ่าน/อาคารตาม `AC-S04-03`)
+  - `frontend/tests/AC-S04-04.test.jsx` (ทดสอบการบล็อกการคำนวณและแจ้งเตือนเมื่อกรอกปริมาณ <= 0 ตาม `AC-S04-04`)
+  - `frontend/tests/AC-S04-05.test.jsx` (ทดสอบการเลือกหน่วยนับเป็นกระสอบสำหรับขวดแก้ว/พลาสติก และคำนวณราคาเหมาต่อกระสอบตาม `AC-S04-05`, `D-02`)
+  - `frontend/tests/pricingApi.test.mjs` (ปรับปรุงให้อยู่ในชุด Vitest)
+  - `frontend/vitest.config.js` (คอนฟิก JSDOM สภาพแวดล้อมทดสอบสำหรับ React Testing Library)
+- **ผลการตรวจ 5 ข้อหลังจบ Task:**
+  1. **ไฟล์ที่แตะ:** แตะเฉพาะไฟล์ทดสอบและคอนฟิกทดสอบที่กำหนดใน `T-07`
+  2. **ผลการรัน Test:**
+     - รัน `npm test --prefix frontend` (Vitest): **`6 test files passed, 15 passed in 0.59s`** (ผ่าน 100%)
+     - รัน Regression Check ฝั่งหลังบ้าน `.venv/bin/pytest backend/tests/`: **`19 passed in 0.14s`** (ผ่าน 100%)
+     - ยอดรวมชุดทดสอบทั้งหมดที่ผ่าน: **34 ผ่าน / 0 ตก**
+  3. **การอ้างอิง ID:** ไฟล์ทดสอบตั้งชื่อและอ้างอิงรหัส `AC-S04-01` ถึง `AC-S04-05`, `REQ-DAT-001`, `REQ-FN-001`, `REQ-FN-006`, `BR-01`, `D-01..D-06` ครบถ้วน
+  4. **Non-goals & Open Questions:** ชุดทดสอบทดสอบเฉพาะตามเกณฑ์การยอมรับในสเปก ไม่มีเคสนอกเหนือขอบเขต
+  5. **การบันทึกผล:** อัปเดตสถานะ `T-07` เป็น `[DONE]` ใน `tasks.md` และบันทึกลง `prompt-log.md` เรียบร้อย
+
+
+---
+
+## บันทึก #18 — `/implement T-08` (ทดสอบแบบครบวงจร End-to-End และวัดเกณฑ์ประสิทธิภาพ)
+- **วันที่:** 2026-11-03
+- **คำสั่งที่ใช้:** `/implement T-08`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `backend/app/services/order_submission_service.py` (เพิ่มเมธอด `accept_order_and_lock_price` สำหรับช่วงเปลี่ยนผ่านสถานะ `S2 -> S3` พร้อมบันทึก Price Snapshot ลงใน `locked_unit_price` และ Audit Log ตาม `REQ-BR-002`, `D-04`, `REQ-SEC-001`)
+  - `backend/app/api/v1/pricing.py` (เพิ่ม Endpoint `POST /api/v1/orders/{order_id}/accept` จำลองการรับงานของผู้ซื้อ)
+  - `backend/tests/test_e2e_pricing_decision.py` (ชุดทดสอบ End-to-End Lifecycle ครอบคลุมการเปิดดูราคากลางรายวัน -> คำนวณช่วงราคาตะกร้า -> Threshold Guard บล็อกเมื่อ < 500 บาท -> ส่งทางเลือกฝากรวมทางผ่านเข้า `S2` -> ผู้ซื้อกดรับงานเข้า `S3` และล็อก Price Snapshot ถาวร พร้อมทดสอบประสิทธิภาพ Latency Benchmark P95 <= 3.0s ตาม `REQ-QA-001`, `AC-S04-02`)
+- **ผลการตรวจ 5 ข้อหลังจบ Task:**
+  1. **ไฟล์ที่แตะ:** แตะเฉพาะไฟล์ที่กำหนดใน `T-08`
+  2. **ผลการรัน Test:**
+     - รัน `pytest backend/tests/test_e2e_pricing_decision.py`: **`2 passed in 0.14s`** (ผ่าน 100%)
+     - รัน Full Backend Suite `pytest backend/tests/`: **`21 passed in 0.17s`** (ผ่าน 100%)
+     - รัน Full Frontend Suite `npm test --prefix frontend`: **`6 files passed, 15 passed in 0.56s`** (ผ่าน 100%)
+     - **ยอดรวมการทดสอบทั้งหมดของฟีเจอร์นี้: 36 ข้อ ผ่าน 100% (Backend 21, Frontend 15)**
+  3. **การอ้างอิง ID:** โค้ดและฟังก์ชันทดสอบอ้างอิง `REQ-QA-001`, `REQ-BR-002`, `REQ-FN-001`, `REQ-FN-006`, `REQ-SEC-001`, `AC-S04-01..05`, `D-01..D-06` ครบถ้วน
+  4. **Non-goals & Open Questions:** ตรวจสอบ Price Snapshot คงเดิมแม้ราคากลางวันถัดไปจะเปลี่ยนแปลง ไม่มีฟังก์ชันนอกขอบเขต
+  5. **การบันทึกผล:** อัปเดตสถานะ `T-08` เป็น `[DONE]` และสถานะของ `tasks.md` เป็น `completed` พร้อมบันทึกลง `prompt-log.md` เรียบร้อย

@@ -1,0 +1,100 @@
+"""
+Pricing API Endpoints
+รองรับ REQ-DAT-001, AC-S04-01, P-04, D-04
+"""
+
+from fastapi import APIRouter, FastAPI, HTTPException
+from fastapi.responses import JSONResponse
+from backend.app.models.pricing_models import (
+    BenchmarkPriceListResponse,
+    CalculationEstimateRequest,
+    CalculationEstimateResponse,
+    OrderSubmissionInput,
+    OrderSubmissionResponse,
+)
+from backend.app.services.pricing_service import pricing_service
+from backend.app.services.order_submission_service import (
+    order_submission_service,
+    MinimumThresholdError,
+)
+
+pricing_router = APIRouter(prefix="/api/v1/pricing", tags=["pricing"])
+orders_router = APIRouter(prefix="/api/v1/orders", tags=["orders"])
+
+
+@pricing_router.get("/benchmark-prices", response_model=BenchmarkPriceListResponse)
+def get_benchmark_prices():
+    """
+    ดึงตารางเรตราคากลางรับซื้อรายวัน (แยกตามหมวดหมู่)
+    รองรับ REQ-DAT-001, AC-S04-01, D-04
+    - แสดงช่วงราคารับซื้ออ้างอิงตามประเภทและเกรดวัสดุ (ต่ำสุด–สูงสุด)
+    - แสดงวันที่และเวลาอัปเดตข้อมูลราคาล่าสุด (รอบเวลา 06:00 น.)
+    """
+    return pricing_service.get_all_benchmark_prices()
+
+
+@pricing_router.post("/calculate-estimate", response_model=CalculationEstimateResponse)
+def calculate_estimate(request: CalculationEstimateRequest):
+    """
+    คำนวณช่วงราคาประเมินเบื้องต้นจากปริมาณที่ระบุ
+    รองรับ Card 01, BR-01, AC-S04-02, AC-S04-04, AC-S04-05, P-01, P-02, D-02, D-06
+    - คำนวณช่วงราคาประเมิน (ต่ำสุด–สูงสุด) ภายใน 3 วินาที
+    - รองรับหน่วย กก. และ กระสอบ (ราคาเหมาต่อกระสอบ)
+    - รองรับตะกร้าหลายรายการ (Multi-Item Basket) พร้อมยอดรวม Min-Max
+    - บล็อกเมื่อปริมาณ <= 0 (HTTP 422)
+    - กำกับด้วยข้อความ "ราคาจริงขึ้นกับสภาพของหน้างาน"
+    """
+    try:
+        return pricing_service.calculate_estimate(request.items)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@orders_router.post("/validate-and-submit", response_model=OrderSubmissionResponse, status_code=201)
+def validate_and_submit_order(submission: OrderSubmissionInput):
+    """
+    ตรวจสอบเกณฑ์มูลค่าขั้นต่ำและส่งคำขอนัดหมาย
+    รองรับ REQ-FN-001, REQ-FN-006, AC-S04-03, P-03, D-01, D-03
+    - ผ่าน: มูลค่ารวม min_price >= 500 บาท หรือขวดแก้ว/พลาสติก >= 2 กระสอบ (HTTP 201)
+    - บล็อก & เสนอทางเลือก: หากไม่ถึงเกณฑ์ขั้นต่ำ ปฏิเสธนัดหมายเดี่ยว (HTTP 400) พร้อมตัวเลือกฝากรวมทางผ่าน/จุดรับรวมอาคาร
+    - รองรับการส่งคำขอแบบฝากรวมจุดรับทางผ่าน (isRouteDropIn = true -> S2)
+    - รองรับการส่งคำขอแบบจุดรับรวมประจำอาคาร (isBuildingGroupDrop = true)
+    """
+    try:
+        return order_submission_service.submit_order(submission)
+    except MinimumThresholdError as e:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": "MINIMUM_THRESHOLD_NOT_MET",
+                "message": e.message,
+                "total_est_min_price": e.total_est_min_price,
+                "total_bags": e.total_bags,
+                "allowed_alternatives": e.allowed_alternatives,
+            }
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@orders_router.post("/{order_id}/accept", status_code=200)
+def accept_order(order_id: str, buyer_id: str = "USR-BUYER-01"):
+    """
+    ซาเล้งกดรับนัดหมาย (S2 -> S3) พร้อมล็อกราคากลาง Snapshot ในฐานข้อมูล
+    รองรับ REQ-BR-002, D-04, REQ-SEC-001
+    """
+    try:
+        return order_submission_service.accept_order_and_lock_price(order_id, buyer_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+# Application instance สำหรับทดสอบและเชื่อมต่อ Server
+app = FastAPI(
+    title="Saleng Pricing & Decision API",
+    description="API ระบบราคาและการตัดสินใจ ฝั่งผู้ขาย (Seller Feature 04)",
+    version="1.0.0"
+)
+app.include_router(pricing_router)
+app.include_router(orders_router)
+
