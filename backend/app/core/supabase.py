@@ -42,6 +42,7 @@ class SupabaseStore:
         self._seed_default_benchmark_prices()
         self._seed_default_scrap_categories()
         self._seed_default_saleng_profiles()
+        self._seed_default_orders_s2()
 
     def _seed_default_benchmark_prices(self):
         """กำหนดราคากลางตั้งต้นตามที่ระบุใน spec.md หัวข้อ 1.1 และ D-02"""
@@ -1087,6 +1088,273 @@ class SupabaseStore:
             latest_sub["reviewed_by"] = reviewed_by
 
         return profile
+
+    # -------------------------------------------------------------
+    # ระบบค้นหาและแสดงงานรับซื้อตามพิกัด (Buyer 02: Job Search & Map, UC-04)
+    # -------------------------------------------------------------
+
+    def _seed_default_orders_s2(self):
+        """กำหนดคำขอขายตั้งต้นสถานะ S2 (Pending) ในพื้นที่กรุงเทพฯ สำหรับซาเล้งค้นหางาน (UC-04)"""
+        now = datetime.now(timezone.utc).isoformat()
+        
+        # 1. งานที่ 1: รัชดาภิเษก 18 (แขวงสามเสนนอก เขตห้วยขวาง) ห่างจาก saleng-01 ~ 0.5 กม.
+        self.pickup_locations["loc-s2-01"] = {
+            "location_id": "loc-s2-01",
+            "seller_id": "seller-01",
+            "address_text": "123/45 ซอยรัชดาภิเษก 18",
+            "subdistrict": "แขวงสามเสนนอก",
+            "district": "เขตห้วยขวาง",
+            "province": "กรุงเทพมหานคร",
+            "lat": 13.7930,
+            "lng": 100.5780,
+            "is_default": True,
+            "created_at": now,
+        }
+        self.orders["order-s2-01"] = {
+            "order_id": "order-s2-01",
+            "seller_id": "seller-01",
+            "location_id": "loc-s2-01",
+            "status": "S2",
+            "total_est_min_price": 150.0,
+            "total_est_max_price": 220.0,
+            "total_est_weight_kg": 25.0,
+            "need_lifting_help": False,
+            "assigned_saleng_id": None,
+            "version": 1,
+            "created_at": now,
+        }
+        self.items["item-s2-01-1"] = {
+            "item_id": "item-s2-01-1",
+            "order_id": "order-s2-01",
+            "category_code": "MAT-CARDBOARD",
+            "category_group": "GENERAL_WEIGHT",
+            "name": "กระดาษลัง",
+            "est_weight_kg": 20.0,
+            "est_min_price": 80.0,
+            "est_max_price": 100.0,
+            "created_at": now,
+        }
+        self.items["item-s2-01-2"] = {
+            "item_id": "item-s2-01-2",
+            "order_id": "order-s2-01",
+            "category_code": "MAT-ALU-CAN",
+            "category_group": "GENERAL_WEIGHT",
+            "name": "กระป๋องอลูมิเนียม",
+            "est_weight_kg": 5.0,
+            "est_min_price": 70.0,
+            "est_max_price": 120.0,
+            "created_at": now,
+        }
+
+        # 2. งานที่ 2: รัชดาภิเษก 32 (แขวงจันทรเกษม เขตจตุจักร) ห่างจาก saleng-01 ~ 1.3 กม.
+        self.pickup_locations["loc-s2-02"] = {
+            "location_id": "loc-s2-02",
+            "seller_id": "seller-02",
+            "address_text": "88 ซอยรัชดาภิเษก 32",
+            "subdistrict": "แขวงจันทรเกษม",
+            "district": "เขตจตุจักร",
+            "province": "กรุงเทพมหานคร",
+            "lat": 13.8010,
+            "lng": 100.5720,
+            "is_default": True,
+            "created_at": now,
+        }
+        self.orders["order-s2-02"] = {
+            "order_id": "order-s2-02",
+            "seller_id": "seller-02",
+            "location_id": "loc-s2-02",
+            "status": "S2",
+            "total_est_min_price": 300.0,
+            "total_est_max_price": 450.0,
+            "total_est_weight_kg": 60.0,
+            "need_lifting_help": True,
+            "assigned_saleng_id": None,
+            "version": 1,
+            "created_at": now,
+        }
+        self.items["item-s2-02-1"] = {
+            "item_id": "item-s2-02-1",
+            "order_id": "order-s2-02",
+            "category_code": "MAT-PET-BOTTLE",
+            "category_group": "GENERAL_WEIGHT",
+            "name": "ขวดพลาสติกใส PET",
+            "est_weight_kg": 60.0,
+            "est_min_price": 300.0,
+            "est_max_price": 450.0,
+            "created_at": now,
+        }
+
+        # 3. งานที่ 3: ประชาสงเคราะห์ 23 (แขวงดินแดง เขตดินแดง) ห่างจาก saleng-01 ~ 1.2 กม.
+        self.pickup_locations["loc-s2-03"] = {
+            "location_id": "loc-s2-03",
+            "seller_id": "seller-03",
+            "address_text": "50 ซอยประชาสงเคราะห์ 23",
+            "subdistrict": "แขวงดินแดง",
+            "district": "เขตดินแดง",
+            "province": "กรุงเทพมหานคร",
+            "lat": 13.7820,
+            "lng": 100.5690,
+            "is_default": True,
+            "created_at": now,
+        }
+        self.orders["order-s2-03"] = {
+            "order_id": "order-s2-03",
+            "seller_id": "seller-03",
+            "location_id": "loc-s2-03",
+            "status": "S2",
+            "total_est_min_price": 500.0,
+            "total_est_max_price": 800.0,
+            "total_est_weight_kg": 120.0,
+            "need_lifting_help": True,
+            "assigned_saleng_id": None,
+            "version": 1,
+            "created_at": now,
+        }
+        self.items["item-s2-03-1"] = {
+            "item_id": "item-s2-03-1",
+            "order_id": "order-s2-03",
+            "category_code": "BULKY-APPLIANCE",
+            "category_group": "BULKY_FLAT_RATE",
+            "name": "ของชิ้นใหญ่แบบเหมาจ่าย",
+            "est_weight_kg": 120.0,
+            "est_min_price": 500.0,
+            "est_max_price": 800.0,
+            "created_at": now,
+        }
+
+        # 4. งานที่ 4: พหลโยธิน ลาดยาว (ห่าง ~ 7.5 กม. จาก saleng-01 สำหรับทดสอบการขยาย 10 กม. AC-B02-02)
+        self.pickup_locations["loc-s2-04"] = {
+            "location_id": "loc-s2-04",
+            "seller_id": "seller-04",
+            "address_text": "999 ถนนพหลโยธิน",
+            "subdistrict": "แขวงลาดยาว",
+            "district": "เขตจตุจักร",
+            "province": "กรุงเทพมหานคร",
+            "lat": 13.8500,
+            "lng": 100.5850,
+            "is_default": True,
+            "created_at": now,
+        }
+        self.orders["order-s2-04"] = {
+            "order_id": "order-s2-04",
+            "seller_id": "seller-04",
+            "location_id": "loc-s2-04",
+            "status": "S2",
+            "total_est_min_price": 60.0,
+            "total_est_max_price": 90.0,
+            "total_est_weight_kg": 15.0,
+            "need_lifting_help": False,
+            "assigned_saleng_id": None,
+            "version": 1,
+            "created_at": now,
+        }
+        self.items["item-s2-04-1"] = {
+            "item_id": "item-s2-04-1",
+            "order_id": "order-s2-04",
+            "category_code": "MAT-CARDBOARD",
+            "category_group": "GENERAL_WEIGHT",
+            "name": "กระดาษลัง",
+            "est_weight_kg": 15.0,
+            "est_min_price": 60.0,
+            "est_max_price": 90.0,
+            "created_at": now,
+        }
+
+    def get_open_orders_s2(self) -> List[dict]:
+        """ดึงรายการคำขอขายสถานะ S2 (Pending) ที่ยังไม่มีซาเล้งรับงาน (UC-04, D-00-03)"""
+        open_orders = []
+        for o in self.orders.values():
+            if o.get("status") in ("S2", "PENDING") and not o.get("assigned_saleng_id"):
+                order_copy = dict(o)
+                order_items = [item for item in self.items.values() if item.get("order_id") == o.get("order_id")]
+                if not order_items and o.get("items"):
+                    order_items = o.get("items")
+                order_copy["items"] = order_items
+                open_orders.append(order_copy)
+        return open_orders
+
+    def add_simulated_order(
+        self,
+        order_data: dict,
+        location_data: dict,
+        items_data: Optional[List[dict]] = None
+    ) -> dict:
+        """จำลองสร้างคำขอขายใหม่สถานะ S2 เพื่อทดสอบ Polling & Live Alert (Q-02)"""
+        now = datetime.now(timezone.utc).isoformat()
+        order_id = order_data.get("order_id") or f"order-sim-{uuid.uuid4().hex[:8]}"
+        loc_id = location_data.get("location_id") or f"loc-sim-{uuid.uuid4().hex[:8]}"
+
+        location_data["location_id"] = loc_id
+        if "created_at" not in location_data:
+            location_data["created_at"] = now
+        self.pickup_locations[loc_id] = location_data
+
+        order_data["order_id"] = order_id
+        order_data["location_id"] = loc_id
+        order_data["status"] = "S2"
+        order_data["assigned_saleng_id"] = None
+        if "version" not in order_data:
+            order_data["version"] = 1
+        if "created_at" not in order_data:
+            order_data["created_at"] = now
+        self.orders[order_id] = order_data
+
+        saved_items = []
+        if items_data:
+            for item in items_data:
+                item_id = item.get("item_id") or f"item-sim-{uuid.uuid4().hex[:8]}"
+                item["item_id"] = item_id
+                item["order_id"] = order_id
+                if "created_at" not in item:
+                    item["created_at"] = now
+                self.items[item_id] = item
+                saved_items.append(item)
+        else:
+            item_id = f"item-sim-{uuid.uuid4().hex[:8]}"
+            default_item = {
+                "item_id": item_id,
+                "order_id": order_id,
+                "category_code": order_data.get("categories", ["MAT-CARDBOARD"])[0],
+                "category_group": "GENERAL_WEIGHT",
+                "name": "ของเก่าทั่วไป",
+                "est_weight_kg": order_data.get("total_est_weight_kg", 20.0),
+                "est_min_price": order_data.get("total_est_min_price", 100.0),
+                "est_max_price": order_data.get("total_est_max_price", 150.0),
+                "created_at": now,
+            }
+            self.items[item_id] = default_item
+            saved_items.append(default_item)
+
+        order_copy = dict(order_data)
+        order_copy["items"] = saved_items
+        return order_copy
+
+    def record_audit_log(
+        self,
+        action: str,
+        actor_id: str,
+        actor_role: str = "COLLECTOR",
+        details: Optional[dict] = None,
+        entity_id: str = "",
+    ) -> dict:
+        """บันทึกประวัติการทำงานลง audit_logs ตาม REQ-SEC-001"""
+        log_entry = {
+            "log_id": str(uuid.uuid4()),
+            "action": action,
+            "entity_id": entity_id or actor_id,
+            "actor_id": actor_id,
+            "actor_role": actor_role,
+            "details": details or {},
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+        self.audit_logs.append(log_entry)
+        return log_entry
+
+    def get_audit_logs(self, action_filter: Optional[str] = None) -> List[dict]:
+        """ดึงรายการ audit_logs ทั้งหมดหรือกรองตาม action"""
+        if action_filter:
+            return [l for l in self.audit_logs if l.get("action") == action_filter]
+        return list(self.audit_logs)
 
 
 # Singleton instance สำหรับเข้าถึง Database

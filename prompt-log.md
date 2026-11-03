@@ -1355,3 +1355,118 @@
   4. **PDPA & Security:** บังคับใช้ Phone Masking `08X-XXX-XXXX`, กฎเหล็ก Unverified Collector Block Gate `D-00-01` (HTTP 403), และบันทึก Security Audit Log ครบทุกเหตุการณ์
   5. **UX Mobile-First:** ปุ่มบนหน้าจอมีขนาดความสูง `>= 48px` ตามข้อกำหนด `REQ-UX-001`
 - **สถานะ:** พัฒนาฟีเจอร์ Buyer 01 เสร็จสมบูรณ์ พร้อมส่งมอบและพร้อมสำหรับฟีเจอร์ถัดไป (`specs/buyer/02-search-and-filtering/`)
+
+
+---
+
+## บันทึก #62 — `/clarify specs/buyer/02-job-search-and-map/spec.md` (การตรวจสอบความสอดคล้องกับสารบัญกลางและการขยายสเปก v2.0)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/clarify specs/buyer/02-job-search-and-map/spec.md`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/buyer/02-job-search-and-map/spec.md` (ปรับปรุงจาก Stub 28 บรรทัด สู่ Version 2.0 สถานะ `reviewed-post-clarify`, เชื่อมโยงรหัส `UC-04`, `REQ-FN-002`, `REQ-QA-002`, `REQ-SEC-002`, `REQ-OP-001..002`, `REQ-UX-001`, `CC-01..06`, และ `D-00-01..02`, กำหนดเกณฑ์การยอมรับ `AC-B02-01` ถึง `AC-B02-05`, และบันทึกข้อสรุปคำถามเปิด `Q-01` ถึง `Q-06`)
+- **ประเด็นสำคัญที่พบและข้อสรุปแนวทางแก้ปัญหา (`Q-01` ถึง `Q-06`):**
+  1. **`Q-01` (การซ่อนพิกัดหมุดบนแผนที่ก่อนรับงาน — `D-00-02`, `REQ-SEC-002`, `CC-06`):**
+     - ใช้เทคนิค **Coordinate Fuzzing (สุ่มเบี่ยงเบนพิกัด ±300–500 ม.)** และส่งเฉพาะชื่อตำบล/แขวง เพื่อไม่ให้ทราบพิกัดบ้านที่แท้จริงของผู้ขายก่อนกดรับงาน ขณะที่การคำนวณระยะทางถนนจริงกระทำที่หลังบ้านอย่างแม่นยำ
+  2. **`Q-02` (การแจ้งเตือนงานใหม่ในพื้นที่):**
+     - ใช้กลไก **In-App Auto-Refresh / Polling ทุก 30–60 วินาที** พร้อม Toast Banner สีเขียวด้านบน, เสียง Audio Ping, และ Notification Badge สอดคล้องกับรอบ GPS Sync `CC-02` สำหรับรอบ R1
+  3. **`Q-03` (ตัวเลือกและเงื่อนไขการกรองงาน — `AC-B02-05`):**
+     - รองรับการกรอง 3 มิติ: หมวดหมู่วัสดุ 5 กลุ่ม, ช่วงน้ำหนักประเมิน 4 ช่วง, และจัดเรียงตามระยะทางใกล้สุด (Default) หรือมูลค่าประเมินสูงสุด
+  4. **`Q-04` (โครงสร้างหน้าจอบนมือถือ — `CC-01`, `REQ-UX-001`):**
+     - ใช้ **Segmented Control Tab Switcher** ด้านบน สลับระหว่าง **"รายการงาน" (List View)** และ **"แผนที่งาน" (Map View)** ขนาดปุ่มกด `>= 48px` ใช้งานง่ายกลางแจ้งและลื่นไหลบนมือถือราคาประหยัด
+  5. **`Q-05` (การทำงานร่วมกับ Unverified Gate — `D-00-01`):**
+     - ซาเล้งที่ยังไม่ผ่าน KYC สามารถเปิดค้นหาและดูแผนที่งานได้ แต่ปุ่มกดรับงานจะล็อกด้วยแม่กุญแจ และหากแตะจะแสดง Informative Gate Modal พร้อมปุ่มส่งเอกสาร KYC ใน Buyer 01 ทันที
+  6. **`Q-06` (การขยายระยะทางค้นหา 10 กม. — `AC-B02-02` / `A1`):**
+     - ค่าเริ่มต้นคือ 5.0 กม. เสมอเมื่อเปิดหน้าจอใหม่ หากกดยอมรับขยายเป็น 10.0 กม. ระบบจะคงค่านี้ไว้ตลอดเซสชันปัจจุบันในแอป
+  7. **ระบบสำรองการคำนวณระยะทาง (`Dual-Engine Routing Fallback` — `CC-03`, `REQ-OP-002`):**
+     - หาก Routing API ภายนอกตอบสนองช้าเกิน 1.5 วินาที หรือขัดข้อง ระบบจะสลับไปใช้สูตร **`Haversine * 1.35`** อัตโนมัติทันที เพื่อให้ตอบสนองภายใน `<= 2.0 วินาที`
+- **สถานะ:** สเปก `spec.md` ได้รับการรับรองและอัปเดตเป็น Version 2.0 (`reviewed-post-clarify`) พร้อมสำหรับขั้นตอน `/plan`
+
+
+---
+
+## บันทึก #63 — `/plan specs/buyer/02-job-search-and-map/spec.md` (แผนสถาปัตยกรรม เทคโนโลยี และการปฏิบัติตาม Constraints ครบทั้ง 13 ข้อ)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/plan specs/buyer/02-job-search-and-map/spec.md`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/buyer/02-job-search-and-map/plan.md` (Version `1.0`, สถานะ `ready-for-tasks`, ออกแบบสถาปัตยกรรม Dual-Engine Routing, กำหนดการตัดสินใจ `P-01` ถึง `P-06`, ออกแบบ DDL Schema และ Pydantic Models, ออกแบบ API 3 เส้นทางสำหรับ Nearby Jobs, Summary, และ Simulate Order, แผนพัฒนาหน้าจอ Mobile-First 6 คอมโพเนนต์, และตารางตรวจสอบ Constraints ครบทั้ง 13 ข้อ)
+- **ประเด็นสำคัญใน plan.md:**
+  1. **เทคโนโลยีที่ใช้:** ระบุกำกับชัดเจนว่า `"ทีมเลือกเอง ไม่ได้มาจาก spec"` (Python 3.11 + FastAPI, In-memory Supabase/PostgreSQL Adapter, React 18 + TailwindCSS, Pytest, Vitest + RTL + JSDOM)
+  2. **การตัดสินใจเชิงสถาปัตยกรรม (`P-01` ถึง `P-06`):**
+     - `P-01`: Coordinate Fuzzing & Subdistrict Snapping เบี่ยงเบนสุ่มพิกัด ±300–500 ม. และซ่อนบ้านเลขที่/พิกัดจริงตามกฎ PDPA และ `D-00-02`
+     - `P-02`: In-App Live Alert & Polling ทุก 30–60 วินาที ตรวจจับงานใหม่ในรัศมี 5.0 กม. พร้อม Toast แจ้งเตือนและเสียง Audio Ping สอดคล้องกับรอบ GPS Sync `CC-02`
+     - `P-03`: Multi-Criteria Filtering & Sorting รองรับตัวกรองหมวดหมู่วัสดุ 5 กลุ่ม, ช่วงน้ำหนักประเมิน 4 ช่วง, และจัดเรียงตามระยะทางใกล้สุดหรือมูลค่าสูงสุด (`AC-B02-05`)
+     - `P-04`: Mobile Segmented Tab Switcher สลับระหว่าง `List View` และ `Map View` ขนาดปุ่มกด `>= 48px` ใช้งานง่ายกลางแจ้งบนมือถือราคาประหยัด (`RAM >= 2 GB` ตาม `CC-01`)
+     - `P-05`: บูรณาการกับ Unverified Gate `D-00-01` ซาเล้งที่ยังไม่ผ่าน KYC สามารถเปิดดูงานและแผนที่ได้ แต่ปุ่มกดรับงานจะล็อกด้วยแม่กุญแจ และมี Modal แจ้งเตือน
+     - `P-06`: Radius Expansion ค่าเริ่มต้น 5.0 กม. เสมอเมื่อเปิดหน้าจอใหม่ หากกดยอมรับขยายเป็น 10.0 กม. ระบบจะคงค่านี้ไว้ตลอดเซสชันปัจจุบันในแอป
+  3. **ตารางตรวจ Constraints:** ครบทั้ง 13 ข้อตาม `specs/000-shared/constraints.md` โดยเชื่อมโยงการตัดสินใจ `P-01` ถึง `P-06` ครบถ้วน
+- **สถานะ:** แผน `plan.md` พร้อมสำหรับการแตกงานย่อยในขั้นตอน `/tasks`
+
+
+---
+
+## บันทึก #64 — `/tasks specs/buyer/02-job-search-and-map/plan.md` (รายการงานย่อยและ Two-way Traceability Matrix)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/tasks specs/buyer/02-job-search-and-map/plan.md`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/buyer/02-job-search-and-map/tasks.md` (แตกงานย่อย 8 งาน `T-01` ถึง `T-08` ครบทั้ง 6 คอลัมน์, พร้อมตาราง Two-way Traceability Matrix ครบทุกข้อ `AC-B02-01..05`, และตาราง Constraints Traceability ครบทั้ง 13 ข้อ)
+- **ประเด็นสำคัญใน tasks.md:**
+  1. **งานย่อย 8 งาน (`T-01` ถึง `T-08`):**
+     - `T-01`: สร้าง Data Models และ Schema สำหรับระบบค้นหาและแสดงงาน (`job_search_models.py`, ฟังก์ชัน `fuzz_coordinates`, ขยาย `supabase.py`)
+     - `T-02`: สร้าง Dual-Engine Routing Service และ API ค้นหาคำขอขายในรัศมี 5.0 กม. ตอบสนอง `<= 3.0s` (`AC-B02-01`, `REQ-FN-002`, `REQ-QA-002`, `CC-03`)
+     - `T-03`: สร้างระบบขยายรัศมีการค้นหาเป็น 10.0 กม. เมื่อไม่พบงานในรัศมี 5.0 กม. (`A1`, `AC-B02-02`, `Q-06`)
+     - `T-04`: สร้างระบบป้องกันข้อมูลส่วนบุคคล PII & Coordinate Protection และการจัดการ GPS Error (`E1`, `AC-B02-03`, `AC-B02-04`, `REQ-SEC-002`, `D-00-02`)
+     - `T-05`: สร้างระบบกรองงานหลายมิติ 3 ด้าน, จัดเรียงลำดับ, และจำลองคำขอขายใหม่ (`AC-B02-05`, `Q-02`, `Q-03`)
+     - `T-06`: สร้าง Frontend API Client และระบบแคชค้นหางานออฟไลน์ใน `localStorage` (`CC-05`, `REQ-OP-001`)
+     - `T-07`: พัฒนาคอมโพเนนต์ React ระบบค้นหาและแสดงงาน (Mobile-First SPA Viewport 375px–414px, Segmented Control Tab Switcher List ⇄ Map, ปุ่ม >= 48px ตาม `REQ-UX-001`)
+     - `T-08`: สร้างชุดทดสอบหน้าจอ Vitest Component Tests และ Backend Integration E2E Test Suite (`AC-B02-01..05`)
+  2. **Two-way Traceability Matrix:** เกณฑ์การยอมรับทุกข้อ (`AC-B02-01` ถึง `AC-B02-05`) เชื่อมโยงกับงานย่อยและชื่อไฟล์ชุดทดสอบอย่างครบถ้วน
+  3. **Constraints Traceability:** ตรวจสอบข้อจำกัดกลางทั้ง 13 ข้อตาม `specs/000-shared/constraints.md` ครบถ้วน
+- **สถานะ:** แตกงานย่อยเสร็จสมบูรณ์ พร้อมสำหรับการเริ่มพัฒนางานย่อยในขั้นตอน `/implement T-01..08`
+
+
+---
+
+## บันทึก #65 — `/implement T-01..08` (พัฒนาระบบค้นหาและแสดงงานรับซื้อตามพิกัด Buyer 02 ครบวงจร)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/implement T-01..08` (อ้างอิง `specs/buyer/02-job-search-and-map/tasks.md`)
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `backend/app/models/job_search_models.py` (Pydantic Models: `JobSearchQueryParams`, `NearbyJobSummaryResponse`, `NearbyJobListResponse`, `SimulateOrderRequest`, ฟังก์ชัน `fuzz_coordinates` สุ่มเบี่ยงเบนพิกัด ±300–500 ม. ตาม `REQ-SEC-002`, `D-00-02`, `CC-06`)
+  - `backend/app/services/job_search_service.py` (`DualEngineRoutingService` คำนวณระยะทางถนนจริงและสลับใช้ `Haversine * 1.35` อัตโนมัติ `REQ-OP-002`, `PrivacyProtectionService` ตัด PII ทิ้ง 100%, `JobSearchService` ค้นหาและกรองคำขอขาย)
+  - `backend/app/api/v1/job_search.py` (FastAPI Router สำหรับ `GET /api/v1/collectors/jobs/nearby`, `GET /api/v1/collectors/jobs/{order_id}/summary`, และ `POST /api/v1/collectors/jobs/simulate-new-order`)
+  - `backend/app/api/v1/pricing.py` (เมานต์ `job_search_router` เข้ากับ FastAPI Application)
+  - `backend/app/core/supabase.py` (เพิ่ม `_seed_default_orders_s2()`, `get_open_orders_s2()`, `add_simulated_order()`, และ `record_audit_log()` ตาม `REQ-SEC-001`, `CC-04`)
+  - `frontend/src/services/jobSearchApi.js` (API Client สำหรับเรียก Nearby Jobs, Summary, Simulate Order พร้อม Offline Cache ใน `localStorage` ตาม `CC-05`, `REQ-OP-001`)
+  - `frontend/src/components/JobSearchFilterBar.jsx` (แถบตัวกรองหมวดหมู่วัสดุ 5 กลุ่ม, ช่วงน้ำหนัก 4 ช่วง, และการจัดเรียง)
+  - `frontend/src/components/JobCardList.jsx` (รายการการ์ดงานแบบเลื่อนแนวตั้ง พร้อมกล่องเตือนไม่มีงานและปุ่มขยาย 10 กม. `AC-B02-02`)
+  - `frontend/src/components/JobMapView.jsx` (แผนที่แสดงหมุดจำลอง Fuzzed Pins, หมุดซาเล้ง, และ Bottom Sheet Mini Preview)
+  - `frontend/src/components/GpsWarningBanner.jsx` (กล่องแจ้งเตือนกรณีปิด GPS พร้อมปุ่มลองใหม่ `AC-B02-04`)
+  - `frontend/src/components/LiveJobAlertToast.jsx` (Toast แจ้งเตือนงานใหม่ในพื้นที่พร้อมตัวนับรอบการรีเฟรช 30–60s `Q-02`, `CC-02`)
+  - `frontend/src/components/JobSearchPanel.jsx` (แผงควบคุมหลักรวม Segmented Tab Switcher List ⇄ Map ปุ่ม >= 48px และ Unverified Gate Modal `D-00-01`)
+  - `backend/tests/test_T01_job_search_models.py` (Unit Test Schema, Fuzzing Bounds 300–500m, PII Masking)
+  - `backend/tests/test_AC_B02_01_job_discovery.py` (Test การค้นหางานในรัศมี 5.0 กม. เวลาตอบสนอง <= 3.0s และ Routing Fallback)
+  - `backend/tests/test_AC_B02_02_radius_expansion.py` (Test แจ้งเตือนไม่มีงานใน 5 กม. และการขยายรัศมีเป็น 10.0 กม.)
+  - `backend/tests/test_AC_B02_03_pii_coordinate_protection.py` (Test การปิดบังบ้านเลขที่ เบอร์โทร และตรวจสอบระยะ Fuzzed Pins)
+  - `backend/tests/test_AC_B02_04_gps_handling.py` (Test ปฏิเสธพิกัด GPS ว่างหรือไม่ถูกต้อง HTTP 400 ไม่ใช้พิกัดเก่าหมดอายุ)
+  - `backend/tests/test_AC_B02_05_job_filtering.py` (Test ตัวกรองหมวดหมู่, ช่วงน้ำหนัก, จัดเรียงลำดับ, และจำลอง Order ใหม่)
+  - `backend/tests/test_e2e_buyer_job_search_and_map.py` (Integration E2E Test ครบวงจร Lifecycle)
+  - `frontend/tests/jobSearchApi.test.mjs` (Unit Test Frontend API Client และ Offline Cache)
+  - `frontend/tests/AC-B02-01.test.jsx` (Component Test ค้นหางานรัศมี 5.0 กม.)
+  - `frontend/tests/AC-B02-02.test.jsx` (Component Test กล่องแจ้งเตือนไม่มีงานและปุ่มขยาย 10 กม.)
+  - `frontend/tests/AC-B02-03.test.jsx` (Component Test ป้องกัน PII ใน List และ Map View)
+  - `frontend/tests/AC-B02-04.test.jsx` (Component Test แจ้งเตือน GPS ปิดพร้อมปุ่มลองใหม่)
+  - `frontend/tests/AC-B02-05.test.jsx` (Component Test ตัวกรอง, สลับ List/Map Tab, และ Unverified Gate Modal `D-00-01`)
+  - `specs/buyer/02-job-search-and-map/tasks.md` (อัปเดตสถานะ `T-01` ถึง `T-08` เป็น `[DONE]` และอัปเดตสถานะเอกสารเป็น `completed`)
+- **ผลการตรวจ 5 ด่านหลังจบงาน (Verification Checklist):**
+  1. **ไฟล์ที่แตะ:** แตะเฉพาะไฟล์ที่กำหนดใน `T-01` ถึง `T-08` ของ Buyer 02 ไม่มีไฟล์นอกขอบเขต
+  2. **ผลการรัน Test:**
+     - Backend Test Suite (`pytest backend/tests/`): **`172 passed, 3 warnings in 0.64s`** (ผ่าน 100% ครบทุกโมดูล เดิม 153 -> 172 passed เพิ่มขึ้น 19 tests)
+     - Frontend Test Suite (`npm test --prefix frontend`): **`58 test files passed, 141 passed in 4.32s`** (ผ่าน 100% ครบทุกโมดูล เดิม 131 -> 141 passed เพิ่มขึ้น 10 tests)
+     - Zero Regressions: ไม่มีผลกระทบต่อ Seller 01..09 และ Buyer 01
+  3. **การอ้างอิง ID:** ฟังก์ชันในโค้ดและชุดทดสอบทุกไฟล์ระบุรหัส `UC-04`, `REQ-FN-002`, `REQ-QA-002`, `REQ-SEC-002`, `REQ-OP-002`, `CC-01..06`, `D-00-01`, `D-00-02`, `AC-B02-01..05`, `P-01..P-06` ครบถ้วน
+  4. **Non-goals & Constraints:**
+     - ไม่มีการกดรับงานหรือผูกใบงานจริง (ยกไปทำใน Buyer 04)
+     - ไม่มีระบบ Turn-by-turn Navigation
+     - ข้อมูลคำขอขายก่อนรับงานไม่มี `address_text`, เบอร์โทรศัพท์, หรือพิกัดจริงเด็ดขาด (Coordinate Fuzzing ±300–500 ม. และแสดงเฉพาะระดับตำบล/แขวง)
+     - ปุ่มกดบนหน้าจอมือถือมีขนาดความสูงไม่น้อยกว่า `48px` ทุกปุ่มตาม `REQ-UX-001`
+     - ซาเล้งที่ยังไม่ผ่าน KYC สามารถเปิดดูงานและแผนที่ได้ แต่ถูกล็อกปุ่มรับงานด้วย Informative Gate Modal ตาม `D-00-01`
+  5. **การบันทึกผล:** อัปเดตสถานะ `tasks.md` เป็น `completed` พร้อมเครื่องหมาย `[DONE]` ครบทุกงานย่อย และบันทึกลง `prompt-log.md` เรียบร้อย
