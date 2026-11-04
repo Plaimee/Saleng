@@ -39,6 +39,7 @@ class SupabaseStore:
         self.collector_sessions: Dict[str, dict] = {}
         self.collector_kyc_submissions: Dict[str, dict] = {}
         self.audit_logs: List[dict] = []
+        self.chat_messages: List[dict] = []
         self._seed_default_benchmark_prices()
         self._seed_default_scrap_categories()
         self._seed_default_saleng_profiles()
@@ -1484,6 +1485,64 @@ class SupabaseStore:
             if o_collector == saleng_id and o.get("status") in ("S3", "S4"):
                 active_jobs.append(dict(o))
         return active_jobs
+
+    def get_order_chat_messages(self, order_id: str) -> List[dict]:
+        """
+        ดึงข้อความแชตทั้งหมดของ order_id เรียงตามลำดับเวลาที่ส่ง (sent_at)
+        """
+        messages = [m for m in self.chat_messages if m.get("order_id") == order_id]
+        return sorted(messages, key=lambda x: x.get("sent_at", ""))
+
+    def send_chat_message(
+        self,
+        order_id: str,
+        sender_id: str,
+        sender_role: str,
+        message_text: str,
+        is_quick_reply: bool = False,
+    ) -> dict:
+        """
+        บันทึกข้อความแชตใหม่ลงตาราง chat_messages (D-B05-04, CC-04)
+        """
+        now = datetime.now(timezone.utc).isoformat()
+        msg = {
+            "message_id": f"msg-{uuid.uuid4().hex[:8]}",
+            "order_id": order_id,
+            "sender_id": sender_id,
+            "sender_role": sender_role,
+            "message_text": message_text,
+            "is_quick_reply": is_quick_reply,
+            "sent_at": now,
+        }
+        self.chat_messages.append(msg)
+        return msg
+
+    def log_communication_audit(
+        self,
+        order_id: str,
+        saleng_id: str,
+        action: str,
+        details: Optional[dict] = None,
+    ) -> dict:
+        """
+        บันทึกประวัติการสื่อสารลงใน audit_logs (REQ-SEC-001)
+        action: "COLLECTOR_SENT_MESSAGE" หรือ "COLLECTOR_INITIATED_CALL"
+        """
+        log_id = f"audit-{uuid.uuid4().hex[:8]}"
+        log_entry = {
+            "id": log_id,
+            "log_id": log_id,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "action": action,
+            "entity_id": order_id,
+            "actor_id": saleng_id,
+            "actor_role": "COLLECTOR",
+            "order_id": order_id,
+            "saleng_id": saleng_id,
+            "details": details or {},
+        }
+        self.audit_logs.append(log_entry)
+        return log_entry
 
 
 # Singleton instance สำหรับเข้าถึง Database

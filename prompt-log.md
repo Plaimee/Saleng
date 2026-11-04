@@ -1974,3 +1974,124 @@
      - Frontend (Vitest): **71 test files passed, 178 tests passed, 0 failed** (ครอบคลุม API client, ทุก AC component test)
   5. **Zero Regression:** ชุดทดสอบเดิมทั้งหมดของระบบผู้ขาย (Seller 01-09) และระบบผู้ซื้อ (Buyer 01-03) ยังคงผ่าน 100% ไม่มีข้อผิดพลาด
 - **สถานะ:** ฟีเจอร์ Buyer 04: ระบบจัดการงานและเส้นทาง (`specs/buyer/04-job-and-route-management/`) พัฒนาและตรวจรับเสร็จสมบูรณ์ 100%
+
+---
+
+## บันทึก #74 — `/clarify specs/buyer/05-communication/spec.md` (รอบที่ 1: ตรวจสอบความกำกวมก่อนวางแผน)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/clarify specs/buyer/05-communication/spec.md`
+- **ไฟล์ที่ AI อ่าน:** `AGENTS.md`, `specs/buyer/05-communication/spec.md` (v1.0), `specs/000-shared/constraints.md`, `specs/seller/03-buyer-search-and-selection/spec.md`, `specs/seller/08-notifications-and-help/spec.md`, `docs/srs/use-cases.md` (`UC-08`)
+- **จุดกำกวมที่ AI ตรวจพบ (6 ประเด็น):**
+  1. `Q-01` (`REQ-SEC-002`, `CC-06`): สิทธิ์การแชตและดูข้อมูลผู้ขายในสถานะ `S2` (Direct Request) ว่าอนุญาตให้แชตได้หรือไม่ และจะ Mask PII อย่างไร
+  2. `Q-02` (`REQ-FN-003`, `CC-01`): เทคโนโลยีโทรด่วน (Quick Call) ว่าใช้ Native Phone Dialer (`tel:<phone>`) และกำหนดให้ In-App VoIP เป็น Non-goals หรือไม่
+  3. `Q-03` (`REQ-UX-001`, `Digital Literacy`): รายการชุดข้อความด่วนสำเร็จรูป (Quick Replies) 4 ข้อความมาตรฐาน และการเปิดช่องพิมพ์ข้อความอิสระ
+  4. `Q-04` (`REQ-FN-003`, `CC-01`): ขอบเขตประเภทสื่อในแชต กำหนดให้รูปภาพและข้อความเสียงเป็น Non-goals ในเฟสนี้
+  5. `Q-05` (`REQ-SEC-002`, `MD-STM-04`): การปิดห้องแชตเป็น Read-Only และซ่อนปุ่มโทรด่วนทันทีเมื่อจบงาน (`S7`) หรือยกเลิก (`S8`) เพื่อความปลอดภัยข้อมูลส่วนบุคคล (PDPA)
+  6. `Q-06` (`REQ-OP-001`, `CC-05`): การแคชประวัติแชตใน `localStorage` ให้เปิดดูได้แม้ออฟไลน์ และปิดการส่งข้อความใหม่เมื่อไม่มีเน็ต
+- **ข้อสรุปการตัดสินใจ (`D-B05-01` ถึง `D-B05-06`):**
+  - **`D-B05-01`:** อนุญาตให้เปิดแชตได้ใน `S2` กรณี Direct Request โดยระบบจะ Mask เบอร์โทรศัพท์และบ้านเลขที่จริงของผู้ขาย จนกว่าซาเล้งจะกดยืนยันรับงาน (`S3`)
+  - **`D-B05-02`:** ปุ่มโทรด่วนทำงานโดยเปิด Native Phone Dialer (`tel:<phone>`) ของอุปกรณ์โดยตรง และไม่ทำ In-App VoIP ตาม `CC-01`
+  - **`D-B05-03`:** ติดตั้ง 4 ข้อความด่วนมาตรฐาน (กำลังเดินทางไปครับ, ถึงหน้าบ้านแล้วครับ, ช่วยออกมารับหน่อยครับ, ขอเลื่อนเวลาประมาณ 15 นาทีครับ) พร้อมช่องพิมพ์ข้อความอิสระ
+  - **`D-B05-04`:** แชตรองรับเฉพาะข้อความและ Quick Replies ส่วนรูปภาพและข้อความเสียงกำหนดเป็น Non-goals
+  - **`D-B05-05`:** เมื่อเข้าสู่สถานะ `S7 (สำเร็จ)` หรือ `S8 (ยกเลิก)` ล็อกห้องแชตเป็น Read-only ทันที และซ่อนปุ่มโทรด่วนเพื่อคุ้มครอง PDPA
+  - **`D-B05-06`:** แคชประวัติแชตลง `localStorage` (`saleng_chat_cache_{order_id}`) เปิดดูได้แม้ออฟไลน์ แต่ไม่อนุญาตให้ส่งข้อความใหม่จนกว่าจะมีสัญญาณเน็ต
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/buyer/05-communication/spec.md` (ปรับปรุงเป็น Version `2.0`, สถานะ `reviewed-post-clarify` ครบทั้ง 5 ส่วนหลัก)
+- **สถานะ:** สเปกผ่านการ Clarify เรียบร้อย พร้อมเข้าสู่ขั้นตอน `/plan specs/buyer/05-communication/spec.md`
+
+---
+
+## บันทึก #75 — `/plan specs/buyer/05-communication/spec.md` (แผนสถาปัตยกรรมและการพัฒนาทางเทคนิค)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/plan specs/buyer/05-communication/spec.md`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/buyer/05-communication/plan.md` (Version `1.0`, สถานะ `ready-for-tasks`, ครบ 8 ส่วนหลักตามมาตรฐานโครงการ)
+- **ประเด็นสำคัญใน plan.md:**
+  1. **เทคโนโลยีที่ใช้:** ระบุกำกับชัดเจนว่า `"ทีมเลือกเอง ไม่ได้มาจาก spec"` (Python 3.11 + FastAPI, Pydantic v2, In-memory Supabase Database Adapter พร้อมตาราง `chat_messages`, React 18 + TailwindCSS Mobile-First SPA ปุ่ม >= 48px, Native Phone Dialer URL Scheme `tel:<phone>`, Pytest และ Vitest)
+  2. **สถาปัตยกรรมและกลไกสำคัญ (`D-B05-01` ถึง `D-B05-06`):**
+     - `D-B05-01`: ในสถานะ `S2` (Direct Request) เปิดให้แชตได้ แต่ปิดบังเบอร์โทรศัพท์และที่อยู่จริงของผู้ขาย จนกว่าจะรับงานเข้าสู่สถานะ `S3` ตาม `REQ-SEC-002` และ `CC-06`
+     - `D-B05-02`: ปุ่มโทรด่วนเปิด Native Phone Dialer (`tel:<phone>`) โดยตรง และกำหนดให้ In-App VoIP เป็น Non-goals เพื่อประหยัด RAM/CPU บนมือถือตาม `CC-01`
+     - `D-B05-03`: ติดตั้งแถบข้อความด่วนสำเร็จรูป 4 ข้อความมาตรฐาน (กำลังเดินทางไปครับ, ถึงหน้าบ้านแล้วครับ, ช่วยออกมารับหน่อยครับ, ขอเลื่อนเวลาประมาณ 15 นาทีครับ) ขนาดปุ่ม `>= 48px` รองรับ Digital Literacy
+     - `D-B05-04`: แชตรองรับเฉพาะข้อความและ Quick Replies ส่วนรูปภาพและข้อความเสียงกำหนดเป็น Non-goals ในเฟสนี้
+     - `D-B05-05`: เมื่อเข้าสู่สถานะ `S7 (สำเร็จ)` หรือ `S8 (ยกเลิก)` ล็อกห้องแชตเป็น Read-Only ทันที และซ่อนปุ่มโทรด่วนเพื่อคุ้มครองข้อมูลส่วนบุคคลตาม PDPA
+     - `D-B05-06`: แคชประวัติแชตลง `localStorage` (`saleng_chat_cache_{order_id}`) เปิดดูได้แม้ออฟไลน์ และปิดการส่งข้อความใหม่เมื่อไม่มีเน็ต
+  3. **การออกแบบ API 4 เส้นทาง:**
+     - `GET /api/v1/collectors/chat/{order_id}/messages` (ดึงประวัติข้อความ ข้อมูลคู่สนทนา และสิทธิ์ Read-Only)
+     - `POST /api/v1/collectors/chat/{order_id}/messages` (ส่งข้อความใหม่ / Quick Reply)
+     - `POST /api/v1/collectors/chat/{order_id}/call-log` (บันทึก Audit Log การกดโทรด่วน)
+     - `GET /api/v1/collectors/chat/quick-replies` (ดึงรายการ 4 ข้อความด่วนมาตรฐาน)
+  4. **การออกแบบ Frontend 6 คอมโพเนนต์:**
+     - `ChatView`, `ChatHeader`, `ChatMessageList`, `QuickRepliesBar`, `ChatInputBar`, `ReadOnlyNoticeBanner` (ทัชทาร์เก็ตทุกปุ่มสูง `>= 48px` ตาม `REQ-UX-001` และ `CC-01`)
+  5. **ตารางตรวจ Constraints กลาง:** ครบทั้ง 13 ข้อตาม `specs/000-shared/constraints.md` โดยไม่มีการละเว้น
+- **สถานะ:** แผน `plan.md` สมบูรณ์ พร้อมเข้าสู่ขั้นตอนการแตกงานย่อย `/tasks specs/buyer/05-communication/plan.md`
+
+---
+
+## บันทึก #76 — `/tasks specs/buyer/05-communication/plan.md` (แตกงานย่อยระบบสื่อสาร Buyer 05)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/tasks specs/buyer/05-communication/plan.md`
+- **ไฟล์ที่ AI อ่าน:** `AGENTS.md`, `specs/buyer/05-communication/spec.md` (v2.0), `specs/buyer/05-communication/plan.md` (v1.0), `specs/000-shared/constraints.md`, `docs/srs/use-cases.md` (`UC-08`)
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/buyer/05-communication/tasks.md` (แตกงานย่อย 8 งาน `T-01` ถึง `T-08` ครบทั้ง 6 คอลัมน์, พร้อมตาราง Two-way Traceability Matrix ครบทุกข้อ `AC-B05-01..06`, และตาราง Constraints Traceability ครบทั้ง 13 ข้อ)
+- **ประเด็นสำคัญใน tasks.md:**
+  1. **งานย่อย 8 งาน (`T-01` ถึง `T-08`):**
+     - `T-01`: สร้าง Data Models และ Schema สำหรับระบบสื่อสาร (`communication_models.py`, ขยาย `supabase.py` เพิ่มตาราง `chat_messages` และ helper methods, `test_T01_communication_models.py`)
+     - `T-02`: สร้าง Service และ API ส่งและดึงข้อความแชต (`communication_service.py`, `communication.py`, `pricing.py`, `test_AC_B05_01_chat_messaging.py`)
+     - `T-03`: สร้าง Service และ API ข้อความด่วนสำเร็จรูป Quick Replies 4 รูปแบบ (`test_AC_B05_02_quick_replies.py`, `REQ-UX-001`, `CC-01`, `D-B05-03`)
+     - `T-04`: สร้าง Service และ API ปุ่มโทรด่วน Native Quick Call & Audit Logging (`test_AC_B05_03_quick_call.py`, `REQ-SEC-001`, `CC-01`, `D-B05-02`)
+     - `T-05`: สร้าง Pre-Claim Privacy Guard ในสถานะ S2 และ Post-Transaction Read-Only Guard ในสถานะ S7/S8 (`test_AC_B05_04_pre_claim_pdpa.py`, `test_AC_B05_05_post_job_lock.py`, `REQ-SEC-002`, `CC-06`, `MD-STM-04`, `D-B05-01`, `D-B05-05`)
+     - `T-06`: สร้าง Frontend API Client และระบบแคชแชตออฟไลน์ใน `localStorage` (`communicationApi.js`, `communicationApi.test.mjs`, `CC-05`, `REQ-OP-001`, `D-B05-06`)
+     - `T-07`: พัฒนาคอมโพเนนต์ React ระบบสื่อสาร (`ChatView`, `ChatHeader`, `ChatMessageList`, `QuickRepliesBar`, `ChatInputBar`, `ReadOnlyNoticeBanner` ทัชทาร์เก็ตทุกปุ่ม >= 48px ตาม `REQ-UX-001` และ `CC-01`)
+     - `T-08`: สร้างชุดทดสอบหน้าจอ Vitest Component Tests และ Backend Integration E2E Test Suite (`AC-B05-01..06`, `test_e2e_buyer_communication.py`)
+  2. **Two-way Traceability Matrix:** เกณฑ์การยอมรับทุกข้อ (`AC-B05-01` ถึง `AC-B05-06`) เชื่อมโยงกับงานย่อยและชื่อไฟล์ชุดทดสอบอย่างครบถ้วน
+  3. **Constraints Traceability:** ตรวจสอบข้อจำกัดกลางทั้ง 13 ข้อตาม `specs/000-shared/constraints.md` ครบถ้วน
+- **สถานะ:** แตกงานย่อยเสร็จสมบูรณ์ พร้อมสำหรับการเริ่มพัฒนางานย่อยในขั้นตอน `/implement T-01..08`
+
+---
+
+## บันทึก #77 — `/implement T-01..08` (พัฒนาระบบสื่อสาร Buyer 05 ครบถ้วน)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/implement T-01..08` (อ้างอิง `specs/buyer/05-communication/tasks.md`)
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - **Backend Models & Database Schema (`T-01`):**
+    - `backend/app/models/communication_models.py` (Pydantic models: `ChatMessage`, `SendChatMessageRequest`, `ChatMessageResponse`, `SellerContactInfo`, `ChatRoomResponse`, `LogCallRequest`, `LogCallResponse`, `QuickReplyItem`, `QuickRepliesResponse`, พร้อม `DEFAULT_QUICK_REPLIES` 4 ข้อความมาตรฐาน)
+    - `backend/app/core/supabase.py` (เพิ่มตาราง `chat_messages`, เมธอด `get_order_chat_messages`, `send_chat_message`, และ `log_communication_audit`)
+    - `backend/tests/test_T01_communication_models.py` (5 unit tests ผ่าน 100%)
+  - **Backend Services & API Router (`T-02`, `T-03`, `T-04`, `T-05`):**
+    - `backend/app/services/communication_service.py` (`CommunicationService` ตรวจสอบสิทธิ์ KYC `D-00-01`, ตรรกะ PDPA Masking เบอร์โทรใน `S2`, เปิดเผยเบอร์ใน `S3..S6`, ล็อกห้องแชต Read-only ใน `S7/S8`, ตรวจสอบความยาวข้อความ 1-500 ตัวอักษร, บันทึก Audit Log ทุกข้อความและการโทร)
+    - `backend/app/api/v1/communication.py` (FastAPI Router สำหรับ `GET /quick-replies`, `GET /{order_id}/messages`, `POST /{order_id}/messages`, `POST /{order_id}/call-log`)
+    - `backend/app/api/v1/pricing.py` (เมานต์ `communication_router` ภายใต้ `/api/v1/collectors`)
+  - **Backend Acceptance Tests (`T-02` ถึง `T-05`):**
+    - `backend/tests/test_AC_B05_01_chat_messaging.py` (3 tests ผ่าน 100%)
+    - `backend/tests/test_AC_B05_02_quick_replies.py` (2 tests ผ่าน 100%)
+    - `backend/tests/test_AC_B05_03_quick_call.py` (3 tests ผ่าน 100%)
+    - `backend/tests/test_AC_B05_04_pre_claim_pdpa.py` (3 tests ผ่าน 100%)
+    - `backend/tests/test_AC_B05_05_post_job_lock.py` (3 tests ผ่าน 100%)
+  - **Frontend API Client & Cache (`T-06`):**
+    - `frontend/src/services/communicationApi.js` (Methods: `getQuickReplies`, `getMessages`, `sendMessage`, `sendQuickReply`, `logCall`, พร้อมระบบแคช `localStorage` คีย์ `saleng_chat_cache_{order_id}` และ fallback ออฟไลน์)
+    - `frontend/tests/communicationApi.test.mjs` (7 unit tests ผ่าน 100%)
+  - **Frontend React Components (`T-07`):**
+    - `frontend/src/components/ChatHeader.jsx` (ส่วนหัวห้องแชต, ป้ายสถานะคำขอ, ปุ่มโทรด่วน Native Quick Call `tel:<phone>` ทัชทาร์เก็ต >= 48px พร้อมล็อกใน S2 และซ่อนใน S7/S8)
+    - `frontend/src/components/ChatMessageList.jsx` (ฟีดข้อความแยกฝั่ง ซาเล้งเขียวมรกต vs ผู้ขายเทาอ่อน พร้อมป้าย `ส่งด่วน ⚡`)
+    - `frontend/src/components/QuickRepliesBar.jsx` (แถบ 4 ปุ่มลัดข้อความด่วน เลื่อนแนวนอน ทัชทาร์เก็ต >= 48px)
+    - `frontend/src/components/ChatInputBar.jsx` (ช่องพิมพ์ข้อความอิสระและปุ่มส่ง >= 48px พร้อมล็อกเมื่อ Read-only หรือออฟไลน์)
+    - `frontend/src/components/ReadOnlyNoticeBanner.jsx` (แบนเนอร์แจ้งเตือนห้องแชตล็อก Read-only ตามกฎหมาย PDPA)
+    - `frontend/src/components/ChatView.jsx` (หน้าจอหลักห้องแชตรวบรวมทุกคอมโพเนนต์ พร้อมป้ายแจ้งเตือนโหมดออฟไลน์)
+  - **Frontend Component Tests & Integration E2E Suite (`T-08`):**
+    - `frontend/tests/AC-B05-01.test.jsx` (In-App Direct Chat Messaging)
+    - `frontend/tests/AC-B05-02.test.jsx` (Quick Replies Preset Bar ทัชทาร์เก็ต >= 48px)
+    - `frontend/tests/AC-B05-03.test.jsx` (Native Quick Call Launch tel: protocol)
+    - `frontend/tests/AC-B05-04.test.jsx` (Pre-Claim Privacy Guard Masking ใน S2)
+    - `frontend/tests/AC-B05-05.test.jsx` (Post-Transaction Privacy Guard Read-Only ใน S7/S8)
+    - `frontend/tests/AC-B05-06.test.jsx` (Offline Chat History Cache & Banner)
+    - `backend/tests/test_e2e_buyer_communication.py` (2 integration lifecycle tests S2 -> S3 -> S4 -> S7 และ KYC Guard)
+  - **Task Checklist:** อัปเดต `specs/buyer/05-communication/tasks.md` เป็นสถานะ `completed` (`T-01..08` เป็น `[DONE]`)
+- **การตรวจสอบ 5 ด่านก่อนจบงาน:**
+  1. **สเปกตรง 100%:** ทุกฟังก์ชันรองรับ `UC-08`, `MD-STM-04`, `AC-B05-01..06` และการตัดสินใจ `D-B05-01..06` ครบถ้วน
+  2. **ไม่มีโค้ดเดาเอง:** ไม่ทำ In-App VoIP/WebRTC ตาม Non-goals (ใช้ Native Phone Dialer `tel:`), ข้อความด่วน 4 รูปแบบตรงตามสเปก, และล็อกห้องแชต Read-only อัตโนมัติเมื่อสิ้นสุดงาน
+  3. **ไม่ละเมิด Constraints:** Mobile-first ปุ่มกด >= 48px (`REQ-UX-001`, `CC-01`), Offline cache ใน `localStorage` (`CC-05`, `REQ-OP-001`), PDPA Masking เบอร์โทรใน S2 และ S7/S8 (`REQ-SEC-002`, `CC-06`), Audit Logging (`REQ-SEC-001`)
+  4. **Automated Tests ผ่าน 100%:**
+     - Backend (Pytest): **229 passed, 0 failed** (ครอบคลุมโมเดล, ทุก AC, และ E2E)
+     - Frontend (Vitest): **78 test files passed, 193 tests passed, 0 failed** (ครอบคลุม API client, ทุก AC component test)
+  5. **Zero Regression:** ชุดทดสอบเดิมทั้งหมดของระบบผู้ขาย (Seller 01-09) และระบบผู้ซื้อ (Buyer 01-04) ยังคงผ่าน 100% ไม่มีข้อผิดพลาด
+- **สถานะ:** ฟีเจอร์ Buyer 05: ระบบสื่อสาร (`specs/buyer/05-communication/`) พัฒนาและตรวจรับเสร็จสมบูรณ์ 100%
