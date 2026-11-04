@@ -2434,3 +2434,126 @@
      - รวมทั้งสิ้น **527 automated tests ผ่าน 100% ปราศจากข้อผิดพลาดและ Regression**
   5. *ด่าน 5 (บันทึก prompt-log):* บันทึกประวัติรอบ #89 เรียบร้อย
 - **สถานะ:** ฟีเจอร์ Admin 01 (`specs/admin/01-user-verification-and-penalty/`) เสร็จสมบูรณ์พร้อมใช้งาน
+
+
+---
+
+## บันทึก #90 — `/clarify specs/admin/02-benchmark-price-and-grading/spec.md` (ตรวจความกำกวมระบบจัดการราคากลางและหมวดหมู่วัสดุ Admin 02)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/clarify specs/admin/02-benchmark-price-and-grading/spec.md`
+- **ไฟล์ที่ AI อ่าน:** `AGENTS.md`, `specs/admin/02-benchmark-price-and-grading/spec.md` (v1.0 draft), `specs/000-shared/constraints.md`, `docs/srs/use-cases.md` (`UC-03`, `UC-05`), `docs/srs/decisions.md` (`D-00-02`), `specs/seller/04-pricing-and-decision/spec.md` (`AC-S04-01`, `D-04`)
+- **จุดกำกวมที่ AI พบและคำตอบของทีม (ส่วน A & B — 6 คำถาม):**
+  1. **`Q-01` (`REQ-DAT-001`, `AC-A02-01`):** เวลาตัดรอบเผยแพร่ราคากลางประจำวันขัดแย้งกันระหว่าง `08:30 น.` ในสเปกเดิมกับ `06:00 น.` ใน Seller 04 -> บันทึก `D-A02-01`: กำหนดเวลาตัดรอบเผยแพร่ราคากลางประจำวันอย่างเป็นทางการ ณ เวลา **`06:00 น.`** ของทุกวัน หากไม่ได้อัปเดตระบบจะดึงราคาฐานของวันก่อนหน้ามาใช้โดยอัตโนมัติพร้อมแสดงวันเวลาอัปเดตล่าสุด
+  2. **`Q-02` (`BR-01`, `REQ-DAT-001`):** กฎการตรวจสอบความถูกต้องของช่วงราคากลาง -> บันทึก `D-A02-02`: บังคับ `min_price > 0`, `max_price >= min_price`, ทศนิยมไม่เกิน 2 ตำแหน่ง และมีระบบเตือนยืนยันหากราคาขยับเกิน `±50%` จากวันก่อนหน้า เพื่อป้องกัน Human Error
+  3. **`Q-03` (`REQ-FN-003`, `AC-A02-02`):** โครงสร้างเกณฑ์คุณภาพและการหักน้ำหนักสิ่งปนเปื้อน -> บันทึก `D-A02-03`: กำหนด 3 ระดับมาตรฐาน ได้แก่ `GRADE_A` (สะอาด/แห้ง หักสิ่งปนเปื้อน `0%`), `GRADE_B` (ปนเปื้อน/ชื้นเล็กน้อย หัก `5%`), `GRADE_C` (ปนเปื้อนมาก/เปียกน้ำ หัก `10%`)
+  4. **`Q-04` (`REQ-FN-003`, `AC-A02-02`):** หมวดหมู่และช่วงราคาประเมินขยะชิ้นใหญ่เหมาจ่าย -> บันทึก `D-A02-04`: กำหนดหน่วยนับเป็น **"ชิ้น/เครื่อง" (`PIECE`)** ครอบคลุม: ตู้เย็น (`200–300 บาท`), เครื่องซักผ้า (`150–250 บาท`), เครื่องปรับอากาศ/แอร์ (`300–500 บาท`), โทรทัศน์/จอภาพ (`50–150 บาท`), เฟอร์นิเจอร์/เตียง (`0–100 บาท`)
+  5. **`Q-05` (`REQ-BR-002`, `D-00-02`):** ผลกระทบต่อออเดอร์ในระบบเมื่อมีการปรับราคากลาง -> บันทึก `D-A02-05`: ออเดอร์สถานะ `S1 (Draft)` และ `S2 (Pending)` คำนวณราคาใหม่ตามเรตล่าสุดทันที ส่วนออเดอร์สถานะ `S3..S7` ล็อกราคาเดิมตาม Price Snapshot ณ เวลาที่ซาเล้งกดรับงานอย่างเคร่งครัด
+  6. **`Q-06` (`REQ-SEC-001`, `CC-03`, `CC-05`):** สิทธิ์การเข้าถึงและความปลอดภัย -> บันทึก `D-A02-06`: บังคับ Header `X-Admin-Role: ADMIN` (`HTTP 403 Forbidden` หากไม่มีสิทธิ์), ทำงานแบบ Online-only (`CC-05`), บันทึก Audit Log แบบ Append-only (`ADMIN_UPDATED_BENCHMARK_PRICE`, `ADMIN_UPDATED_GRADING_RULES`) พร้อมค่าเก่าและใหม่
+- **ไฟล์ที่สร้าง/แก้ไข:** `specs/admin/02-benchmark-price-and-grading/spec.md` (ปรับปรุงเป็น Version 2.0 สถานะ `reviewed-post-clarify`)
+- **สิ่งที่ป้องกันไม่ให้ AI เดาเอง:** ป้องกัน AI สับสนเวลาตัดรอบเผยแพร่ราคา, ป้องกันการเดาสูตรหักสิ่งปนเปื้อนคลาดเคลื่อน, ป้องกันการคิดราคาขยะชิ้นใหญ่ผิดหน่วยนับ, และป้องกันการกระทบต่อออเดอร์ที่ล็อก Price Snapshot แล้ว
+- **สถานะ:** Clarification เสร็จสมบูรณ์ พร้อมสำหรับการวางแผนทางเทคนิค `/plan specs/admin/02-benchmark-price-and-grading/spec.md`
+
+
+---
+
+## บันทึก #91 — `/plan specs/admin/02-benchmark-price-and-grading/spec.md` (สร้างแผนทางเทคนิคระบบจัดการราคากลางและหมวดหมู่วัสดุ Admin 02)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/plan specs/admin/02-benchmark-price-and-grading/spec.md`
+- **ไฟล์ที่ AI อ่าน:** `AGENTS.md`, `specs/admin/02-benchmark-price-and-grading/spec.md` (v2.0), `specs/000-shared/constraints.md`, `specs/000-shared/quality-requirements.md`, `docs/srs/use-cases.md` (`UC-03`, `UC-05`), `docs/srs/decisions.md` (`D-00-02`), `specs/seller/04-pricing-and-decision/spec.md`
+- **ไฟล์ที่สร้าง:** `specs/admin/02-benchmark-price-and-grading/plan.md` (ครบ 8 ส่วนตามโครงสร้างมาตรฐาน)
+- **ประเด็นสำคัญในแผน:**
+  1. **การตัดสินใจทางเทคโนโลยี:** ระบุชัดเจนว่า **`"ทีมเลือกเอง ไม่ได้มาจาก spec"`** ตามกติกาข้อ 6 (FastAPI + Pydantic v2 หลังบ้าน, React 18 + TailwindCSS หน้าบ้าน, และ In-Memory Adapter จำลอง Supabase)
+  2. **โครงสร้างไฟล์และโมดูล:**
+     - Data Models: `backend/app/models/benchmark_price_grading_models.py`
+     - Backend Service & API: `backend/app/services/benchmark_price_grading_service.py` และ `backend/app/api/v1/benchmark_price_grading.py`
+     - Mock Store & Database: `benchmark_prices`, `quality_grading_rules`, `price_history_logs`, `audit_logs`
+     - Frontend API Client & Components: `adminBenchmarkApi.js`, `BenchmarkPriceTable.jsx`, `QualityGradingRuleCard.jsx`, `BulkyItemPriceTable.jsx`, `AdminBenchmarkGradingView.jsx` (`data-req="UC-03"`)
+  3. **การออกแบบ API แอดมิน 6 เส้นทาง:**
+     - `GET /api/v1/admin/benchmark-prices` (ดึงรายการราคากลางทั้งหมด)
+     - `PUT /api/v1/admin/benchmark-prices/{category_code}` (แก้ไขช่วงราคา Min-Max พร้อมเตือน 50%)
+     - `POST /api/v1/admin/benchmark-prices/batch-update` (อัปเดตราคาแบบกลุ่มประจำวัน)
+     - `GET /api/v1/admin/benchmark-prices/grading/{category_code}` (ดึงเกณฑ์คุณภาพ 3 ระดับ)
+     - `PUT /api/v1/admin/benchmark-prices/grading/{category_code}` (แก้ไขเกณฑ์คุณภาพและ % หักสิ่งปนเปื้อน)
+     - `GET /api/v1/admin/benchmark-prices/history/{category_code}` (ดึงประวัติการปรับราคา)
+  4. **การปฏิบัติตาม Constraints กลาง:** ครบทั้ง 13 ข้อตาม `specs/000-shared/constraints.md` โดยเฉพาะ `CC-01` (ปุ่ม $\ge 48\text{px}$), `CC-03` (สิทธิ์ `X-Admin-Role: ADMIN`), `CC-05` (Online-only สำหรับแอดมิน), `REQ-SEC-001` (Audit Logging `ADMIN_UPDATED_BENCHMARK_PRICE`, `ADMIN_UPDATED_GRADING_RULES`), และ `D-00-02` (ล็อกราคา Price Snapshot ณ `S3`)
+- **สถานะ:** แผน `plan.md` สมบูรณ์ พร้อมเข้าสู่ขั้นตอนการแตกงานย่อย `/tasks specs/admin/02-benchmark-price-and-grading/plan.md`
+
+
+---
+
+## บันทึก #92 — `/tasks specs/admin/02-benchmark-price-and-grading/plan.md` (แตกงานย่อยระบบจัดการราคากลางและหมวดหมู่วัสดุ Admin 02)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/tasks specs/admin/02-benchmark-price-and-grading/plan.md`
+- **ไฟล์ที่ AI อ่าน:** `AGENTS.md`, `specs/admin/02-benchmark-price-and-grading/spec.md` (v2.0), `specs/admin/02-benchmark-price-and-grading/plan.md` (v1.0), `specs/000-shared/constraints.md`, `docs/srs/use-cases.md` (`UC-03`, `UC-05`), `docs/srs/decisions.md` (`D-00-02`)
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/admin/02-benchmark-price-and-grading/tasks.md` (แตกงานย่อย 8 งาน `T-01` ถึง `T-08` ครบทั้ง 6 คอลัมน์, พร้อมตาราง Two-way Traceability Matrix ครบทุกข้อ `AC-A02-01..05`, และตาราง Constraints Traceability ครบทั้ง 13 ข้อ)
+- **ประเด็นสำคัญใน tasks.md:**
+  1. **งานย่อย 8 งาน (`T-01` ถึง `T-08`):**
+     - `T-01`: สร้าง Data Models และ Schema สำหรับระบบราคากลางและเกณฑ์คุณภาพ (`benchmark_price_grading_models.py`, ขยาย `supabase.py` เพิ่ม `quality_grading_rules`, `price_history_logs`, `test_T01_benchmark_grading_models.py`)
+     - `T-02`: สร้าง Service และ API เผยแพร่ราคากลางรายวันและ Price Validation (`benchmark_price_grading_service.py`, `benchmark_price_grading.py`, `pricing.py`, `test_AC_A02_01_benchmark_publishing.py`)
+     - `T-03`: สร้าง Service และ API กำหนดเกณฑ์คุณภาพ 3 ระดับและการหักสิ่งปนเปื้อน 0%/5%/10% (`benchmark_price_grading_service.py`, `benchmark_price_grading.py`, `test_AC_A02_02_grading_rules.py`)
+     - `T-04`: สร้าง Service และ API จัดการช่วงราคาขยะชิ้นใหญ่เหมาจ่ายหน่วย PIECE และ Batch Update (`benchmark_price_grading_service.py`, `benchmark_price_grading.py`, `test_AC_A02_03_bulky_item_prices.py`)
+     - `T-05`: สร้างระบบตรวจสอบความปลอดภัย Admin RBAC (`X-Admin-Role: ADMIN` -> 403), เตือนราคาเปลี่ยนเกิน 50%, ทดสอบ Price Snapshot Lock ณ S3 และ Audit Logging (`test_AC_A02_04_price_snapshot_integrity.py`, `test_AC_A02_05_admin_price_audit.py`)
+     - `T-06`: สร้าง Frontend API Client สำหรับแอดมิน (`adminBenchmarkApi.js`, `adminBenchmarkApi.test.mjs`, `CC-03`, `CC-05`)
+     - `T-07`: พัฒนาคอมโพเนนต์ React แดชบอร์ดจัดการราคากลางและเกณฑ์คุณภาพ (`BenchmarkPriceTable`, `BulkyItemPriceTable`, `QualityGradingRuleCard`, `AdminBenchmarkGradingView` ทัชทาร์เก็ตทุกปุ่ม $\ge 48\text{px}$ ตาม `REQ-UX-001`, `CC-01`)
+     - `T-08`: สร้างชุดทดสอบ Vitest Component Tests และ Integration E2E Test Suite เต็มวงรอบ พร้อมตรวจรับ 5 ด่าน (`test_e2e_admin_benchmark_price_grading.py`)
+  2. **Two-way Traceability Matrix:** เกณฑ์การยอมรับทุกข้อ (`AC-A02-01` ถึง `AC-A02-05`) เชื่อมโยงกับงานย่อยและชื่อไฟล์ชุดทดสอบอย่างครบถ้วน
+  3. **Constraints Traceability:** ตรวจสอบข้อจำกัดกลางทั้ง 13 ข้อตาม `specs/000-shared/constraints.md` ครบถ้วน
+- **สถานะ:** แตกงานย่อยเสร็จสมบูรณ์ พร้อมสำหรับการเริ่มพัฒนางานย่อยในขั้นตอน `/implement T-01..08`
+
+
+---
+
+## บันทึก #93 — `/implement T-01..08` (พัฒนาระบบจัดการราคากลางและเกณฑ์คุณภาพ Admin 02 จนเสร็จสมบูรณ์)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/implement T-01..08`
+- **ไฟล์ที่ AI อ่าน:** `AGENTS.md`, `specs/admin/02-benchmark-price-and-grading/spec.md` (v2.0), `specs/admin/02-benchmark-price-and-grading/plan.md` (v1.0), `specs/admin/02-benchmark-price-and-grading/tasks.md` (v1.1), `specs/000-shared/constraints.md`, `docs/srs/use-cases.md` (`UC-03`, `UC-05`), `docs/srs/decisions.md` (`D-00-02`)
+- **งานย่อยที่พัฒนาครบทั้ง 8 งาน (`T-01` ถึง `T-08`):**
+  1. **`T-01` (Data Models & Schemas):**
+     - สร้าง `backend/app/models/benchmark_price_grading_models.py` (`BenchmarkPriceAdminItem`, `UpdateBenchmarkPriceRequest`, `BatchUpdateBenchmarkPricesRequest`, `QualityGradingRuleItem`, `UpdateGradingRulesRequest`, `PriceHistoryLogItem`, `BenchmarkPriceResponse`, `BatchUpdateResponse`, `GradingRulesResponse`)
+     - ขยาย `backend/app/core/supabase.py` เพิ่ม `quality_grading_rules`, `price_history_logs` และ helper methods: `get_all_benchmark_prices_admin`, `update_benchmark_price`, `get_quality_grading_rules`, `update_quality_grading_rules`, `batch_update_benchmark_prices`, `get_benchmark_price_history`
+     - สร้างชุดทดสอบ `backend/tests/test_T01_benchmark_grading_models.py` (8 passed)
+  2. **`T-02` (Daily Benchmark Publishing & Price Validation):**
+     - พัฒนา `BenchmarkPriceGradingService.list_benchmark_prices` และ `update_benchmark_price` ใน `backend/app/services/benchmark_price_grading_service.py`
+     - เปิด Endpoint `GET /api/v1/admin/benchmark-prices`, `PUT /api/v1/admin/benchmark-prices/{category_code}` และเมานต์ใน `backend/app/api/v1/pricing.py`
+     - ตรวจสอบ `min_price > 0`, `max_price >= min_price`, ทศนิยม $\le 2$ ตำแหน่ง และกลไก Fallback ราคาก่อนหน้าอัตโนมัติหากไม่มีการตั้งราคาใหม่ก่อน 06:00 น. (`D-A02-01`, `D-A02-02`)
+     - สร้างชุดทดสอบ `backend/tests/test_AC_A02_01_benchmark_publishing.py` (4 passed)
+  3. **`T-03` (Quality Grading & Contamination Rules):**
+     - พัฒนา `get_grading_rules` และ `update_grading_rules` เปิด Endpoint `GET /api/v1/admin/benchmark-prices/grading/{category_code}` และ `PUT /api/v1/admin/benchmark-prices/grading/{category_code}`
+     - รองรับเกณฑ์คุณภาพ 3 ระดับมาตรฐาน: `GRADE_A` (สะอาด หัก 0%, คิดราคา MAX), `GRADE_B` (ปนเปื้อนเล็กน้อย หัก 5%, คิดราคา MID), `GRADE_C` (ปนเปื้อนมาก หัก 10%, คิดราคา MIN) ตาม `D-A02-03`
+     - บันทึก Audit Log `ADMIN_UPDATED_GRADING_RULES`
+     - สร้างชุดทดสอบ `backend/tests/test_AC_A02_02_grading_rules.py` (4 passed)
+  4. **`T-04` (Bulky Waste Lump-sum Pricing & Batch Update):**
+     - รองรับขยะชิ้นใหญ่หน่วย `PIECE` (ตู้เย็น 200–300 บ., เครื่องซักผ้า 150–250 บ., แอร์ 300–500 บ., ทีวี 50–150 บ., เตียง/เฟอร์นิเจอร์ 10–100 บ.) ตาม `D-A02-04` และ `UC-05`
+     - เปิด Endpoint `POST /api/v1/admin/benchmark-prices/batch-update` สำหรับอัปเดตราคากลางหลายหมวดหมู่พร้อมกันประจำวัน
+     - บันทึกประวัติลง `price_history_logs`
+     - สร้างชุดทดสอบ `backend/tests/test_AC_A02_03_bulky_item_prices.py` (4 passed)
+  5. **`T-05` (Admin RBAC, 50% Price Shift Warning & Price Snapshot Integrity):**
+     - ตรวจสอบ Header `X-Admin-Role: ADMIN` ปฏิเสธผู้ไม่มีสิทธิ์ด้วย `HTTP 403 Forbidden` (`CC-03`, `D-A02-06`)
+     - แจ้งเตือนและบังคับยืนยัน flag `confirm_shift = True` เมื่อราคาเปลี่ยนเกิน $\pm 50\%$ เพื่อป้องกันความผิดพลาดจากคน (`D-A02-02`)
+     - ทดสอบผลกระทบต่อออเดอร์: ออเดอร์ `S1/S2` ได้รับราคาคำนวณใหม่ตามเรตล่าสุดทันที ส่วนออเดอร์ `S3..S7` ล็อกราคาเดิมตาม Price Snapshot อย่างเคร่งครัดตาม `D-00-02` และ `D-A02-05`
+     - บันทึก Audit Log `ADMIN_UPDATED_BENCHMARK_PRICE` แบบ Append-only
+     - สร้างชุดทดสอบ `backend/tests/test_AC_A02_04_price_snapshot_integrity.py` และ `test_AC_A02_05_admin_price_audit.py` (4 passed)
+  6. **`T-06` (Frontend API Client):**
+     - สร้าง `frontend/src/services/adminBenchmarkApi.js` (`getBenchmarkPrices`, `updateBenchmarkPrice`, `batchUpdatePrices`, `getGradingRules`, `updateGradingRules`, `getPriceHistory`)
+     - แนบ Header `X-Admin-Role: ADMIN` อัตโนมัติ จัดการ Error 403 และ Error 400 (50% shift)
+     - สร้างชุดทดสอบ `frontend/tests/adminBenchmarkApi.test.mjs` (8 passed)
+  7. **`T-07` (React Admin Dashboard Components):**
+     - พัฒนาชุดคอมโพเนนต์ Responsive SPA ใน `frontend/src/components/admin/`:
+       - `BenchmarkPriceTable.jsx`: ตารางราคากลางรายวัน, ฟอร์มแก้ไข Inline, Modal ยืนยันเปลี่ยนราคาเกิน 50%
+       - `BulkyItemPriceTable.jsx`: ตารางราคาเหมาจ่ายขยะชิ้นใหญ่ (หน่วย PIECE)
+       - `QualityGradingRuleCard.jsx`: การ์ดเกณฑ์คุณภาพ 3 ระดับ พร้อม % หักสิ่งปนเปื้อน 0%/5%/10%
+       - `AdminBenchmarkGradingView.jsx`: หน้าจอหลักแท็บคู่ กำกับ `data-req="UC-03"`, ป้ายโหมด Online-only (`CC-05`), และปุ่มกดมีทัชทาร์เก็ต $\ge 48\text{px}$ ทุกปุ่ม (`REQ-UX-001`, `CC-01`)
+  8. **`T-08` (Vitest Component Tests & Integration E2E Test Suite):**
+     - สร้างชุดทดสอบหน้าจอ: `frontend/tests/AC-A02-01.test.jsx` (4 passed), `AC-A02-02.test.jsx` (2 passed), `AC-A02-03.test.jsx` (2 passed)
+     - สร้างชุดทดสอบ E2E เต็มวงจร: `backend/tests/test_e2e_admin_benchmark_price_grading.py` (1 passed)
+- **ผลการตรวจรับ 5 ด่าน (5-Gate Checkpoints):**
+  1. **ตรวจ `git status`:** ไฟล์ที่แตะตรงตามที่ระบุใน tasks.md ช่อง "สร้างหรือแก้ไฟล์ไหน" ครบถ้วน ไม่แตะไฟล์นอกขอบเขต
+  2. **ตรวจผลรัน test:**
+     - Backend (Pytest): ผ่าน 308/308 tests (100% pass, 0 regressions)
+     - Frontend (Vitest): ผ่าน 260/260 tests (100% pass, 0 regressions)
+     - รวมผ่านทั้งหมด 568 tests ทั่วทั้งคลังโค้ด
+  3. **ตรวจการอ้างอิง ID:** ทุกโมดูล ฟังก์ชัน และชุดทดสอบอ้างอิง ID สเปกครบถ้วน (`UC-03`, `UC-05`, `REQ-DAT-001`, `REQ-FN-003`, `REQ-BR-002`, `REQ-SEC-001`, `REQ-UX-001`, `CC-01..06`, `D-00-02`, `D-A02-01..06`, `AC-A02-01..05`)
+  4. **ตรวจ Non-goals / คำถามเปิด:** ปฏิบัติตามขอบเขตเคร่งครัด (ไม่ทำ Bidding, ไม่เชื่อมต่อ API ตลาดต่างประเทศอัตโนมัติ, ไม่ทำ AI image detection, โหมด Online-only สำหรับแอดมิน)
+  5. **บันทึกลง tasks.md & prompt-log.md:** ปรับสถานะ tasks.md เป็น `completed` (ทุกงาน `[DONE]`) และบันทึกประวัติลง `prompt-log.md` เรียบร้อย
+- **สถานะ:** พัฒนาฟีเจอร์ Admin 02 เสร็จสมบูรณ์ 100% พร้อมสำหรับการตรวจรับหรือขึ้นสู่ฟีเจอร์ถัดไป

@@ -42,12 +42,15 @@ class SupabaseStore:
         self.chat_messages: List[dict] = []
         self.collector_favorite_sellers: List[dict] = []
         self.dispute_reports: Dict[str, dict] = {}
+        self.quality_grading_rules: Dict[str, List[dict]] = {}
+        self.price_history_logs: List[dict] = []
         self._seed_default_benchmark_prices()
         self._seed_default_scrap_categories()
         self._seed_default_saleng_profiles()
         self._seed_default_orders_s2()
         self._seed_default_sellers()
         self._seed_default_collector_kyc()
+        self._seed_default_quality_grading_rules()
 
     def _seed_default_benchmark_prices(self):
         """กำหนดราคากลางตั้งต้นตามที่ระบุใน spec.md หัวข้อ 1.1 และ D-02"""
@@ -110,11 +113,127 @@ class SupabaseStore:
                 "min_price_per_unit": 30.0,
                 "max_price_per_unit": 50.0,
                 "grading_condition": "บรรจุกระสอบมาตรฐาน เทน้ำบีบแบน",
+                "effective_date": "2026-11-04",
+                "is_active": True,
                 "updated_at": datetime.now(timezone.utc).isoformat(),
+                "updated_by": "admin-01",
+            },
+            # ขยะชิ้นใหญ่เหมาจ่าย (หน่วย PIECE) รองรับ D-A02-04, UC-05, REQ-FN-003
+            {
+                "id": str(uuid.uuid4()),
+                "category_code": "BULKY-FRIDGE",
+                "category_name": "ตู้เย็น",
+                "unit": "piece",
+                "min_price_per_unit": 200.0,
+                "max_price_per_unit": 300.0,
+                "grading_condition": "คอมเพรสเซอร์ครบ อุปกรณ์ครบ ไม่บุบหนัก",
+                "effective_date": "2026-11-04",
+                "is_active": True,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "updated_by": "admin-01",
+            },
+            {
+                "id": str(uuid.uuid4()),
+                "category_code": "BULKY-WASHING-MACHINE",
+                "category_name": "เครื่องซักผ้า",
+                "unit": "piece",
+                "min_price_per_unit": 150.0,
+                "max_price_per_unit": 250.0,
+                "grading_condition": "ถังซักและมอเตอร์ครบ ไม่ผุกร่อนรุนแรง",
+                "effective_date": "2026-11-04",
+                "is_active": True,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "updated_by": "admin-01",
+            },
+            {
+                "id": str(uuid.uuid4()),
+                "category_code": "BULKY-AIR-CONDITIONER",
+                "category_name": "แอร์/เครื่องปรับอากาศ",
+                "unit": "piece",
+                "min_price_per_unit": 300.0,
+                "max_price_per_unit": 500.0,
+                "grading_condition": "คอยล์ทองแดงและคอมเพรสเซอร์สมบูรณ์",
+                "effective_date": "2026-11-04",
+                "is_active": True,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "updated_by": "admin-01",
+            },
+            {
+                "id": str(uuid.uuid4()),
+                "category_code": "BULKY-TV",
+                "category_name": "โทรทัศน์/จอภาพ",
+                "unit": "piece",
+                "min_price_per_unit": 50.0,
+                "max_price_per_unit": 150.0,
+                "grading_condition": "จอไม่แตก หลอดภาพ/บอร์ดหลักอยู่ครบ",
+                "effective_date": "2026-11-04",
+                "is_active": True,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "updated_by": "admin-01",
+            },
+            {
+                "id": str(uuid.uuid4()),
+                "category_code": "BULKY-FURNITURE",
+                "category_name": "เฟอร์นิเจอร์/เตียง/เบาะ",
+                "unit": "piece",
+                "min_price_per_unit": 10.0,
+                "max_price_per_unit": 100.0,
+                "grading_condition": "โครงไม้/เหล็กสมบูรณ์ ไม่ผุพัง",
+                "effective_date": "2026-11-04",
+                "is_active": True,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "updated_by": "admin-01",
             },
         ]
         for p in default_prices:
+            p.setdefault("effective_date", "2026-11-04")
+            p.setdefault("is_active", True)
+            p.setdefault("updated_by", "admin-01")
             self.benchmark_prices[str(p["category_code"])] = p
+
+    def _seed_default_quality_grading_rules(self):
+        """
+        กำหนดเกณฑ์คุณภาพ 3 ระดับและการหักสิ่งปนเปื้อน 0%/5%/10%
+        รองรับ REQ-FN-003, D-A02-03
+        """
+        now = datetime.now(timezone.utc).isoformat()
+        categories = list(self.benchmark_prices.keys())
+        for cat in categories:
+            self.quality_grading_rules[cat] = [
+                {
+                    "rule_id": str(uuid.uuid4()),
+                    "category_code": cat,
+                    "grade_level": "GRADE_A",
+                    "grade_name": "เกรด A (สะอาด/แห้ง/สมบูรณ์)",
+                    "description": "วัสดุสะอาด แห้งสนิท ไม่เปียกชื้น ไม่มีสิ่งปนเปื้อน",
+                    "contamination_deduction_percent": 0.0,
+                    "price_target": "MAX",
+                    "updated_at": now,
+                    "updated_by": "admin-01",
+                },
+                {
+                    "rule_id": str(uuid.uuid4()),
+                    "category_code": cat,
+                    "grade_level": "GRADE_B",
+                    "grade_name": "เกรด B (ปนเปื้อน/ชื้นเล็กน้อย)",
+                    "description": "มีสิ่งเจือปนเล็กน้อย คัดแยกไม่สมบูรณ์ หรือมีความชื้นปานกลาง",
+                    "contamination_deduction_percent": 5.0,
+                    "price_target": "MID",
+                    "updated_at": now,
+                    "updated_by": "admin-01",
+                },
+                {
+                    "rule_id": str(uuid.uuid4()),
+                    "category_code": cat,
+                    "grade_level": "GRADE_C",
+                    "grade_name": "เกรด C (ปนเปื้อนมาก/เปียกน้ำ)",
+                    "description": "มีสิ่งเจือปนสูง เปียกน้ำ คละเกรด หรือมีสารเคมีเปรอะเปื้อน",
+                    "contamination_deduction_percent": 10.0,
+                    "price_target": "MIN",
+                    "updated_at": now,
+                    "updated_by": "admin-01",
+                },
+            ]
 
     def _seed_default_scrap_categories(self):
         """กำหนดหมวดหมู่ของเก่าและคู่มือภาพ 3 กลุ่มหลักตาม spec.md และ Card 03"""
@@ -1895,6 +2014,235 @@ class SupabaseStore:
             return dict(seller)
         else:
             raise ValueError(f"บทบาทผู้ใช้ไม่ถูกต้อง: {role} (ต้องเป็น COLLECTOR หรือ SELLER)")
+
+    def get_all_benchmark_prices_admin(
+        self,
+        unit: Optional[str] = None,
+        q: Optional[str] = None,
+    ) -> List[dict]:
+        """
+        ดึงรายการราคากลางทั้งหมดสำหรับแอดมิน (UC-03, REQ-DAT-001, AC-A02-01)
+        """
+        prices = list(self.benchmark_prices.values())
+        if unit and unit != "all":
+            prices = [p for p in prices if p.get("unit") == unit]
+        if q:
+            query = q.strip().lower()
+            prices = [
+                p for p in prices
+                if query in p.get("category_code", "").lower()
+                or query in p.get("category_name", "").lower()
+            ]
+        # เรียงตาม category_code เพื่อความแน่นอน
+        return sorted(prices, key=lambda x: x.get("category_code", ""))
+
+    def update_benchmark_price(
+        self,
+        category_code: str,
+        min_price: float,
+        max_price: float,
+        grading_condition: Optional[str] = None,
+        updated_by: str = "admin-01",
+        change_reason: Optional[str] = None,
+    ) -> dict:
+        """
+        แก้ไขช่วงราคากลางรายวัน (UC-03, REQ-DAT-001, BR-01, D-A02-01..05, REQ-SEC-001)
+        - บันทึกประวัติลง price_history_logs
+        - บันทึก Audit Log (ADMIN_UPDATED_BENCHMARK_PRICE)
+        - คำนวณราคาประเมินใหม่ให้กับออเดอร์ในสถานะ S1/S2 (D-A02-05)
+        - ออเดอร์ S3..S7 ยังคงล็อกราคาเดิมตาม Price Snapshot (D-00-02)
+        """
+        item = self.benchmark_prices.get(category_code)
+        if not item:
+            raise KeyError(f"ไม่พบหมวดหมู่วัสดุรหัส {category_code}")
+
+        old_min = float(item.get("min_price_per_unit", 0.0))
+        old_max = float(item.get("max_price_per_unit", 0.0))
+        now = datetime.now(timezone.utc).isoformat()
+
+        # 1. บันทึกประวัติราคา
+        history_entry = {
+            "history_id": str(uuid.uuid4()),
+            "category_code": category_code,
+            "old_min_price": old_min,
+            "old_max_price": old_max,
+            "new_min_price": float(min_price),
+            "new_max_price": float(max_price),
+            "changed_at": now,
+            "changed_by": updated_by,
+            "change_reason": change_reason,
+        }
+        self.price_history_logs.append(history_entry)
+
+        # 2. ปรับปรุงราคากลาง
+        item["min_price_per_unit"] = float(min_price)
+        item["max_price_per_unit"] = float(max_price)
+        if grading_condition:
+            item["grading_condition"] = grading_condition
+        item["updated_at"] = now
+        item["updated_by"] = updated_by
+        self.benchmark_prices[category_code] = item
+
+        # 3. บันทึก Audit Log (REQ-SEC-001, CC-03)
+        self.add_audit_log(
+            action="ADMIN_UPDATED_BENCHMARK_PRICE",
+            entity_id=category_code,
+            actor_id=updated_by,
+            details={
+                "category_code": category_code,
+                "old_min_price": old_min,
+                "old_max_price": old_max,
+                "new_min_price": float(min_price),
+                "new_max_price": float(max_price),
+                "actor_role": "ADMIN",
+                "change_reason": change_reason,
+            },
+        )
+
+        # 4. ปรับราคาย้อนหลังเฉพาะออเดอร์ S1 และ S2 (D-A02-05)
+        for order in self.orders.values():
+            if order.get("status") in ["S1", "S2"]:
+                updated = False
+                for it in order.get("items", []):
+                    if it.get("category_code") == category_code:
+                        qty = float(it.get("quantity", 0.0))
+                        it["est_min_price"] = round(qty * float(min_price), 2)
+                        it["est_max_price"] = round(qty * float(max_price), 2)
+                        if it.get("item_id") in self.items:
+                            self.items[it["item_id"]] = it
+                        updated = True
+                if updated:
+                    self._recalculate_order_totals(order["order_id"])
+
+        return dict(item)
+
+    def get_quality_grading_rules(self, category_code: str) -> List[dict]:
+        """
+        ดึงเกณฑ์คุณภาพและการหักสิ่งปนเปื้อน 3 ระดับ (REQ-FN-003, D-A02-03)
+        """
+        if category_code not in self.quality_grading_rules:
+            # Fallback สร้างเกณฑ์มาตรฐานให้อัตโนมัติหากยังไม่มี
+            now = datetime.now(timezone.utc).isoformat()
+            self.quality_grading_rules[category_code] = [
+                {
+                    "rule_id": str(uuid.uuid4()),
+                    "category_code": category_code,
+                    "grade_level": "GRADE_A",
+                    "grade_name": "เกรด A (สะอาด/แห้ง/สมบูรณ์)",
+                    "description": "วัสดุสะอาด แห้งสนิท ไม่เปียกชื้น ไม่มีสิ่งปนเปื้อน",
+                    "contamination_deduction_percent": 0.0,
+                    "price_target": "MAX",
+                    "updated_at": now,
+                    "updated_by": "admin-01",
+                },
+                {
+                    "rule_id": str(uuid.uuid4()),
+                    "category_code": category_code,
+                    "grade_level": "GRADE_B",
+                    "grade_name": "เกรด B (ปนเปื้อน/ชื้นเล็กน้อย)",
+                    "description": "มีสิ่งเจือปนเล็กน้อย คัดแยกไม่สมบูรณ์ หรือมีความชื้นปานกลาง",
+                    "contamination_deduction_percent": 5.0,
+                    "price_target": "MID",
+                    "updated_at": now,
+                    "updated_by": "admin-01",
+                },
+                {
+                    "rule_id": str(uuid.uuid4()),
+                    "category_code": category_code,
+                    "grade_level": "GRADE_C",
+                    "grade_name": "เกรด C (ปนเปื้อนมาก/เปียกน้ำ)",
+                    "description": "มีสิ่งเจือปนสูง เปียกน้ำ คละเกรด หรือมีสารเคมีเปรอะเปื้อน",
+                    "contamination_deduction_percent": 10.0,
+                    "price_target": "MIN",
+                    "updated_at": now,
+                    "updated_by": "admin-01",
+                },
+            ]
+        return list(self.quality_grading_rules[category_code])
+
+    def update_quality_grading_rules(
+        self,
+        category_code: str,
+        rules_data: List[dict],
+        updated_by: str = "admin-01",
+    ) -> List[dict]:
+        """
+        แก้ไขเกณฑ์คุณภาพ 3 ระดับและอัตราหักสิ่งปนเปื้อน (REQ-FN-003, D-A02-03, REQ-SEC-001)
+        """
+        now = datetime.now(timezone.utc).isoformat()
+        normalized_rules = []
+        for r in rules_data:
+            rule_entry = {
+                "rule_id": r.get("rule_id") or str(uuid.uuid4()),
+                "category_code": category_code,
+                "grade_level": r.get("grade_level", "GRADE_A"),
+                "grade_name": r.get("grade_name", ""),
+                "description": r.get("description", ""),
+                "contamination_deduction_percent": float(r.get("contamination_deduction_percent", 0.0)),
+                "price_target": r.get("price_target", "MID"),
+                "updated_at": now,
+                "updated_by": updated_by,
+            }
+            normalized_rules.append(rule_entry)
+
+        self.quality_grading_rules[category_code] = normalized_rules
+
+        # บันทึก Audit Log (REQ-SEC-001, CC-03)
+        self.add_audit_log(
+            action="ADMIN_UPDATED_GRADING_RULES",
+            entity_id=category_code,
+            actor_id=updated_by,
+            details={
+                "category_code": category_code,
+                "rules_count": len(normalized_rules),
+                "actor_role": "ADMIN",
+            },
+        )
+        return list(normalized_rules)
+
+    def batch_update_benchmark_prices(
+        self,
+        items_data: List[dict],
+        effective_date: Optional[str] = None,
+        updated_by: str = "admin-01",
+        change_reason: Optional[str] = None,
+    ) -> List[dict]:
+        """
+        อัปเดตราคากลางหลายหมวดหมู่พร้อมกัน (Batch Update)
+        """
+        updated_items = []
+        for it in items_data:
+            cat_code = it["category_code"]
+            min_p = it["min_price_per_unit"]
+            max_p = it["max_price_per_unit"]
+            cond = it.get("grading_condition")
+            updated = self.update_benchmark_price(
+                category_code=cat_code,
+                min_price=min_p,
+                max_price=max_p,
+                grading_condition=cond,
+                updated_by=updated_by,
+                change_reason=change_reason,
+            )
+            if effective_date:
+                updated["effective_date"] = effective_date
+                self.benchmark_prices[cat_code]["effective_date"] = effective_date
+            updated_items.append(updated)
+        return updated_items
+
+    def get_benchmark_price_history(
+        self,
+        category_code: str,
+        limit: int = 20,
+    ) -> List[dict]:
+        """
+        ดึงประวัติการปรับเปลี่ยนราคาย้อนหลัง
+        """
+        history = [
+            h for h in self.price_history_logs
+            if h.get("category_code") == category_code
+        ]
+        return history[-limit:]
 
 
 # Singleton instance สำหรับเข้าถึง Database

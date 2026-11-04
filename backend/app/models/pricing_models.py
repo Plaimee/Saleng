@@ -15,7 +15,7 @@ class BenchmarkPrice(BaseModel):
     id: str
     category_code: str
     category_name: str
-    unit: Literal["kg", "bag"] = "kg"
+    unit: Literal["kg", "bag", "piece", "crate"] = "kg"
     min_price_per_unit: float = Field(..., gt=0, description="ราคาต่ำสุดต่อหน่วย (บาท)")
     max_price_per_unit: float = Field(..., gt=0, description="ราคาสูงสุดต่อหน่วย (บาท)")
     grading_condition: Optional[str] = None
@@ -41,7 +41,7 @@ class WasteItemEstimateInput(BaseModel):
     รองรับ AC-S04-02, AC-S04-04 (Invalid Quantity Guard), AC-S04-05 (Bag Unit)
     """
     category_code: str
-    unit: Literal["kg", "bag"] = "kg"
+    unit: Literal["kg", "bag", "piece", "crate"] = "kg"
     quantity: float = Field(..., description="ปริมาณของเก่า (กก. หรือ กระสอบ)")
 
     @field_validator("quantity")

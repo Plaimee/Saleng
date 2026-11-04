@@ -105,11 +105,12 @@ from backend.app.api.v1.communication import router as communication_router
 from backend.app.api.v1.billing import router as billing_router
 from backend.app.api.v1.post_job import router as post_job_router
 from backend.app.api.v1.user_verification_penalty import router as admin_user_router
+from backend.app.api.v1.benchmark_price_grading import router as admin_benchmark_router
 
 # Application instance สำหรับทดสอบและเชื่อมต่อ Server
 app = FastAPI(
     title="Saleng Pricing & Decision API",
-    description="API ระบบราคาและการตัดสินใจ ฝั่งผู้ขาย ผู้ซื้อ และผู้ดูแลระบบ (Seller 01..09, Buyer 01..07, Admin 01)",
+    description="API ระบบราคาและการตัดสินใจ ฝั่งผู้ขาย ผู้ซื้อ และผู้ดูแลระบบ (Seller 01..09, Buyer 01..07, Admin 01, Admin 02)",
     version="1.0.0"
 )
 app.include_router(pricing_router)
@@ -131,4 +132,5 @@ app.include_router(communication_router, prefix="/api/v1/collectors")
 app.include_router(billing_router, prefix="/api/v1/collectors")
 app.include_router(post_job_router, prefix="/api/v1/collectors")
 app.include_router(admin_user_router, prefix="/api/v1/admin")
+app.include_router(admin_benchmark_router, prefix="/api/v1/admin")
 
