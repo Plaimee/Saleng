@@ -693,12 +693,12 @@ class SupabaseStore:
         
         if not actor_role:
             if actor_id:
-                actor_id_str = str(actor_id)
-                if actor_id_str.startswith("admin-") or "admin" in actor_id_str.lower():
+                actor_id_lower = actor_id.lower()
+                if actor_id.startswith("admin-") or "admin" in actor_id_lower:
                     actor_role = "ADMIN"
-                elif actor_id_str.startswith("saleng-") or actor_id_str.startswith("col-"):
+                elif actor_id.startswith("saleng-") or actor_id.startswith("col-"):
                     actor_role = "COLLECTOR"
-                elif actor_id_str.startswith("seller-") or actor_id_str.startswith("sel-"):
+                elif actor_id.startswith("seller-") or actor_id.startswith("sel-"):
                     actor_role = "SELLER"
                 else:
                     actor_role = "SYSTEM"
@@ -1941,7 +1941,7 @@ class SupabaseStore:
                 raw_phone = str(sel.get("phone", ""))
                 masked_phone = f"{raw_phone[:2]}X-XXX-{raw_phone[-4:]}" if len(raw_phone) >= 10 else "08X-XXX-XXXX"
                 users.append({
-                    "user_id": str(seller_id),
+                    "user_id": seller_id,
                     "role": "SELLER",
                     "display_name": str(sel.get("display_name", f"ผู้ขาย {seller_id}")),
                     "phone_masked": masked_phone,
