@@ -46,6 +46,8 @@ class SupabaseStore:
         self._seed_default_scrap_categories()
         self._seed_default_saleng_profiles()
         self._seed_default_orders_s2()
+        self._seed_default_sellers()
+        self._seed_default_collector_kyc()
 
     def _seed_default_benchmark_prices(self):
         """กำหนดราคากลางตั้งต้นตามที่ระบุใน spec.md หัวข้อ 1.1 และ D-02"""
@@ -334,6 +336,10 @@ class SupabaseStore:
             },
         ]
         for p in profiles:
+            p.setdefault("account_status", "ACTIVE")
+            p.setdefault("penalty_reason", None)
+            p.setdefault("penalized_at", None)
+            p.setdefault("penalized_by", None)
             self.saleng_profiles[str(p["saleng_id"])] = p
 
         # Seed favorite เบื้องต้นสำหรับ seller-01 -> saleng-01
@@ -343,6 +349,51 @@ class SupabaseStore:
             "collector_id": "saleng-01",
             "created_at": datetime.now(timezone.utc).isoformat(),
         })
+
+    def _seed_default_sellers(self):
+        """กำหนดรายชื่อผู้ขายตั้งต้นในระบบ (UC-01, AC-A01-03)"""
+        now = datetime.now(timezone.utc).isoformat()
+        if "seller-01" not in self.sellers:
+            self.sellers["seller-01"] = {
+                "seller_id": "seller-01",
+                "phone": "081-234-5678",
+                "display_name": "คุณวิภาดา",
+                "account_status": "ACTIVE",
+                "penalty_reason": None,
+                "penalized_at": None,
+                "penalized_by": None,
+                "created_at": now,
+            }
+        if "seller-02" not in self.sellers:
+            self.sellers["seller-02"] = {
+                "seller_id": "seller-02",
+                "phone": "0898765432",
+                "display_name": "วิชัย รีไซเคิลบ้าน",
+                "account_status": "ACTIVE",
+                "penalty_reason": None,
+                "penalized_at": None,
+                "penalized_by": None,
+                "created_at": now,
+            }
+
+    def _seed_default_collector_kyc(self):
+        """กำหนดคำขอยืนยันตัวตน KYC ตั้งต้นสำหรับรอแอดมินตรวจ (UC-11, AC-A01-01)"""
+        now = datetime.now(timezone.utc).isoformat()
+        if "kyc-sub-01" not in self.collector_kyc_submissions:
+            self.collector_kyc_submissions["kyc-sub-01"] = {
+                "id": "kyc-sub-01",
+                "saleng_id": "saleng-05",
+                "id_card_no": "1100200112233",
+                "full_name": "เอกชัย ขยันเก็บ",
+                "id_card_photo_url": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300",
+                "selfie_photo_url": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=300",
+                "vehicle_photo_url": "https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=300",
+                "status": "PENDING_REVIEW",
+                "rejection_reason": None,
+                "submitted_at": now,
+                "reviewed_at": None,
+                "reviewed_by": None,
+            }
 
     def get_saleng_profile(self, saleng_id: str) -> Optional[dict]:
         """ดึงข้อมูลโปรไฟล์ซาเล้งตาม ID (AC-S03-01)"""
@@ -1652,6 +1703,198 @@ class SupabaseStore:
         dispute_data["status"] = dispute_data.get("status", "PENDING_ADMIN")
         self.dispute_reports[dispute_id] = dispute_data
         return dispute_data
+
+    def get_collector_kyc_submissions(self, status_filter: Optional[str] = None) -> List[dict]:
+        """
+        ดึงรายการคำขอยืนยันตัวตน KYC ของซาเล้ง (UC-11, AC-A01-01)
+        """
+        submissions = list(self.collector_kyc_submissions.values())
+        if status_filter and status_filter.upper() != "ALL":
+            submissions = [s for s in submissions if s.get("status") == status_filter.upper()]
+        return sorted(submissions, key=lambda x: x.get("submitted_at", ""), reverse=True)
+
+    def get_collector_kyc_submission(self, submission_id: str) -> Optional[dict]:
+        """
+        ดึงคำขอ KYC ตามรหัสอ้างอิง
+        """
+        return self.collector_kyc_submissions.get(submission_id)
+
+    def review_collector_kyc(
+        self,
+        submission_id: str,
+        action: str,
+        rejection_reason: Optional[str] = None,
+        reviewed_by: str = "ADMIN"
+    ) -> Tuple[dict, dict]:
+        """
+        พิจารณาอนุมัติหรือปฏิเสธคำขอ KYC ซาเล้ง (UC-11, AC-A01-02, D-00-01)
+        """
+        submission = self.collector_kyc_submissions.get(submission_id)
+        if not submission:
+            raise KeyError(f"ไม่พบคำขอ KYC รหัส {submission_id}")
+
+        saleng_id = submission.get("saleng_id", "")
+        saleng_profile = self.saleng_profiles.get(saleng_id)
+        if not saleng_profile:
+            raise KeyError(f"ไม่พบข้อมูลซาเล้งรหัส {saleng_id}")
+
+        now = datetime.now(timezone.utc).isoformat()
+        if action == "APPROVE":
+            submission["status"] = "VERIFIED"
+            submission["rejection_reason"] = None
+            submission["reviewed_at"] = now
+            submission["reviewed_by"] = reviewed_by
+
+            saleng_profile["verified"] = True
+            saleng_profile["kyc_status"] = "VERIFIED"
+            saleng_profile["rejection_reason"] = None
+            saleng_profile["updated_at"] = now
+        elif action == "REJECT":
+            if not rejection_reason or not rejection_reason.strip():
+                raise ValueError("ต้องระบุเหตุผลการปฏิเสธ (rejection_reason)")
+            submission["status"] = "REJECTED"
+            submission["rejection_reason"] = rejection_reason.strip()
+            submission["reviewed_at"] = now
+            submission["reviewed_by"] = reviewed_by
+
+            saleng_profile["verified"] = False
+            saleng_profile["kyc_status"] = "REJECTED"
+            saleng_profile["rejection_reason"] = rejection_reason.strip()
+            saleng_profile["updated_at"] = now
+        else:
+            raise ValueError(f"action ไม่ถูกต้อง: {action} (ต้องเป็น APPROVE หรือ REJECT)")
+
+        return submission, saleng_profile
+
+    def get_admin_users(
+        self,
+        role_filter: Optional[str] = None,
+        status_filter: Optional[str] = None,
+        search_query: Optional[str] = None,
+    ) -> List[dict]:
+        """
+        ดึงรายชื่อผู้ใช้งานทั้งหมด (ซาเล้งและผู้ขาย) พร้อมสถานะบัญชี (UC-11, AC-A01-03)
+        """
+        users: List[dict] = []
+
+        # ดึงข้อมูลฝั่งซาเล้ง
+        if not role_filter or role_filter.upper() in ("ALL", "COLLECTOR"):
+            for s in self.saleng_profiles.values():
+                raw_phone = str(s.get("phone", ""))
+                masked_phone = str(s.get("phone_masked") or (
+                    f"{raw_phone[:2]}X-XXX-{raw_phone[-4:]}" if len(raw_phone) >= 10 else "08X-XXX-XXXX"
+                ))
+                users.append({
+                    "user_id": str(s["saleng_id"]),
+                    "role": "COLLECTOR",
+                    "display_name": str(s.get("display_name", f"ซาเล้ง {s['saleng_id']}")),
+                    "phone_masked": masked_phone,
+                    "account_status": str(s.get("account_status", "ACTIVE")),
+                    "penalty_reason": s.get("penalty_reason"),
+                    "penalized_at": s.get("penalized_at"),
+                    "penalized_by": s.get("penalized_by"),
+                    "verified": s.get("verified", False),
+                })
+
+        # ดึงข้อมูลฝั่งผู้ขาย
+        if not role_filter or role_filter.upper() in ("ALL", "SELLER"):
+            for seller_id, sel in self.sellers.items():
+                raw_phone = str(sel.get("phone", ""))
+                masked_phone = f"{raw_phone[:2]}X-XXX-{raw_phone[-4:]}" if len(raw_phone) >= 10 else "08X-XXX-XXXX"
+                users.append({
+                    "user_id": str(seller_id),
+                    "role": "SELLER",
+                    "display_name": str(sel.get("display_name", f"ผู้ขาย {seller_id}")),
+                    "phone_masked": masked_phone,
+                    "account_status": str(sel.get("account_status", "ACTIVE")),
+                    "penalty_reason": sel.get("penalty_reason"),
+                    "penalized_at": sel.get("penalized_at"),
+                    "penalized_by": sel.get("penalized_by"),
+                    "verified": None,
+                })
+
+        # กรองตามสถานะบัญชี
+        if status_filter and status_filter.upper() != "ALL":
+            target_status = status_filter.upper()
+            users = [u for u in users if u.get("account_status") == target_status]
+
+        # กรองตามคำค้นหา (user_id, display_name)
+        if search_query and search_query.strip():
+            sq = search_query.strip().lower()
+            users = [u for u in users if sq in str(u["user_id"]).lower() or sq in str(u["display_name"]).lower()]
+
+        return users
+
+    def penalize_user_account(
+        self,
+        user_id: str,
+        role: str,
+        action: str,
+        penalty_reason: str,
+        penalized_by: str = "ADMIN",
+    ) -> dict:
+        """
+        สั่งระงับสิทธิ์บัญชีผู้ใช้ชั่วคราวหรือถาวร (UC-11, AC-A01-03, D-A01-03, D-A01-04)
+        """
+        now = datetime.now(timezone.utc).isoformat()
+        new_status = "BANNED" if action == "BAN" else "SUSPENDED_TEMPORARY"
+
+        if role == "COLLECTOR":
+            profile = self.saleng_profiles.get(user_id)
+            if not profile:
+                raise KeyError(f"ไม่พบข้อมูลซาเล้งรหัส {user_id}")
+            profile["account_status"] = new_status
+            profile["penalty_reason"] = penalty_reason
+            profile["penalized_at"] = now
+            profile["penalized_by"] = penalized_by
+            profile["updated_at"] = now
+            return dict(profile)
+        elif role == "SELLER":
+            seller = self.sellers.get(user_id)
+            if not seller:
+                raise KeyError(f"ไม่พบข้อมูลผู้ขายรหัส {user_id}")
+            seller["account_status"] = new_status
+            seller["penalty_reason"] = penalty_reason
+            seller["penalized_at"] = now
+            seller["penalized_by"] = penalized_by
+            seller["updated_at"] = now
+            return dict(seller)
+        else:
+            raise ValueError(f"บทบาทผู้ใช้ไม่ถูกต้อง: {role} (ต้องเป็น COLLECTOR หรือ SELLER)")
+
+    def reactivate_user_account(
+        self,
+        user_id: str,
+        role: str,
+        reason: str = "ADMIN_REINSTATED",
+    ) -> dict:
+        """
+        ปลดระงับสิทธิ์บัญชีผู้ใช้ คืนสถานะเป็น ACTIVE (UC-11, AC-A01-04)
+        """
+        now = datetime.now(timezone.utc).isoformat()
+
+        if role == "COLLECTOR":
+            profile = self.saleng_profiles.get(user_id)
+            if not profile:
+                raise KeyError(f"ไม่พบข้อมูลซาเล้งรหัส {user_id}")
+            profile["account_status"] = "ACTIVE"
+            profile["penalty_reason"] = None
+            profile["penalized_at"] = None
+            profile["penalized_by"] = None
+            profile["updated_at"] = now
+            return dict(profile)
+        elif role == "SELLER":
+            seller = self.sellers.get(user_id)
+            if not seller:
+                raise KeyError(f"ไม่พบข้อมูลผู้ขายรหัส {user_id}")
+            seller["account_status"] = "ACTIVE"
+            seller["penalty_reason"] = None
+            seller["penalized_at"] = None
+            seller["penalized_by"] = None
+            seller["updated_at"] = now
+            return dict(seller)
+        else:
+            raise ValueError(f"บทบาทผู้ใช้ไม่ถูกต้อง: {role} (ต้องเป็น COLLECTOR หรือ SELLER)")
 
 
 # Singleton instance สำหรับเข้าถึง Database

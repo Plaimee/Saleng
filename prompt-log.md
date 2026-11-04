@@ -2305,3 +2305,132 @@
   4. **Mockups:** โครงสร้างป้ายภาษาไทย, ปุ่มกดขนาดใหญ่ >= 48px, และแอตทริบิวต์ `data-req="UC-10"` ครบถ้วน
   5. **Non-goals:** ไม่มีแชทต่อหลัง S7, ไม่มีการจ่ายชดเชยค่าเดินทางอัตโนมัติ (เป็นดุลยพินิจ Admin ใน UC-13), ไม่เปิดเผย PII ที่ไม่ Mask เกิน 24 ชม., และไม่มีระบบรีวิวดาวผู้ขาย (ใช้ปักหมุดลูกค้าประจำแทน) ตาม `D-B07-04` และ `D-B07-06`
 - **สถานะ:** พัฒนาและตรวจรับระบบหลังจบงานซาเล้ง Buyer 07 สำเร็จสมบูรณ์ พร้อมส่งมอบงาน
+
+
+---
+
+## บันทึก #86 — `/clarify specs/admin/01-user-verification-and-penalty/spec.md` (ตรวจความกำกวมระบบตรวจสอบอนุมัติ KYC และจัดการบทลงโทษผู้ใช้งาน)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/clarify specs/admin/01-user-verification-and-penalty/spec.md`
+- **ไฟล์ที่ AI อ่าน:** `AGENTS.md`, `specs/admin/01-user-verification-and-penalty/spec.md` (v1.0), `specs/000-shared/constraints.md`, `docs/srs/use-cases.md` (`UC-11`, `UC-01`, `UC-04`), `docs/srs/decisions.md` (`D-00-01`), `specs/002-route/models.md`
+- **จุดกำกวมที่ AI พบและคำตอบของทีม (ส่วน A & B — 6 คำถาม):**
+  1. **`Q-01` (`AC-A01-01`):** เอกสารภาพถ่ายที่ใช้ตรวจสอบ KYC ซาเล้งต้องมีรายการใดบ้าง -> บันทึก `D-A01-01`: บังคับ 3 รูป ได้แก่ ภาพหน้าบัตรประชาชน, ภาพเซลฟี่ถือบัตร, และภาพถ่ายยานพาหนะพร้อมป้ายทะเบียน
+  2. **`Q-02` (`AC-A01-02`, `D-00-01`):** การอนุมัติ KYC เชื่อมโยงกับสิทธิ์รับงานใน `UC-04` อย่างไร -> บันทึก `D-A01-02`: การอนุมัติจะปรับ `saleng_profiles.verified = true` และ `kyc_status = 'VERIFIED'` ปลดล็อกให้ค้นหาและกดรับงานใน `UC-04` ได้ทันที หากปฏิเสธต้องระบุ `rejection_reason`
+  3. **`Q-03` (`AC-A01-03`, `D-A01-03`):** ระดับของบทลงโทษบัญชีผู้ใช้ -> บันทึก `D-A01-03`: แบ่งเป็น 3 ระดับ `ACTIVE` (ปกติ), `SUSPENDED_TEMPORARY` (ระงับชั่วคราว), และ `BANNED` (แบนถาวร)
+  4. **`Q-04` (`AC-A01-03`):** ขอบเขตการลงโทษครอบคลุมบทบาทใดบ้าง -> บันทึก `D-A01-04`: ครอบคลุมทั้งซาเล้ง (`saleng_profiles`) และผู้ขาย (`sellers`)
+  5. **`Q-05` (`CC-03`, `REQ-SEC-001`):** การควบคุมสิทธิ์ของระบบแอดมิน -> บันทึก `D-A01-05`: บังคับ Header `X-Admin-Role: ADMIN` หากไม่มีสิทธิ์ให้ส่งกลับ `HTTP 403 Forbidden`
+  6. **`Q-06` (`REQ-SEC-002`, `CC-06`):** การปกปิดข้อมูลส่วนบุคคล (PII) ในหน้ารวมรายการ -> บันทึก `D-A01-06`: ปกปิดหมายเลขบัตรประชาชนเป็น `1-1002-XXXXX-XX-X` และเบอร์โทรศัพท์เป็น `08X-XXX-XXXX`
+- **ไฟล์ที่สร้าง/แก้ไข:** `specs/admin/01-user-verification-and-penalty/spec.md` (ปรับปรุงเป็น Version 2.0 สถานะ `reviewed-post-clarify`)
+- **สถานะ:** Clarification เสร็จสมบูรณ์ พร้อมสำหรับการวางแผนทางเทคนิค `/plan`
+
+---
+
+## บันทึก #87 — `/plan specs/admin/01-user-verification-and-penalty/spec.md` (สร้างแผนทางเทคนิคระบบตรวจสอบและอนุมัติผู้ใช้งาน Admin 01)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/plan specs/admin/01-user-verification-and-penalty/spec.md`
+- **ไฟล์ที่ AI อ่าน:** `AGENTS.md`, `specs/admin/01-user-verification-and-penalty/spec.md` (v2.0), `specs/000-shared/constraints.md`, `specs/000-shared/quality-requirements.md`, `docs/srs/use-cases.md` (`UC-11`, `UC-01`, `UC-04`), `docs/srs/decisions.md` (`D-00-01`), `specs/002-route/models.md`
+- **ไฟล์ที่สร้าง:** `specs/admin/01-user-verification-and-penalty/plan.md` (ครบ 8 ส่วนตามโครงสร้างมาตรฐาน)
+- **ประเด็นสำคัญในแผน:**
+  1. **การตัดสินใจทางเทคนิค 6 ข้อ (`P-01` ถึง `P-06`):**
+     - `P-01`: โครงสร้าง Data Schema สำหรับ `collector_kyc_submissions` และขยาย `saleng_profiles` / `sellers` ให้รองรับ `account_status` และ `penalty_reason`
+     - `P-02`: การออกแบบ Service Layer `UserVerificationPenaltyService` สำหรับคิวตรวจคำขอ KYC และการลงโทษบัญชีผู้ใช้
+     - `P-03`: การบังคับสิทธิ์ Admin RBAC ผ่าน FastAPI Dependency ตรวจสอบ `X-Admin-Role: ADMIN` และส่งกลับ `HTTP 403 Forbidden`
+     - `P-04`: การปกปิดข้อมูลส่วนบุคคล PII Masking สำหรับเลขบัตรประชาชนและเบอร์โทรศัพท์ตาม `REQ-SEC-002` และ `CC-06`
+     - `P-05`: การบันทึก Audit Log แบบ Append-only สำหรับทุกการกระทำของแอดมินตาม `REQ-SEC-001`
+     - `P-06`: แดชบอร์ดแอดมิน React Responsive SPA ทัชทาร์เก็ตปุ่มกด $\ge 48\text{px}$ ตาม `REQ-UX-001` และ `CC-01`
+  2. **โครงสร้างไฟล์และโมดูล:**
+     - Data Models: `backend/app/models/user_verification_penalty_models.py`
+     - Backend Service & API: `backend/app/services/user_verification_penalty_service.py` และ `backend/app/api/v1/user_verification_penalty.py`
+     - Mock Store & Database: `collector_kyc_submissions`, `saleng_profiles`, `sellers`, `audit_logs`
+     - Frontend API Client & Components: `adminUserApi.js`, `KycReviewQueueCard.jsx`, `UserPenaltyControlCard.jsx`, `AdminUserVerificationView.jsx` (`data-req="UC-11"`)
+  3. **การออกแบบ API แอดมิน 5 เส้นทาง:**
+     - `GET /api/v1/admin/kyc/submissions` (คิวคำขอ KYC พร้อม PII Masking)
+     - `POST /api/v1/admin/kyc/review` (อนุมัติ/ปฏิเสธคำขอ KYC พร้อมระบุเหตุผล)
+     - `GET /api/v1/admin/users` (รายชื่อผู้ใช้ทั้งซาเล้งและผู้ขาย)
+     - `POST /api/v1/admin/users/penalty` (ระงับสิทธิ์ชั่วคราวหรือถาวร)
+     - `POST /api/v1/admin/users/reactivate` (ปลดระงับสิทธิ์คืนสถานะ ACTIVE)
+  4. **การปฏิบัติตาม Constraints กลาง:** ครบทั้ง 13 ข้อตาม `specs/000-shared/constraints.md` โดยเฉพาะ `CC-01` (ปุ่ม $\ge 48\text{px}$), `CC-03` (สิทธิ์ `X-Admin-Role: ADMIN`), `CC-05` (Online-only สำหรับแอดมิน), `CC-06` / `REQ-SEC-002` (PDPA Masking เลขบัตร `1-1002-XXXXX-XX-X`), `REQ-SEC-001` (Audit Logging), และ `D-00-01` (KYC Gatekeeper)
+- **สถานะ:** แผน `plan.md` สมบูรณ์ พร้อมเข้าสู่ขั้นตอนการแตกงานย่อย `/tasks specs/admin/01-user-verification-and-penalty/plan.md`
+
+---
+
+## บันทึก #88 — `/tasks specs/admin/01-user-verification-and-penalty/plan.md` (แตกงานย่อยระบบตรวจสอบและอนุมัติผู้ใช้งาน Admin 01)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/tasks specs/admin/01-user-verification-and-penalty/plan.md`
+- **ไฟล์ที่ AI อ่าน:** `AGENTS.md`, `specs/admin/01-user-verification-and-penalty/spec.md` (v2.0), `specs/admin/01-user-verification-and-penalty/plan.md` (v1.0), `specs/000-shared/constraints.md`, `docs/srs/use-cases.md` (`UC-11`, `UC-01`, `UC-04`), `docs/srs/decisions.md` (`D-00-01`)
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/admin/01-user-verification-and-penalty/tasks.md` (แตกงานย่อย 8 งาน `T-01` ถึง `T-08` ครบทั้ง 6 คอลัมน์, พร้อมตาราง Two-way Traceability Matrix ครบทุกข้อ `AC-A01-01..05`, และตาราง Constraints Traceability ครบทั้ง 13 ข้อ)
+- **ประเด็นสำคัญใน tasks.md:**
+  1. **งานย่อย 8 งาน (`T-01` ถึง `T-08`):**
+     - `T-01`: สร้าง Data Models และ Schema สำหรับระบบตรวจสอบ KYC และบทลงโทษ (`user_verification_penalty_models.py`, ขยาย `supabase.py` เพิ่ม methods และกำหนดสถานะเริ่มต้น `account_status = 'ACTIVE'`, `test_T01_admin_user_models.py`)
+     - `T-02`: สร้าง Service และ API คิวตรวจคำขอ KYC ซาเล้ง และ PII Masking (`user_verification_penalty_service.py`, `user_verification_penalty.py`, `pricing.py`, `test_AC_A01_01_kyc_queue.py`)
+     - `T-03`: สร้าง Service และ API อนุมัติและปฏิเสธคำขอ KYC ซาเล้ง เปิด verified=true ปลดล็อก `UC-04` หรือปฏิเสธพร้อมระบุเหตุผล (`user_verification_penalty_service.py`, `user_verification_penalty.py`, `test_AC_A01_02_kyc_review.py`)
+     - `T-04`: สร้าง Service และ API จัดการบทลงโทษผู้ใช้และปลดระงับทั้งซาเล้งและผู้ขาย (`user_verification_penalty_service.py`, `user_verification_penalty.py`, `test_AC_A01_03_user_penalty.py`, `test_AC_A01_04_user_reactivate.py`)
+     - `T-05`: สร้างระบบตรวจสอบความปลอดภัย Admin RBAC (`X-Admin-Role: ADMIN` -> 403 Forbidden) และความครบถ้วนของ Audit Logging (`test_AC_A01_05_admin_rbac_audit.py`)
+     - `T-06`: สร้าง Frontend API Client สำหรับแอดมิน (`adminUserApi.js`, `adminUserApi.test.mjs`, `CC-03`, `CC-05`)
+     - `T-07`: พัฒนาคอมโพเนนต์ React แดชบอร์ดแอดมิน (`KycReviewQueueCard`, `UserPenaltyControlCard`, `AdminUserVerificationView` ทัชทาร์เก็ตทุกปุ่ม $\ge 48\text{px}$ ตาม `REQ-UX-001`, `CC-01`)
+     - `T-08`: สร้างชุดทดสอบ Vitest Component Tests และ Integration E2E Test Suite เต็มวงรอบ พร้อมตรวจรับ 5 ด่าน (`test_e2e_admin_user_verification_penalty.py`)
+  2. **Two-way Traceability Matrix:** เกณฑ์การยอมรับทุกข้อ (`AC-A01-01` ถึง `AC-A01-05`) เชื่อมโยงกับงานย่อยและชื่อไฟล์ชุดทดสอบอย่างครบถ้วน
+  3. **Constraints Traceability:** ตรวจสอบข้อจำกัดกลางทั้ง 13 ข้อตาม `specs/000-shared/constraints.md` ครบถ้วน
+- **สถานะ:** แตกงานย่อยเสร็จสมบูรณ์ พร้อมสำหรับการเริ่มพัฒนางานย่อยในขั้นตอน `/implement T-01..08`
+
+---
+
+## บันทึก #89 — `/implement T-01..08` (พัฒนาระบบตรวจสอบอนุมัติผู้ใช้งานและจัดการบทลงโทษ Admin 01 จนเสร็จสมบูรณ์)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/implement T-01..08`
+- **ไฟล์ที่ AI อ่าน:** `AGENTS.md`, `specs/admin/01-user-verification-and-penalty/spec.md` (v2.0), `specs/admin/01-user-verification-and-penalty/plan.md` (v1.0), `specs/admin/01-user-verification-and-penalty/tasks.md` (v1.1), `specs/000-shared/constraints.md`
+- **งานย่อยที่พัฒนาครบทั้ง 8 งาน (`T-01` ถึง `T-08`):**
+  1. **`T-01` (Data Models & Schemas):**
+     - สร้าง `backend/app/models/user_verification_penalty_models.py` (`KYCSubmissionItem`, `KYCReviewRequest`, `KYCReviewResponse`, `UserAccountItem`, `UserPenaltyRequest`, `UserPenaltyResponse`, `UserReactivateRequest`, `UserReactivateResponse`, `mask_thai_id_card`)
+     - ขยาย `backend/app/core/supabase.py` เพิ่มคลังข้อมูลและเมธอด: `collector_kyc_submissions`, `sellers`, `get_collector_kyc_submissions`, `get_collector_kyc_submission`, `review_collector_kyc`, `get_admin_users`, `penalize_user_account`, `reactivate_user_account`
+     - สร้างชุดทดสอบ `backend/tests/test_T01_admin_user_models.py` (4 passed)
+  2. **`T-02` (KYC Queue & PII Masking):**
+     - พัฒนา `UserVerificationPenaltyService.list_kyc_submissions` และเปิด Endpoint `GET /api/v1/admin/kyc/submissions`
+     - เมานต์เราเตอร์แอดมินใน `backend/app/api/v1/pricing.py`
+     - ปกปิดหมายเลขบัตรประชาชน 13 หลักเป็น `1-1002-XXXXX-XX-X` ตาม `REQ-SEC-002` และ `CC-06`
+     - สร้างชุดทดสอบ `backend/tests/test_AC_A01_01_kyc_queue.py` (2 passed)
+  3. **`T-03` (KYC Review & Gatekeeper Verification):**
+     - พัฒนา `review_kyc_submission` และเปิด Endpoint `POST /api/v1/admin/kyc/review`
+     - กรณี `APPROVE`: ปรับสถานะคำขอเป็น `VERIFIED` และเปิดสิทธิ์ `saleng_profiles.verified = True`, `kyc_status = 'VERIFIED'` ปลดล็อกให้ค้นหาและรับงานใน `UC-04` ตาม `D-00-01`
+     - กรณี `REJECT`: บังคับระบุเหตุผล `rejection_reason` และคงสถานะ `verified = False`
+     - บันทึก Audit Log `ADMIN_APPROVED_KYC` / `ADMIN_REJECTED_KYC` พร้อม `actor_role = 'ADMIN'`
+     - สร้างชุดทดสอบ `backend/tests/test_AC_A01_02_kyc_review.py` (3 passed)
+  4. **`T-04` (User Penalty & Reactivation):**
+     - พัฒนา `list_users`, `penalize_user`, `reactivate_user` และเปิด Endpoint:
+       - `GET /api/v1/admin/users` (ค้นหาและกรองตาม role / status)
+       - `POST /api/v1/admin/users/penalty` (ระงับชั่วคราว `SUSPENDED_TEMPORARY` หรือแบนถาวร `BANNED`)
+       - `POST /api/v1/admin/users/reactivate` (ปลดระงับคืนสถานะ `ACTIVE`)
+     - รองรับทั้งซาเล้ง (`COLLECTOR`) และผู้ขาย (`SELLER`) ตาม `D-A01-03`, `D-A01-04`
+     - บันทึก Audit Log `ADMIN_PENALIZED_USER` / `ADMIN_UNSUSPENDED_USER`
+     - สร้างชุดทดสอบ `backend/tests/test_AC_A01_03_user_penalty.py` และ `test_AC_A01_04_user_reactivate.py` (6 passed)
+  5. **`T-05` (Admin RBAC & Audit Integrity):**
+     - พัฒนา Dependency `verify_admin_role` บังคับ Header `X-Admin-Role: ADMIN` ปฏิเสธการเข้าถึงด้วย `HTTP 403 Forbidden` หากไม่มีสิทธิ์ตาม `CC-03`
+     - ตรวจสอบความถูกต้องของ Audit Log ครบทุกเหตุการณ์ความปลอดภัยตาม `REQ-SEC-001`
+     - สร้างชุดทดสอบ `backend/tests/test_AC_A01_05_admin_rbac_audit.py` (2 passed)
+  6. **`T-06` (Frontend API Client):**
+     - สร้าง `frontend/src/services/adminUserApi.js` รองรับ `getKycSubmissions`, `reviewKyc`, `getUsers`, `penalizeUser`, `reactivateUser` พร้อมแนบ Header `X-Admin-Role: ADMIN` และรองรับทั้ง positional & object argument options
+     - สร้างชุดทดสอบ `frontend/tests/adminUserApi.test.mjs` (6 passed)
+  7. **`T-07` (React Admin Dashboard SPA):**
+     - สร้าง `frontend/src/components/admin/KycReviewQueueCard.jsx` (แสดงภาพบัตรประชาชน/เซลฟี่คู่บัตร/ยานพาหนะ, เลขบัตร Masked, ปุ่มอนุมัติและปฏิเสธพร้อม Modal ระบุเหตุผล)
+     - สร้าง `frontend/src/components/admin/UserPenaltyControlCard.jsx` (แสดงบทบาท ป้ายสถานะ Active/Suspended/Banned, ปุ่มสั่งระงับสิทธิ์ชั่วคราว/แบนถาวรพร้อม Modal, ปุ่มปลดระงับ)
+     - สร้าง `frontend/src/components/admin/AdminUserVerificationView.jsx` (แดชบอร์ดแท็บคู่ แท็บ KYC และแท็บจัดการบทลงโทษผู้ใช้ กำกับ `data-req="UC-11"`)
+     - ทุกปุ่มกดมีทัชทาร์เก็ต $\ge 48\text{px}$ ตาม `REQ-UX-001` และ `CC-01`
+  8. **`T-08` (Vitest Component Tests, Integration E2E & ตรวจรับ 5 ด่าน):**
+     - สร้าง Vitest UI Tests:
+       - `frontend/tests/AC-A01-01.test.jsx` (3 passed)
+       - `frontend/tests/AC-A01-02.test.jsx` (2 passed)
+       - `frontend/tests/AC-A01-03.test.jsx` (3 passed)
+       - `frontend/tests/AC-A01-04.test.jsx` (3 passed)
+     - สร้าง Integration E2E Test:
+       - `backend/tests/test_e2e_admin_user_verification_penalty.py` (1 passed)
+- **ผลการตรวจรับ 5 ด่านหลังจบงาน (Checkpoints):**
+  1. *ด่าน 1 (ครบทุก Task):* ทำครบทั้ง 8 งาน `T-01` ถึง `T-08` และอัปเดต `tasks.md` เป็น `completed`
+  2. *ด่าน 2 (Automated Tests ครบทุก AC):* ครอบคลุมทั้ง `AC-A01-01` ถึง `AC-A01-05` ครบถ้วนทั้งฝั่งหน้าบ้าน หลังบ้าน และ E2E
+  3. *ด่าน 3 (Constraints ครบถ้วน):* ผ่าน `CC-01` (ปุ่ม $\ge 48\text{px}$), `CC-03` (RBAC `X-Admin-Role: ADMIN`), `CC-05` (Online-only), `CC-06` (PDPA Masking), `REQ-SEC-001` (Audit Logs), `D-00-01` (Gatekeeper KYC)
+  4. *ด่าน 4 (Zero Regression):*
+     - Backend Test Suite: **283 passed** (0 failed)
+     - Frontend Vitest Suite: **244 passed** (94 test files, 0 failed)
+     - รวมทั้งสิ้น **527 automated tests ผ่าน 100% ปราศจากข้อผิดพลาดและ Regression**
+  5. *ด่าน 5 (บันทึก prompt-log):* บันทึกประวัติรอบ #89 เรียบร้อย
+- **สถานะ:** ฟีเจอร์ Admin 01 (`specs/admin/01-user-verification-and-penalty/`) เสร็จสมบูรณ์พร้อมใช้งาน
