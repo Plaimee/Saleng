@@ -51,6 +51,7 @@ class SupabaseStore:
         self._seed_default_sellers()
         self._seed_default_collector_kyc()
         self._seed_default_quality_grading_rules()
+        self._seed_default_dispatch_dispute()
 
     def _seed_default_benchmark_prices(self):
         """กำหนดราคากลางตั้งต้นตามที่ระบุใน spec.md หัวข้อ 1.1 และ D-02"""
@@ -2243,6 +2244,451 @@ class SupabaseStore:
             if h.get("category_code") == category_code
         ]
         return history[-limit:]
+
+    def _seed_default_dispatch_dispute(self):
+        """
+        กำหนดข้อมูลคำขอตกค้าง (S2 > 30 นาที) และข้อพิพาทตั้งต้น (S8 / PENDING_ADMIN)
+        รองรับ UC-13, D-A03-01..05
+        """
+        now = datetime.now(timezone.utc)
+        stalled_time = (now - timedelta(minutes=45)).isoformat()
+        dispute_time = (now - timedelta(minutes=25)).isoformat()
+        two_hours_ago = (now - timedelta(hours=2)).isoformat()
+
+        # 1. คำขอขาย S2 ที่ตกค้าง > 30 นาที
+        self.pickup_locations["loc-s2-stalled-01"] = {
+            "location_id": "loc-s2-stalled-01",
+            "seller_id": "seller-01",
+            "address_text": "99/1 ซอยประชาราษฎร์บำเพ็ญ 7",
+            "subdistrict": "แขวงห้วยขวาง",
+            "district": "เขตห้วยขวาง",
+            "province": "กรุงเทพมหานคร",
+            "lat": 13.7780,
+            "lng": 100.5740,
+            "is_default": False,
+            "created_at": stalled_time,
+        }
+        self.orders["order-s2-stalled-01"] = {
+            "order_id": "order-s2-stalled-01",
+            "seller_id": "seller-01",
+            "location_id": "loc-s2-stalled-01",
+            "status": "S2",
+            "total_est_min_price": 200.0,
+            "total_est_max_price": 350.0,
+            "total_est_weight_kg": 40.0,
+            "need_lifting_help": False,
+            "search_radius_km": 5.0,
+            "is_manual_dispatched": False,
+            "assigned_saleng_id": None,
+            "version": 1,
+            "created_at": stalled_time,
+        }
+        self.items["item-s2-stalled-01"] = {
+            "item_id": "item-s2-stalled-01",
+            "order_id": "order-s2-stalled-01",
+            "category_code": "MAT-CARDBOARD",
+            "category_group": "GENERAL_WEIGHT",
+            "name": "กระดาษลัง",
+            "est_weight_kg": 40.0,
+            "est_min_price": 200.0,
+            "est_max_price": 350.0,
+            "created_at": stalled_time,
+        }
+
+        # 2. คำขอขายสถานะ S8 ที่มีข้อพิพาท
+        self.orders["order-dispute-01"] = {
+            "order_id": "order-dispute-01",
+            "seller_id": "seller-02",
+            "location_id": "loc-s2-02",
+            "status": "S8",
+            "assigned_saleng_id": "saleng-01",
+            "buyer_id": "saleng-01",
+            "collector_id": "saleng-01",
+            "total_est_min_price": 300.0,
+            "total_est_max_price": 450.0,
+            "total_est_weight_kg": 60.0,
+            "actual_weight_kg": 42.0,
+            "re_quoted_price": 210.0,
+            "created_at": two_hours_ago,
+            "price_snapshot": {
+                "MAT-PET-BOTTLE": {
+                    "min_price": 5.0,
+                    "max_price": 7.5,
+                    "snapshot_at": two_hours_ago,
+                }
+            },
+            "scale_photo_url": "https://storage.saleng.app/disputes/scale_photo_01.jpg",
+            "seller_photo_urls": ["https://storage.saleng.app/disputes/seller_photo_01.jpg"],
+            "version": 3,
+        }
+        self.items["item-disp-01"] = {
+            "item_id": "item-disp-01",
+            "order_id": "order-dispute-01",
+            "category_code": "MAT-PET-BOTTLE",
+            "category_group": "GENERAL_WEIGHT",
+            "name": "ขวดพลาสติกใส PET",
+            "est_weight_kg": 60.0,
+            "actual_weight_kg": 42.0,
+            "est_min_price": 300.0,
+            "est_max_price": 450.0,
+            "created_at": two_hours_ago,
+        }
+
+        self.dispute_reports["DISP-20261104-0001"] = {
+            "dispute_id": "DISP-20261104-0001",
+            "order_id": "order-dispute-01",
+            "seller_id": "seller-02",
+            "buyer_id": "saleng-01",
+            "dispute_reason": "น้ำหนักขวดพลาสติกชั่งได้น้อยกว่าที่ประเมินมาก ซาเล้งแจ้งว่าหักสิ่งปนเปื้อนเกินจริง",
+            "status": "PENDING_ADMIN",
+            "re_quoted_price": 210.0,
+            "scale_photo_url": "https://storage.saleng.app/disputes/scale_photo_01.jpg",
+            "seller_photo_urls": ["https://storage.saleng.app/disputes/seller_photo_01.jpg"],
+            "actual_weights": {"MAT-PET-BOTTLE": 42.0},
+            "created_at": dispute_time,
+        }
+
+    def get_stalled_orders(self, min_wait_minutes: float = 30.0) -> List[dict]:
+        """
+        ดึงรายการคำขอขายสถานะ S2 (Pending) ที่ไม่มีซาเล้งกดรับเกินเกณฑ์เวลา (นาที)
+        รองรับ UC-13, D-A03-02, CC-06
+        """
+        now = datetime.now(timezone.utc)
+        results = []
+        for order in self.orders.values():
+            if order.get("status") != "S2":
+                continue
+            created_str = order.get("created_at")
+            if not created_str:
+                continue
+            try:
+                created_dt = datetime.fromisoformat(created_str.replace("Z", "+00:00"))
+                elapsed_min = (now - created_dt).total_seconds() / 60.0
+            except Exception:
+                elapsed_min = 0.0
+
+            if elapsed_min >= min_wait_minutes:
+                loc = self.pickup_locations.get(order.get("location_id", ""), {})
+                item = {
+                    "order_id": order["order_id"],
+                    "seller_id": order.get("seller_id", ""),
+                    "status": order.get("status", "S2"),
+                    "created_at": created_str,
+                    "waiting_minutes": round(elapsed_min, 1),
+                    "subdistrict": loc.get("subdistrict"),
+                    "district": loc.get("district"),
+                    "total_est_min_price": float(order.get("total_est_min_price", 0.0)),
+                    "total_est_max_price": float(order.get("total_est_max_price", 0.0)),
+                    "total_est_weight_kg": float(order.get("total_est_weight_kg", 0.0)),
+                    "search_radius_km": float(order.get("search_radius_km", 5.0)),
+                    "is_manual_dispatched": bool(order.get("is_manual_dispatched", False)),
+                    "dispatched_by": order.get("dispatched_by"),
+                    "dispatched_at": order.get("dispatched_at"),
+                    "pickup_time": order.get("pickup_time"),
+                }
+                results.append(item)
+        return sorted(results, key=lambda x: x["waiting_minutes"], reverse=True)
+
+    def manual_dispatch_order(
+        self,
+        order_id: str,
+        saleng_id: str,
+        admin_id: str = "admin-01",
+        notes: Optional[str] = None,
+    ) -> Tuple[bool, dict, str]:
+        """
+        แอดมินมอบหมายงานตรงให้ซาเล้งเฉพาะราย (Direct Assign -> S3)
+        รองรับ UC-13, D-A03-03, D-00-01, CC-03, REQ-SEC-001
+        """
+        order = self.orders.get(order_id)
+        if not order:
+            return False, {}, "ไม่พบคำขอนัดหมาย"
+        if order.get("status") != "S2":
+            return False, {}, "คำขอไม่ได้อยู่ในสถานะรอผู้รับงาน (S2)"
+
+        saleng = self.saleng_profiles.get(saleng_id)
+        if not saleng:
+            return False, {}, "ไม่พบข้อมูลซาเล้ง"
+        if not saleng.get("verified", False):
+            return False, {}, "ซาเล้งยังไม่ผ่านการยืนยันตัวตน KYC (D-00-01)"
+        if not saleng.get("is_online", False):
+            return False, {}, "ซาเล้งไม่ได้เปิดสถานะพร้อมรับงาน (Online)"
+
+        now_iso = datetime.now(timezone.utc).isoformat()
+        order["status"] = "S3"
+        order["assigned_saleng_id"] = saleng_id
+        order["buyer_id"] = saleng_id
+        order["collector_id"] = saleng_id
+        order["is_manual_dispatched"] = True
+        order["dispatched_by"] = admin_id
+        order["dispatched_at"] = now_iso
+        order["version"] = order.get("version", 1) + 1
+
+        self.add_audit_log(
+            action="ADMIN_MANUAL_DISPATCH",
+            entity_id=order_id,
+            actor_id=admin_id,
+            details={
+                "order_id": order_id,
+                "assigned_saleng_id": saleng_id,
+                "assigned_saleng_name": saleng.get("display_name"),
+                "actor_role": "ADMIN",
+                "notes": notes,
+            },
+        )
+        return True, order, "มอบหมายงานสำเร็จ"
+
+    def expand_order_search_radius(
+        self,
+        order_id: str,
+        new_radius_km: float = 10.0,
+        admin_id: str = "admin-01",
+    ) -> Tuple[bool, dict, str]:
+        """
+        แอดมินขยายรัศมีการค้นหาของคำขอ (Expand Radius Broadcast)
+        รองรับ UC-13, D-A03-03, REQ-SEC-001
+        """
+        order = self.orders.get(order_id)
+        if not order:
+            return False, {}, "ไม่พบคำขอนัดหมาย"
+        if order.get("status") != "S2":
+            return False, {}, "คำขอไม่ได้อยู่ในสถานะรอผู้รับงาน (S2)"
+
+        old_radius = float(order.get("search_radius_km", 5.0))
+        order["search_radius_km"] = float(new_radius_km)
+
+        self.add_audit_log(
+            action="ADMIN_EXPAND_DISPATCH_RADIUS",
+            entity_id=order_id,
+            actor_id=admin_id,
+            details={
+                "order_id": order_id,
+                "old_radius_km": old_radius,
+                "new_radius_km": float(new_radius_km),
+                "actor_role": "ADMIN",
+            },
+        )
+        return True, {
+            "order_id": order_id,
+            "old_radius_km": old_radius,
+            "new_radius_km": float(new_radius_km),
+        }, "ขยายรัศมีการค้นหาสำเร็จ"
+
+    def get_disputes(self, status_filter: Optional[str] = "PENDING_ADMIN") -> List[dict]:
+        """
+        ดึงรายการข้อพิพาททั้งหมด หรือกรองตามสถานะ
+        รองรับ UC-13, D-A03-01
+        """
+        results = []
+        for disp in self.dispute_reports.values():
+            if status_filter and status_filter.upper() != "ALL":
+                if disp.get("status") != status_filter.upper():
+                    continue
+            order_id = disp.get("order_id")
+            order = self.orders.get(order_id, {})
+            seller_id = disp.get("seller_id") or order.get("seller_id", "")
+            buyer_id = disp.get("buyer_id") or order.get("assigned_saleng_id") or order.get("collector_id", "")
+            seller = self.sellers.get(seller_id, {})
+            buyer = self.saleng_profiles.get(buyer_id, {})
+            summary = {
+                "dispute_id": disp.get("dispute_id"),
+                "order_id": order_id,
+                "seller_id": seller_id,
+                "buyer_id": buyer_id,
+                "seller_name": seller.get("display_name") or seller.get("name") or "ผู้ขาย",
+                "buyer_name": buyer.get("display_name") or "ซาเล้ง",
+                "dispute_reason": disp.get("dispute_reason", ""),
+                "status": disp.get("status", "PENDING_ADMIN"),
+                "created_at": disp.get("created_at"),
+                "re_quoted_price": disp.get("re_quoted_price"),
+                "arbitrated_amount": disp.get("arbitrated_amount"),
+            }
+            results.append(summary)
+        return sorted(results, key=lambda x: x.get("created_at", ""), reverse=True)
+
+    def get_dispute_dossier(self, dispute_id: str) -> Optional[dict]:
+        """
+        ดึงสำนวนหลักฐานข้อพิพาท 4 มิติ
+        รองรับ UC-13, REQ-FN-005, REQ-FN-004, D-A03-04
+        """
+        disp = self.dispute_reports.get(dispute_id)
+        if not disp:
+            return None
+
+        order_id = disp.get("order_id")
+        order = self.orders.get(order_id, {})
+        seller_id = disp.get("seller_id") or order.get("seller_id", "")
+        buyer_id = disp.get("buyer_id") or order.get("assigned_saleng_id", "")
+        seller = self.sellers.get(seller_id, {})
+        buyer = self.saleng_profiles.get(buyer_id, {})
+
+        order_items = [it for it in self.items.values() if it.get("order_id") == order_id]
+        if not order_items and "items" in order:
+            order_items = order["items"]
+
+        original_order = {
+            "order_id": order_id,
+            "total_est_min_price": float(order.get("total_est_min_price", 0.0)),
+            "total_est_max_price": float(order.get("total_est_max_price", 0.0)),
+            "total_est_weight_kg": float(order.get("total_est_weight_kg", 0.0)),
+            "price_snapshot": order.get("price_snapshot", {}),
+            "items": order_items,
+        }
+        saleng_verification = {
+            "scale_photo_url": disp.get("scale_photo_url") or order.get("scale_photo_url"),
+            "actual_weights": disp.get("actual_weights") or {"actual_weight_kg": order.get("actual_weight_kg")},
+            "re_quoted_price": disp.get("re_quoted_price") or order.get("re_quoted_price"),
+            "buyer_notes": disp.get("buyer_notes"),
+        }
+        seller_dispute = {
+            "dispute_reason": disp.get("dispute_reason", ""),
+            "seller_photo_urls": disp.get("seller_photo_urls") or order.get("seller_photo_urls", []),
+            "seller_notes": disp.get("seller_notes"),
+        }
+        parties_contact = {
+            "seller": {
+                "seller_id": seller_id,
+                "name": seller.get("display_name") or seller.get("name") or "ผู้ขาย",
+                "phone_masked": seller.get("phone_masked") or "08X-XXX-XXXX",
+            },
+            "buyer": {
+                "buyer_id": buyer_id,
+                "name": buyer.get("display_name") or "ซาเล้ง",
+                "phone_masked": buyer.get("phone_masked") or "08X-XXX-XXXX",
+            },
+        }
+
+        arbitration_result = None
+        if disp.get("status") in ["RESOLVED_COMPLETED", "RESOLVED_CANCELLED"]:
+            arbitration_result = {
+                "arbitrated_amount": disp.get("arbitrated_amount"),
+                "arbitration_note": disp.get("arbitration_note"),
+                "arbitrated_by": disp.get("arbitrated_by"),
+                "arbitrated_at": disp.get("arbitrated_at"),
+            }
+
+        return {
+            "dispute_id": dispute_id,
+            "order_id": order_id,
+            "seller_id": seller_id,
+            "buyer_id": buyer_id,
+            "status": disp.get("status", "PENDING_ADMIN"),
+            "created_at": disp.get("created_at"),
+            "dispute_reason": disp.get("dispute_reason", ""),
+            "original_order": original_order,
+            "saleng_verification": saleng_verification,
+            "seller_dispute": seller_dispute,
+            "parties_contact": parties_contact,
+            "arbitration_result": arbitration_result,
+        }
+
+    def resolve_dispute(
+        self,
+        dispute_id: str,
+        action: str,
+        arbitrated_amount: Optional[float] = None,
+        arbitration_note: Optional[str] = None,
+        admin_id: str = "admin-01",
+    ) -> Tuple[bool, dict, str]:
+        """
+        แอดมินตัดสินชี้ขาดข้อพิพาท:
+        - RESOLVE_COMPLETE: สั่งปิดงาน (S7) พร้อมยอดเงินชี้ขาดสุทธิ และออกใบเสร็จ
+        - RESOLVE_CANCEL: สั่งยกเลิก (S9) ไม่มีการชำระเงิน
+        รองรับ UC-13, D-A03-01, D-A03-05, REQ-SEC-001
+        """
+        disp = self.dispute_reports.get(dispute_id)
+        if not disp:
+            return False, {}, "ไม่พบข้อพิพาท"
+        if disp.get("status") != "PENDING_ADMIN":
+            return False, {}, "ข้อพิพาทได้รับการตัดสินแล้ว"
+
+        order_id = disp.get("order_id")
+        order = self.orders.get(order_id)
+        if not order:
+            return False, {}, "ไม่พบคำขอนัดหมายที่เชื่อมโยงกับข้อพิพาท"
+
+        now_iso = datetime.now(timezone.utc).isoformat()
+
+        if action == "RESOLVE_COMPLETE":
+            if arbitrated_amount is None or float(arbitrated_amount) <= 0:
+                return False, {}, "การตัดสินให้ปิดงานต้องระบุยอดเงินชี้ขาดสุทธิที่มากกว่า 0 บาท"
+
+            amount = float(arbitrated_amount)
+            disp["status"] = "RESOLVED_COMPLETED"
+            disp["arbitrated_amount"] = amount
+            disp["arbitration_note"] = arbitration_note
+            disp["arbitrated_by"] = admin_id
+            disp["arbitrated_at"] = now_iso
+
+            order["status"] = "S7"
+            order["final_price"] = amount
+            order["resolved_at"] = now_iso
+            order["version"] = order.get("version", 1) + 1
+
+            receipt_id = f"REC-DISP-{dispute_id}"
+            receipt = {
+                "receipt_id": receipt_id,
+                "order_id": order_id,
+                "seller_id": disp.get("seller_id"),
+                "buyer_id": disp.get("buyer_id"),
+                "total_amount": amount,
+                "payment_method": "PROMPTPAY",
+                "status": "ISSUED",
+                "issued_at": now_iso,
+                "notes": f"ออกใบเสร็จตามคำตัดสินชี้ขาดของแอดมิน: {arbitration_note or 'ระงับข้อพิพาทสำเร็จ'}",
+            }
+            self.receipts[receipt_id] = receipt
+
+            self.add_audit_log(
+                action="ADMIN_RESOLVED_DISPUTE",
+                entity_id=dispute_id,
+                actor_id=admin_id,
+                details={
+                    "dispute_id": dispute_id,
+                    "order_id": order_id,
+                    "arbitrated_amount": amount,
+                    "arbitration_note": arbitration_note,
+                    "actor_role": "ADMIN",
+                    "receipt_id": receipt_id,
+                },
+            )
+            return True, {
+                "dispute": disp,
+                "order_status": "S7",
+                "receipt": receipt,
+                "arbitrated_amount": amount,
+            }, "ตัดสินชี้ขาดให้ปิดงานและออกใบเสร็จสำเร็จ"
+
+        elif action == "RESOLVE_CANCEL":
+            disp["status"] = "RESOLVED_CANCELLED"
+            disp["arbitration_note"] = arbitration_note
+            disp["arbitrated_by"] = admin_id
+            disp["arbitrated_at"] = now_iso
+
+            order["status"] = "S9"
+            order["cancelled_reason"] = arbitration_note or "คำตัดสินแอดมินสั่งยกเลิกรายการ"
+            order["cancelled_at"] = now_iso
+            order["version"] = order.get("version", 1) + 1
+
+            self.add_audit_log(
+                action="ADMIN_CANCELLED_DISPUTE",
+                entity_id=dispute_id,
+                actor_id=admin_id,
+                details={
+                    "dispute_id": dispute_id,
+                    "order_id": order_id,
+                    "cancellation_reason": arbitration_note,
+                    "actor_role": "ADMIN",
+                },
+            )
+            return True, {
+                "dispute": disp,
+                "order_status": "S9",
+                "cancellation_reason": arbitration_note,
+            }, "ตัดสินสั่งยกเลิกคำขอสำเร็จ"
+
+        else:
+            return False, {}, f"ไม่รองรับคำสั่งตัดสิน: {action}"
 
 
 # Singleton instance สำหรับเข้าถึง Database

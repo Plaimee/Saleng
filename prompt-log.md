@@ -2557,3 +2557,128 @@
   4. **ตรวจ Non-goals / คำถามเปิด:** ปฏิบัติตามขอบเขตเคร่งครัด (ไม่ทำ Bidding, ไม่เชื่อมต่อ API ตลาดต่างประเทศอัตโนมัติ, ไม่ทำ AI image detection, โหมด Online-only สำหรับแอดมิน)
   5. **บันทึกลง tasks.md & prompt-log.md:** ปรับสถานะ tasks.md เป็น `completed` (ทุกงาน `[DONE]`) และบันทึกประวัติลง `prompt-log.md` เรียบร้อย
 - **สถานะ:** พัฒนาฟีเจอร์ Admin 02 เสร็จสมบูรณ์ 100% พร้อมสำหรับการตรวจรับหรือขึ้นสู่ฟีเจอร์ถัดไป
+
+
+---
+
+## บันทึก #94 — `/clarify specs/admin/03-dispatch-and-dispute-center/spec.md` (เคลียร์จุดกำกวมศูนย์ควบคุมการจับคู่งานและข้อพิพาท Admin 03)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/clarify specs/admin/03-dispatch-and-dispute-center/spec.md`
+- **ไฟล์ที่ AI อ่าน:** `AGENTS.md`, `specs/admin/03-dispatch-and-dispute-center/spec.md` (v1.0), `specs/000-shared/constraints.md`, `specs/002-route/models.md`, `docs/srs/glossary.md`, `docs/srs/use-cases.md` (`UC-13`), `backend/app/services/payment_service.py`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/admin/03-dispatch-and-dispute-center/spec.md` (อัปเกรดเป็น Version 2.0, สถานะ `reviewed-post-clarify`, เคลียร์ 6 ประเด็นเปิด `Q-01` ถึง `Q-06` พร้อมมติ `D-A03-01` ถึง `D-A03-06`, กำหนดเกณฑ์การยอมรับ `AC-A03-01..05`, Non-goals, แผนภาพ Workflow Diagram และ API Endpoints)
+- **ประเด็นคำถามเปิดและมติที่บันทึก (`D-A03-01` ถึง `D-A03-06`):**
+  1. **`D-A03-01` (สถานะข้อพิพาทและการยกเลิกใน State Machine `MD-STM-04`):** ยึดตาม `glossary.md` และโค้ดปัจจุบันอย่างเป็นทางการ:
+     - `S8`: อยู่ระหว่างตรวจสอบข้อพิพาท (`Disputed / Frozen`)
+     - `S9`: ยกเลิกใบงาน (`Cancelled`)
+     - `S7`: จบงานสมบูรณ์ (`Completed`)
+     - แอดมินตัดสินให้จบงาน: `S8 -> S7`
+     - แอดมินตัดสินยกเลิก/คืนเงิน: `S8 -> S9`
+  2. **`D-A03-02` (เกณฑ์เวลาตัดสินงานตกค้าง `Pending Timeout`):** คำขอในสถานะ `S2 (Pending)` ที่ไม่มีซาเล้งกดรับเกิน **30 นาที** นับจากเวลาโพสต์ หรือเวลาปัจจุบันเข้าใกล้เวลานัดหมายภายใน 1 ชั่วโมง จะถูกดึงเข้าคิวงานตกค้างเพื่อให้แอดมินแทรกแซง
+  3. **`D-A03-03` (ทางเลือกการกระจายงานสำรอง `Manual Dispatch Fallback`):** แอดมินมี 2 ทางเลือก:
+     - `Direct Assign`: มอบหมายงานเจาะจงให้ซาเล้งที่ออนไลน์และผ่านการยืนยันตัวตน (`verified = True`)
+     - `Expand Radius`: ขยายรัศมีการค้นหาจาก 5.0 กม. เป็น 10.0 กม. เพื่อบรอดคาสต์คำขอให้ซาเล้งวงนอก
+  4. **`D-A03-04` (ชุดหลักฐานสำนวนข้อพิพาท `Dispute Dossier`):** แสดง 4 มิติ: ข้อมูลคำขอเดิมและ Price Snapshot, ข้อมูลหน้างานจากซาเล้ง (น้ำหนักชั่งจริง, รูปตาชั่ง `scale_photo_url`, ราคาเสนอใหม่), ข้อมูลข้อโต้แย้งจากผู้ขาย (`dispute_reason`), และข้อมูลติดต่อคู่กรณี
+  5. **`D-A03-05` (ผลการตัดสินชี้ขาดข้อพิพาท):** แอดมินมี 2 ทางเลือก:
+     - `RESOLVE_COMPLETE -> S7`: ระบุยอดเงินสุทธิที่ตัดสินชี้ขาด (Arbitrated Amount บาท) พร้อมหมายเหตุ และออกใบเสร็จดิจิทัล
+     - `RESOLVE_CANCEL -> S9`: สั่งยกเลิกคำขอ ไม่มีการชำระเงิน พร้อมระบุเหตุผล
+  6. **`D-A03-06` (การควบคุมสิทธิ์ Admin RBAC และ Audit Trail):** บังคับ Header `X-Admin-Role: ADMIN` (`403 Forbidden` หากไม่มีสิทธิ์) ตาม `CC-03`, ทำงานแบบ Online-only (`CC-05`), บันทึก Audit Log 4 แอ็กชัน (`ADMIN_MANUAL_DISPATCH`, `ADMIN_EXPAND_DISPATCH_RADIUS`, `ADMIN_RESOLVED_DISPUTE`, `ADMIN_CANCELLED_DISPUTE`) ตาม `REQ-SEC-001`, และทัชทาร์เก็ตปุ่มกด $\ge 48\text{px}$ ตาม `REQ-UX-001`, `CC-01`
+- **สถานะ:** Clarification เสร็จสมบูรณ์ สเปก Version 2.0 พร้อมสำหรับการวางแผนในขั้นตอน `/plan specs/admin/03-dispatch-and-dispute-center/spec.md`
+
+
+---
+
+## บันทึก #95 — `/plan specs/admin/03-dispatch-and-dispute-center/spec.md` (จัดทำแผนสถาปัตยกรรมศูนย์ควบคุมการจับคู่งานและข้อพิพาท Admin 03)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/plan specs/admin/03-dispatch-and-dispute-center/spec.md`
+- **ไฟล์ที่ AI อ่าน:** `AGENTS.md`, `specs/admin/03-dispatch-and-dispute-center/spec.md` (v2.0), `specs/000-shared/constraints.md`, `specs/002-route/models.md`, `docs/srs/use-cases.md` (`UC-13`), `docs/srs/decisions.md` (`D-00-01..03`)
+- **ไฟล์ที่สร้าง:**
+  - `specs/admin/03-dispatch-and-dispute-center/plan.md` (แผนทางเทคนิค 8 ส่วนตามมาตรฐาน agent-pack v2: สถาปัตยกรรม, โครงสร้างไฟล์, ฐานข้อมูล, API Specification, แผนระบบภายนอก, แผนหน้าจอ React SPA, แผน Automated Tests, และตารางตรวจ Constraints กลาง 13 ข้อ)
+- **ประเด็นสำคัญใน plan.md:**
+  1. **สถาปัตยกรรมและเทคโนโลยี (ทีมเลือกเอง ไม่ได้มาจาก spec):**
+     - Backend: Python 3.11 + FastAPI (`dispatch_dispute.py`, `dispatch_dispute_service.py`, `dispatch_dispute_models.py`)
+     - State Store: Supabase Store (`orders`, `dispute_reports`, `audit_logs`)
+     - Frontend: React 18 + TailwindCSS (`AdminDispatchDisputeView.jsx`, `StalledOrdersTable.jsx`, `DisputeDossierCard.jsx`, `ArbitrationModal.jsx`, `adminDispatchDisputeApi.js`)
+  2. **โครงสร้างโมเดลข้อมูลและ API:**
+     - `orders` รองรับการคัดกรองคำขอ `S2` ตกค้าง > 30 นาที, บันทึกการขยายรัศมี `search_radius_km` และการมอบหมายงาน `buyer_id`
+     - `dispute_reports` บันทึกสำนวนข้อพิพาท 4 มิติ (`dispute_id`, `order_id`, `status: PENDING_ADMIN / RESOLVED_COMPLETED / RESOLVED_CANCELLED`, `arbitrated_amount`, `arbitration_note`)
+     - API Endpoints:
+       - `GET /api/v1/admin/dispatch/stalled-orders` (ดึงคิวนัดหมายตกค้าง)
+       - `POST /api/v1/admin/dispatch/assign` (มอบหมายงานให้ซาเล้งเจาะจง -> S3)
+       - `POST /api/v1/admin/dispatch/expand-radius` (ขยายรัศมีการค้นหาเป็น 10 กม.)
+       - `GET /api/v1/admin/disputes` (ดึงรายการข้อพิพาท S8)
+       - `GET /api/v1/admin/disputes/{dispute_id}` (ดึงสำนวนหลักฐานข้อพิพาท 4 มิติ)
+       - `POST /api/v1/admin/disputes/{dispute_id}/resolve` (ตัดสินชี้ขาดให้จบงาน S8->S7 หรือยกเลิก S8->S9)
+  3. **การปฏิบัติตาม Constraints กลาง:** ครบทั้ง 13 ข้อตาม `specs/000-shared/constraints.md` โดยเฉพาะ `CC-01` (ปุ่ม $\ge 48\text{px}$), `CC-03` (สิทธิ์ `X-Admin-Role: ADMIN`), `CC-05` (Online-only สำหรับแอดมิน), `D-00-01` (กรองเฉพาะซาเล้งที่ verified = True สำหรับ Direct Assign), `D-00-02` (ใช้ Price Snapshot ในการพิจารณาข้อพิพาท), และ `REQ-SEC-001` (Audit Logging 4 แอ็กชัน)
+- **สถานะ:** แผน `plan.md` สมบูรณ์ พร้อมเข้าสู่ขั้นตอนการแตกงานย่อย `/tasks specs/admin/03-dispatch-and-dispute-center/plan.md`
+
+
+---
+
+## บันทึก #96 — `/tasks specs/admin/03-dispatch-and-dispute-center/plan.md` (แตกงานย่อยศูนย์ควบคุมการจับคู่งานและข้อพิพาท Admin 03)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/tasks specs/admin/03-dispatch-and-dispute-center/plan.md`
+- **ไฟล์ที่ AI อ่าน:** `AGENTS.md`, `specs/admin/03-dispatch-and-dispute-center/plan.md` (v1.0), `specs/admin/03-dispatch-and-dispute-center/spec.md` (v2.0), `specs/000-shared/constraints.md`, `specs/002-route/models.md`
+- **ไฟล์ที่สร้าง:** `specs/admin/03-dispatch-and-dispute-center/tasks.md`
+- **ผลลัพธ์การแตกงานย่อย (8 งาน `T-01` ถึง `T-08` ครบ 6 ช่องต่อ Task):**
+  1. **`T-01`:** สร้าง Data Models และ Schema สำหรับระบบกระจายงานสำรองและตัดสินข้อพิพาท (`dispatch_dispute_models.py`, `supabase.py` ขยาย store methods และ seed ข้อมูล, `test_T01_dispatch_dispute_models.py`)
+  2. **`T-02`:** สร้าง Service และ API จัดการคิวนัดหมายตกค้างและการกระจายงานกรณีสำรอง (Manual Dispatch Fallback: กรอง S2 > 30 นาที, Direct Assign -> S3 สำหรับซาเล้งออนไลน์ KYC, Expand Radius เป็น 10.0 กม., `test_AC_A03_01_manual_dispatch.py`)
+  3. **`T-03`:** สร้าง Service และ API เรียกดูคิวข้อพิพาทและสำนวนหลักฐาน 4 มิติ (Dispute Dossier: คำขอเดิม, ภาพตาชั่งซาเล้ง, ข้อโต้แย้งผู้ขาย, ข้อมูลติดต่อ, `test_AC_A03_02_dispute_dossier.py`)
+  4. **`T-04`:** สร้าง Service และ API ตัดสินชี้ขาดข้อพิพาทให้จบงาน (RESOLVE_COMPLETE -> S7, Arbitrated Amount > 0, ออกใบเสร็จดิจิทัล, `test_AC_A03_03_resolve_complete.py`)
+  5. **`T-05`:** สร้าง Service และ API ตัดสินสั่งยกเลิกข้อพิพาท (RESOLVE_CANCEL -> S9), Admin RBAC (`X-Admin-Role: ADMIN` ปฏิเสธ 403), และ Audit Trail 4 แอ็กชัน (`test_AC_A03_04_resolve_cancel.py`, `test_AC_A03_05_admin_dispute_rbac_audit.py`)
+  6. **`T-06`:** สร้าง Frontend API Client สำหรับแอดมิน (`adminDispatchDisputeApi.js`, `adminDispatchDisputeApi.test.mjs`)
+  7. **`T-07`:** พัฒนาคอมโพเนนต์ React แดชบอร์ดศูนย์ควบคุมการจับคู่งานและข้อพิพาท (`StalledOrdersTable.jsx`, `DisputeDossierCard.jsx`, `ArbitrationModal.jsx`, `AdminDispatchDisputeView.jsx` พร้อม `data-req="UC-13"`, ปุ่ม $\ge 48\text{px}$)
+  8. **`T-08`:** สร้างชุดทดสอบ Vitest Component Tests (`AC-A03-01.test.jsx`, `AC-A03-02.test.jsx`, `AC-A03-03.test.jsx`), Integration E2E Test Suite (`test_e2e_admin_dispatch_dispute.py`) และตรวจรับ 5 ด่าน
+- **ตารางตรวจทานท้ายไฟล์:**
+  - ตาราง Two-way Traceability Matrix ครบทั้ง 5 AC (`AC-A03-01` ถึง `AC-A03-05`) รองรับทั้งหลังบ้าน หน้าบ้าน และ E2E
+  - ตาราง Constraints Traceability Matrix ครบทั้ง 13 ข้อ (`CC-01..06`, `REQ-SEC-001..002`, `REQ-OP-001..002`, `D-00-01..03`)
+- **สถานะ:** แตกงานย่อยเสร็จสมบูรณ์ พร้อมดำเนินการพัฒนาในขั้นตอน `/implement T-01..08`
+
+
+---
+
+## บันทึก #97 — `/implement T-01..08` (พัฒนาระบบศูนย์ควบคุมการจับคู่งานและข้อพิพาท Admin 03 ครบทั้ง 8 Tasks)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/implement T-01..08`
+- **ไฟล์ที่ AI อ่าน:** `AGENTS.md`, `specs/admin/03-dispatch-and-dispute-center/tasks.md` (v1.0), `specs/admin/03-dispatch-and-dispute-center/plan.md`, `specs/admin/03-dispatch-and-dispute-center/spec.md`, `specs/000-shared/constraints.md`
+- **งานย่อยที่พัฒนาครบถ้วน (`T-01` ถึง `T-08`):**
+  1. **`T-01` (Data Models & Schemas):**
+     - สร้าง `backend/app/models/dispatch_dispute_models.py` (`StalledOrderItem`, `ManualDispatchAssignRequest`, `ExpandDispatchRadiusRequest`, `ManualDispatchResponse`, `ExpandRadiusResponse`, `DisputeDossierResponse`, `DisputeSummaryItem`, `ResolveDisputeRequest`, `ResolveDisputeResponse`)
+     - ขยาย `backend/app/core/supabase.py` เพิ่ม `_seed_default_dispatch_dispute`, `get_stalled_orders`, `manual_dispatch_order`, `expand_order_search_radius`, `get_disputes`, `get_dispute_dossier`, `resolve_dispute`
+     - ทดสอบ `test_T01_dispatch_dispute_models.py` ผ่าน 7/7 passed
+  2. **`T-02` (Stalled Orders Queue & Manual Dispatch Fallback):**
+     - พัฒนา `backend/app/services/dispatch_dispute_service.py` (`list_stalled_orders`, `assign_order_manually`, `expand_search_radius`)
+     - สร้าง `backend/app/api/v1/dispatch_dispute.py` และเมานต์ใน `backend/app/api/v1/pricing.py`
+     - ทดสอบ `test_AC_A03_01_manual_dispatch.py` ผ่าน 4/4 passed (กรองงานตกค้าง > 30 นาที, มอบหมายตรงเปลี่ยนเป็น S3, ขยายรัศมีเป็น 10 กม., Latency < 2.0s)
+  3. **`T-03` (Dispute Inspection Dossier Display):**
+     - เปิด Endpoint `GET /api/v1/admin/disputes` และ `GET /api/v1/admin/disputes/{dispute_id}`
+     - แสดงชุดสำนวนหลักฐาน 4 มิติ: คำขอเดิม & Price Snapshot, ข้อมูลหน้างานและภาพตาชั่ง, ข้อโต้แย้งผู้ขาย, ข้อมูลติดต่อคู่กรณี
+     - ทดสอบ `test_AC_A03_02_dispute_dossier.py` ผ่าน 3/3 passed
+  4. **`T-04` (Dispute Resolution to Complete):**
+     - ตัดสินชี้ขาดให้จบงาน (`RESOLVE_COMPLETE -> S7`) พร้อมยอดเงินชี้ขาดสุทธิ (Arbitrated Amount > 0)
+     - สร้างใบเสร็จดิจิทัล (`REC-DISP-...`) ตามยอดเงินชี้ขาด
+     - ทดสอบ `test_AC_A03_03_resolve_complete.py` ผ่าน 3/3 passed
+  5. **`T-05` (Dispute Resolution to Cancel, RBAC & Audit Trail):**
+     - ตัดสินสั่งยกเลิกคำขอ (`RESOLVE_CANCEL -> S9`) โดยไม่มีการชำระเงิน พร้อมบันทึกเหตุผล
+     - บังคับ Header `X-Admin-Role: ADMIN` ปฏิเสธ 403 Forbidden หากไม่มีสิทธิ์
+     - บันทึก Audit Log แบบ Append-only ทั้ง 4 แอ็กชัน (`ADMIN_MANUAL_DISPATCH`, `ADMIN_EXPAND_DISPATCH_RADIUS`, `ADMIN_RESOLVED_DISPUTE`, `ADMIN_CANCELLED_DISPUTE`)
+     - ทดสอบ `test_AC_A03_04_resolve_cancel.py` และ `test_AC_A03_05_admin_dispute_rbac_audit.py` ผ่าน 4/4 passed
+  6. **`T-06` (Frontend API Client):**
+     - สร้าง `frontend/src/services/adminDispatchDisputeApi.js` รองรับทั้ง 6 เมธอด แนบ Header `X-Admin-Role: ADMIN` อัตโนมัติ
+     - ทดสอบ `frontend/tests/adminDispatchDisputeApi.test.mjs` ผ่าน 8/8 passed
+  7. **`T-07` (React Admin Dashboard Components):**
+     - สร้าง `StalledOrdersTable.jsx`, `DisputeDossierCard.jsx`, `ArbitrationModal.jsx`, `AdminDispatchDisputeView.jsx`
+     - กำกับ `data-req="UC-13"`, ป้าย Online-only (`CC-05`), ทัชทาร์เก็ตปุ่มกด $\ge 48\text{px}$ ทุกปุ่ม
+  8. **`T-08` (Vitest Tests & E2E Integration Suite):**
+     - สร้างชุดทดสอบ Vitest: `AC-A03-01.test.jsx`, `AC-A03-02.test.jsx`, `AC-A03-03.test.jsx` ผ่าน 6/6 passed
+     - สร้างและทดสอบ Integration E2E `backend/tests/test_e2e_admin_dispatch_dispute.py` ผ่าน 1/1 passed
+- **ผลการตรวจ 5 ด่าน:**
+  1. `git status`: ตรวจสอบความถูกต้องของไฟล์ที่สร้างและแก้ไขตรงตาม Tasks
+  2. ผลรัน Automated Tests:
+     - Backend (Pytest): **330/330 passed** (100%)
+     - Frontend (Vitest): **274/274 passed** (100% across 102 test suites)
+     - รวมทั้งระบบ: **604 passed** ปราศจาก Regression
+  3. การอ้างอิง ID: ตรงตาม `UC-13`, `AC-A03-01..05`, `D-A03-01..06`, `CC-01..06`, `REQ-SEC-001`, `REQ-FN-004..005`, `D-00-01..02`
+  4. Non-goals: ไม่สร้าง Voice Bot, ไม่สร้าง AI วิเคราะห์เสียง/วิดีโอสด, ไม่สร้าง Escrow Wallet ตามที่กำหนดไว้
+  5. ปรับปรุงสถานะ: อัปเดต `specs/admin/03-dispatch-and-dispute-center/tasks.md` เป็นสถานะ `completed`
+- **สถานะ:** พัฒนาเสร็จสมบูรณ์ 100%
