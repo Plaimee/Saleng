@@ -2095,3 +2095,113 @@
      - Frontend (Vitest): **78 test files passed, 193 tests passed, 0 failed** (ครอบคลุม API client, ทุก AC component test)
   5. **Zero Regression:** ชุดทดสอบเดิมทั้งหมดของระบบผู้ขาย (Seller 01-09) และระบบผู้ซื้อ (Buyer 01-04) ยังคงผ่าน 100% ไม่มีข้อผิดพลาด
 - **สถานะ:** ฟีเจอร์ Buyer 05: ระบบสื่อสาร (`specs/buyer/05-communication/`) พัฒนาและตรวจรับเสร็จสมบูรณ์ 100%
+
+---
+
+## บันทึก #78 — `/clarify specs/buyer/06-billing-and-receipt/spec.md` (รอบที่ 1: ตรวจสอบความกำกวมก่อนวางแผน)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/clarify specs/buyer/06-billing-and-receipt/spec.md`
+- **ไฟล์ที่ AI อ่าน:** `AGENTS.md`, `specs/buyer/06-billing-and-receipt/spec.md` (v1.0), `specs/seller/06-payment-and-verification/spec.md`, `specs/000-shared/constraints.md`, `docs/srs/use-cases.md` (`UC-05`, `UC-06`, `UC-07`), `specs/002-route/models.md` (`MD-STM-04`)
+- **จุดกำกวมที่ AI ตรวจพบ (6 ประเด็น):**
+  1. `Q-01` (`MD-STM-04`, `use-cases.md`): ลำดับสถานะ State Machine เดิมขัดกับระบบกลาง ปรับเป็น `S4 (ชั่งน้ำหนักหน้างาน)` -> `S5 (ผู้ขายตรวจน้ำหนัก/ใบเสนอราคาใหม่)` -> `S6 (ชำระเงิน)` -> `S7 (สำเร็จ/ออกใบเสร็จ)` และอ้างอิง `UC-05`, `UC-06`, `UC-07`
+  2. `Q-02` (`REQ-FN-002`, `UC-05`): บังคับแนบรูปถ่ายหน้าตาชั่งดิจิทัล (`scale_photo_url`) อย่างน้อย 1 ภาพ เพื่อส่งให้ผู้ขายตรวจสอบความโปร่งใส
+  3. `Q-03` (`REQ-BR-002`, `REQ-DAT-001`): การคำนวณยอดเงินสุทธิหน้างานต้องใช้ราคาต่อหน่วยที่ล็อกไว้ตอนนัดหมาย (`locked_unit_price`) คูณกับน้ำหนักจริง
+  4. `Q-04` (`UC-07`, `Payment Confirmation`): ซาเล้งเลือกช่องทางจ่ายเงิน (เงินสด/PromptPay QR) และผู้ขายเป็นผู้กดยืนยันรับเงินเพื่อเปลี่ยนสถานะเป็น `S7` (Completed)
+  5. `Q-05` (`CT-02`, `CC-05`, `REQ-OP-001`): โหมดกึ่งออฟไลน์ในจุดอับสัญญาณขณะชั่งน้ำหนัก บันทึกลง `localStorage` (`saleng_weighing_offline_queue`) พร้อม `idempotency_key` เพื่อซิงก์เมื่อต่อเน็ต
+  6. `Q-06` (`REQ-FN-005`, `REQ-SEC-002`, `SC-03`): โครงสร้างใบเสร็จดิจิทัล (`DigitalReceipt`) รหัสไม่ซ้ำ สรุปรายการน้ำหนักและยอดเงินสุทธิ พร้อม Mask เบอร์โทรศัพท์เป็น `08X-XXX-XXXX`
+- **ข้อสรุปการตัดสินใจ (`D-B06-01` ถึง `D-B06-06`):**
+  - **`D-B06-01`:** ยึดตาม `MD-STM-04` ปรับลำดับสถานะเป็น `S4 -> S5 -> S6 -> S7` และอ้างอิง `UC-05`, `UC-06`, `UC-07`
+  - **`D-B06-02`:** บังคับแนบรูปถ่ายหน้าตาชั่งดิจิทัล (`scale_photo_url`) เมื่อกรอกน้ำหนักชั่งจริง
+  - **`D-B06-03`:** คำนวณยอดเงินด้วยราคาต่อหน่วยที่ล็อกไว้ตอนนัดหมาย (`locked_unit_price`) ตาม `REQ-BR-002`
+  - **`D-B06-04`:** ซาเล้งเลือกช่องทางชำระเงิน (เงินสด/PromptPay) และให้ผู้ขายเป็นผู้กดยืนยันรับเงินเพื่อเปลี่ยนสถานะเป็น `S7`
+  - **`D-B06-05`:** บันทึกข้อมูลผลชั่งและภาพตาชั่งลง Offline Queue ใน `localStorage` เมื่ออยู่ในจุดอับสัญญาณ
+  - **`D-B06-06`:** ออกใบเสร็จดิจิทัลอัตโนมัติเมื่อเข้าสู่ `S7` พร้อม Mask เบอร์โทรศัพท์ตามกฎหมาย PDPA
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/buyer/06-billing-and-receipt/spec.md` (ปรับปรุงเป็น Version `2.0`, สถานะ `reviewed-post-clarify` ครบทั้ง 5 ส่วนหลัก)
+- **สถานะ:** สเปกผ่านการ Clarify เรียบร้อย พร้อมเข้าสู่ขั้นตอน `/plan specs/buyer/06-billing-and-receipt/spec.md`
+
+---
+
+## บันทึก #79 — `/plan specs/buyer/06-billing-and-receipt/spec.md` (แผนสถาปัตยกรรมและการพัฒนาทางเทคนิค)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/plan specs/buyer/06-billing-and-receipt/spec.md`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/buyer/06-billing-and-receipt/plan.md` (Version `1.0`, สถานะ `ready-for-tasks`, ครบ 8 ส่วนหลักตามมาตรฐานโครงการ)
+- **ประเด็นสำคัญใน plan.md:**
+  1. **เทคโนโลยีที่ใช้:** ระบุกำกับชัดเจนว่า `"ทีมเลือกเอง ไม่ได้มาจาก spec"` (Python 3.11 + FastAPI, Pydantic v2, In-memory Supabase Database Adapter พร้อมตาราง `orders`, `items`, `receipts`, `audit_logs`, React 18 + TailwindCSS Mobile-First SPA ปุ่ม >= 48px, PromptPay EMVCo QR Protocol, LocalStorage Offline Queue, Pytest และ Vitest)
+  2. **สถาปัตยกรรมและกลไกสำคัญ (`D-B06-01` ถึง `D-B06-06`):**
+     - `D-B06-01`: ยึดผังสถานะตาม `MD-STM-04` และ `use-cases.md` อย่างเคร่งครัด (`S4: Weighing` -> `S5: Re-Quote/Weight Confirmed` -> `S6: Pending Payment` -> `S7: Completed`)
+     - `D-B06-02`: บังคับแนบรูปถ่ายหน้าตาชั่งดิจิทัล (`scale_photo_url`) อย่างน้อย 1 ภาพ เพื่อส่งให้ผู้ขายตรวจสอบความโปร่งใสตาม `REQ-FN-002`
+     - `D-B06-03`: คำนวณยอดเงินสุทธิหน้างานโดยใช้ราคาต่อหน่วยที่ล็อกไว้ตอนนัดหมาย (`locked_unit_price`) คูณกับน้ำหนักจริงตาม `REQ-BR-002`
+     - `D-B06-04`: ซาเล้งเลือกจ่ายด้วยเงินสดหรือ PromptPay QR และให้ผู้ขายเป็นผู้กดยืนยันรับเงินเพื่อเปลี่ยนสถานะเป็น `S7` ตามสเปก Seller 06
+     - `D-B06-05`: บันทึกข้อมูลผลชั่งและภาพตาชั่งลง Offline Queue ใน `localStorage` (`saleng_weighing_offline_queue`) พร้อม `idempotency_key` เมื่ออยู่ในจุดอับสัญญาณ (`CT-02`, `CC-05`, `REQ-OP-001`)
+     - `D-B06-06`: ออกใบเสร็จดิจิทัลอัตโนมัติ (`REC-YYYYMMDD-XXXX`) พร้อม Mask เบอร์โทรศัพท์เป็น `08X-XXX-XXXX` ตามกฎหมาย PDPA (`REQ-SEC-002`, `SC-03`)
+  3. **การออกแบบ API 4 เส้นทาง:**
+     - `GET /api/v1/collectors/billing/{order_id}/weighing-sheet` (ดึงข้อมูลใบชั่งและราคาล็อก)
+     - `POST /api/v1/collectors/billing/{order_id}/weighing` (บันทึกน้ำหนักจริง + ภาพตาชั่ง)
+     - `POST /api/v1/collectors/billing/{order_id}/payment-method` (เลือกช่องทางชำระเงิน)
+     - `GET /api/v1/collectors/billing/{order_id}/receipt` (ดึงใบเสร็จดิจิทัลสรุปรายการ)
+  4. **การออกแบบ Frontend 5 คอมโพเนนต์:**
+     - `WeighingInputForm`, `SellerConfirmationGate`, `PaymentMethodSelector`, `DigitalReceiptCard`, `BillingReceiptView` (ทัชทาร์เก็ตทุกปุ่มสูง `>= 48px` ตาม `REQ-UX-001` และ `CC-01`)
+  5. **ตารางตรวจ Constraints กลาง:** ครบทั้ง 13 ข้อตาม `specs/000-shared/constraints.md` โดยไม่มีการละเว้น
+- **สถานะ:** แผน `plan.md` สมบูรณ์ พร้อมเข้าสู่ขั้นตอนการแตกงานย่อย `/tasks specs/buyer/06-billing-and-receipt/plan.md`
+
+---
+
+## บันทึก #80 — `/tasks specs/buyer/06-billing-and-receipt/plan.md` (แตกงานย่อยระบบคิดเงินและออกใบเสร็จ Buyer 06)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/tasks specs/buyer/06-billing-and-receipt/plan.md`
+- **ไฟล์ที่ AI อ่าน:** `AGENTS.md`, `specs/buyer/06-billing-and-receipt/spec.md` (v2.0), `specs/buyer/06-billing-and-receipt/plan.md` (v1.0), `specs/000-shared/constraints.md`, `docs/srs/use-cases.md` (`UC-05`, `UC-06`, `UC-07`), `specs/002-route/models.md` (`MD-STM-04`)
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/buyer/06-billing-and-receipt/tasks.md` (แตกงานย่อย 8 งาน `T-01` ถึง `T-08` ครบทั้ง 6 คอลัมน์, พร้อมตาราง Two-way Traceability Matrix ครบทุกข้อ `AC-B06-01..06`, และตาราง Constraints Traceability ครบทั้ง 13 ข้อ)
+- **ประเด็นสำคัญใน tasks.md:**
+  1. **งานย่อย 8 งาน (`T-01` ถึง `T-08`):**
+     - `T-01`: สร้าง Data Models และ Schema สำหรับระบบคิดเงินและออกใบเสร็จ (`billing_models.py`, ขยาย `supabase.py` เพิ่ม helper methods `get_order_weighing_sheet`, `update_order_payment_method`, และ `test_T01_billing_models.py`)
+     - `T-02`: สร้าง Service และ API บันทึกน้ำหนักชั่งจริงและแนบภาพถ่ายหน้าตาชั่งดิจิทัล (`billing_service.py`, `billing.py`, `pricing.py`, `test_AC_B06_01_actual_weight.py`)
+     - `T-03`: สร้าง Logic คำนวณยอดเงินตามราคาที่ล็อกไว้ (`locked_unit_price`) และการตรวจเกณฑ์ส่วนต่าง `±15%` ปรับสถานะเป็น S5 (`test_AC_B06_02_price_calc.py`, `REQ-BR-002`)
+     - `T-04`: สร้างระบบและ API ประตูยืนยันผลชั่งโดยผู้ขาย Seller Confirmation Gate 100% Lock (`test_AC_B06_03_seller_gate.py`, `REQ-FN-004`, `UC-06`)
+     - `T-05`: สร้าง Service และ API เลือกช่องทางชำระเงิน (เงินสด/PromptPay) และออกใบเสร็จดิจิทัล (`test_AC_B06_04_payment_method.py`, `test_AC_B06_05_digital_receipt.py`, `REQ-FN-005`, `REQ-SEC-002`)
+     - `T-06`: สร้าง Frontend API Client และระบบคิวออฟไลน์ (`billingReceiptApi.js`, `billingReceiptApi.test.mjs`, `CT-02`, `CC-05`, `REQ-OP-001`)
+     - `T-07`: พัฒนาคอมโพเนนต์ React ระบบคิดเงินและออกใบเสร็จ (`WeighingInputForm`, `SellerConfirmationGate`, `PaymentMethodSelector`, `DigitalReceiptCard`, `BillingReceiptView` ทัชทาร์เก็ตทุกปุ่ม >= 48px ตาม `REQ-UX-001` และ `CC-01`)
+     - `T-08`: สร้างชุดทดสอบหน้าจอ Vitest Component Tests และ Backend Integration E2E Test Suite (`AC-B06-01..06`, `test_e2e_buyer_billing_receipt.py`)
+  2. **Two-way Traceability Matrix:** เกณฑ์การยอมรับทุกข้อ (`AC-B06-01` ถึง `AC-B06-06`) เชื่อมโยงกับงานย่อยและชื่อไฟล์ชุดทดสอบอย่างครบถ้วน
+  3. **Constraints Traceability:** ตรวจสอบข้อจำกัดกลางทั้ง 13 ข้อตาม `specs/000-shared/constraints.md` ครบถ้วน
+- **สถานะ:** แตกงานย่อยเสร็จสมบูรณ์ พร้อมสำหรับการเริ่มพัฒนางานย่อยในขั้นตอน `/implement T-01..08`
+
+---
+
+## บันทึก #81 — `/implement T-01..08` (พัฒนาระบบคิดเงินและออกใบเสร็จ Buyer 06)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/implement T-01..08`
+- **ไฟล์ที่ AI อ่าน:** `AGENTS.md`, `specs/buyer/06-billing-and-receipt/spec.md` (v2.0), `specs/buyer/06-billing-and-receipt/plan.md` (v1.0), `specs/buyer/06-billing-and-receipt/tasks.md` (v1.0), `specs/000-shared/constraints.md`, `specs/seller/06-payment-and-verification/spec.md`, `backend/app/api/v1/payment.py`, `backend/app/services/payment_service.py`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `backend/app/models/billing_models.py` (สร้าง Data Models Pydantic สำหรับคำขอบันทึกผลชั่งจริง, ใบชั่งน้ำหนัก, การเลือกช่องทางชำระเงิน, และใบเสร็จดิจิทัล)
+  - `backend/app/core/supabase.py` (เพิ่ม helper methods `get_order_weighing_sheet` และ `update_order_payment_method`)
+  - `backend/app/services/billing_service.py` (สร้าง BillingService: จัดการใบชั่ง, บันทึกผลชั่งจริง, คำนวณราคาด้วย `locked_unit_price`, ตรวจเกณฑ์ส่วนต่าง `±15%`, ตรวจสอบประตูกั้นยืนยันน้ำหนัก 100% `seller_confirmed_weight`, บันทึกช่องทางชำระเงิน, และออกใบเสร็จดิจิทัลพร้อม Masking เบอร์โทรศัพท์)
+  - `backend/app/api/v1/billing.py` (สร้าง FastAPI Router 4 endpoints: `GET /{order_id}/weighing-sheet`, `POST /{order_id}/weighing`, `POST /{order_id}/payment-method`, `GET /{order_id}/receipt`)
+  - `backend/app/api/v1/pricing.py` (เมานต์ billing router ภายใต้ prefix `/api/v1/collectors`)
+  - `frontend/src/services/billingReceiptApi.js` (สร้าง Frontend API Client พร้อมระบบ Offline Queue `saleng_weighing_offline_queue`, `idempotency_key`, และการซิงก์อัตโนมัติเมื่อต่อเน็ต)
+  - `frontend/src/components/WeighingInputForm.jsx` (คอมโพเนนต์ฟอร์มกรอกน้ำหนักจริง, แนบรูปตาชั่งดิจิทัล, แสดงยอดคำนวณสด, และแจ้งเตือนเกณฑ์ ±15%)
+  - `frontend/src/components/SellerConfirmationGate.jsx` (คอมโพเนนต์ประตูกั้น 100% Confirmation Gate ล็อกไม่ให้ข้ามไปชำระเงินจนกว่าผู้ขายจะกดยืนยัน)
+  - `frontend/src/components/PaymentMethodSelector.jsx` (คอมโพเนนต์เลือกเงินสด หรือ PromptPay QR พร้อมคำแนะนำ)
+  - `frontend/src/components/DigitalReceiptCard.jsx` (ปรับปรุงรองรับทั้ง Buyer และ Seller receipt models พร้อม PII Masking)
+  - `frontend/src/components/BillingReceiptView.jsx` (คอมโพเนนต์หน้าจอหลักรวบรวมทุกขั้นตอนคิดเงินและออกใบเสร็จ `data-req="UC-07"`)
+  - `backend/tests/test_T01_billing_models.py` (ทดสอบ Models และ Store methods)
+  - `backend/tests/test_AC_B06_01_actual_weight.py` (ทดสอบ AC-B06-01 บันทึกน้ำหนักจริงและภาพตาชั่ง)
+  - `backend/tests/test_AC_B06_02_price_calc.py` (ทดสอบ AC-B06-02 คำนวณด้วยราคาล็อกและตรวจเกณฑ์ ±15%)
+  - `backend/tests/test_AC_B06_03_seller_gate.py` (ทดสอบ AC-B06-03 ประตูกั้น 100% Seller Confirmation Gate)
+  - `backend/tests/test_AC_B06_04_payment_method.py` (ทดสอบ AC-B06-04 เลือกช่องทางชำระเงินสด/PromptPay)
+  - `backend/tests/test_AC_B06_05_digital_receipt.py` (ทดสอบ AC-B06-05 ออกใบเสร็จดิจิทัลและ Mask เบอร์โทรศัพท์)
+  - `backend/tests/test_e2e_buyer_billing_receipt.py` (ทดสอบ E2E เต็มวงรอบ S4 -> S5 -> S6 -> S7)
+  - `frontend/tests/billingReceiptApi.test.mjs` (ทดสอบ Vitest สำหรับ API client และ Offline queue)
+  - `frontend/tests/AC-B06-01.test.jsx` ถึง `AC-B06-06.test.jsx` (ทดสอบ Vitest UI Component tests)
+  - `specs/buyer/06-billing-and-receipt/tasks.md` (อัปเดตสถานะงาน `T-01` ถึง `T-08` เป็น `[DONE]` และภาพรวมเป็น `completed`)
+- **ผลการทดสอบและการตรวจรับ 5 ด่าน:**
+  1. **Automated Tests:**
+     - Backend (Pytest): ผ่าน 100% รวม 251 passed (0 failed)
+     - Frontend (Vitest): ผ่าน 100% รวม 85 test files, 214 passed (0 failed)
+  2. **Constraints กลาง:** ปฏิบัติตามครบถ้วน (`CC-01` ปุ่ม >= 48px, `CC-04` Optimistic concurrency, `CC-05` Offline queue, `CC-06` / `REQ-SEC-002` PII masking `08X-XXX-XXXX`, `D-00-01` KYC gate)
+  3. **Traceability:** ฟังก์ชันและคอมโพเนนต์ทุกชิ้นอ้างอิง `UC-05`, `UC-06`, `UC-07`, `REQ-FN-002`, `REQ-FN-004`, `REQ-FN-005`, `REQ-BR-002`, `AC-B06-01..06` ครบถ้วน
+  4. **Mockups:** โครงสร้างป้ายภาษาไทย, ขนาดปุ่มสัมผัส >= 48px, และแอตทริบิวต์ `data-req="UC-07"` ครบถ้วน
+  5. **Non-goals:** ไม่มี In-App digital wallet หรือ payment gateway SDK ตามขอบเขต `D-B06-04` และบังคับใช้ Two-Party Safety Gate 100%
+- **สถานะ:** พัฒนาและตรวจรับระบบคิดเงินและออกใบเสร็จ Buyer 06 สำเร็จสมบูรณ์ พร้อมส่งมอบงาน

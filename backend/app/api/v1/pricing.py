@@ -102,11 +102,12 @@ from backend.app.api.v1.job_search import router as job_search_router
 from backend.app.api.v1.job_evaluation import router as job_evaluation_router
 from backend.app.api.v1.job_route import router as job_route_router
 from backend.app.api.v1.communication import router as communication_router
+from backend.app.api.v1.billing import router as billing_router
 
 # Application instance สำหรับทดสอบและเชื่อมต่อ Server
 app = FastAPI(
     title="Saleng Pricing & Decision API",
-    description="API ระบบราคาและการตัดสินใจ ฝั่งผู้ขายและผู้ซื้อ (Seller Feature 01..09, Buyer Feature 01..05)",
+    description="API ระบบราคาและการตัดสินใจ ฝั่งผู้ขายและผู้ซื้อ (Seller Feature 01..09, Buyer Feature 01..06)",
     version="1.0.0"
 )
 app.include_router(pricing_router)
@@ -125,4 +126,5 @@ app.include_router(job_search_router, prefix="/api/v1")
 app.include_router(job_evaluation_router, prefix="/api/v1")
 app.include_router(job_route_router, prefix="/api/v1/collectors")
 app.include_router(communication_router, prefix="/api/v1/collectors")
+app.include_router(billing_router, prefix="/api/v1/collectors")
 

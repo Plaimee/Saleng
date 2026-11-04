@@ -14,7 +14,9 @@ export default function DigitalReceiptCard({
   if (!receipt) return null;
 
   const items = receipt.items || [];
-  const totalAmount = receipt.total_amount || 0;
+  const totalAmount = receipt.total_settled_amount !== undefined ? receipt.total_settled_amount : (receipt.total_amount || 0);
+  const receiptNo = receipt.receipt_id || receipt.receipt_no || "-";
+  const collectorPhone = receipt.collector_phone_masked || receipt.buyer_phone_masked || "08X-XXX-XXXX";
 
   const handleDownload = () => {
     alert("ระบบกำลังดาวน์โหลดใบเสร็จดิจิทัลลงเครื่องของคุณ...");
@@ -38,7 +40,7 @@ export default function DigitalReceiptCard({
           ใบเสร็จดิจิทัล (Digital Receipt)
         </h2>
         <span className="text-xs font-mono font-medium text-gray-500 block mt-1" data-testid="receipt-no">
-          เลขที่: {receipt.receipt_no}
+          เลขที่: {receiptNo}
         </span>
       </div>
 
@@ -73,8 +75,8 @@ export default function DigitalReceiptCard({
         </div>
         <div className="flex justify-between">
           <span className="text-gray-500">ซาเล้ง (ผู้รับซื้อ):</span>
-          <span className="font-mono font-medium text-gray-800">
-            {receipt.buyer_phone_masked || "08X-XXX-XXXX"}
+          <span className="font-mono font-medium text-gray-800" data-testid="collector-phone">
+            {collectorPhone}
           </span>
         </div>
         <div className="flex justify-between">

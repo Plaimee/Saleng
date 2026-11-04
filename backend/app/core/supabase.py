@@ -1544,6 +1544,40 @@ class SupabaseStore:
         self.audit_logs.append(log_entry)
         return log_entry
 
+    def get_order_weighing_sheet(self, order_id: str) -> Optional[dict]:
+        """
+        ดึงข้อมูลคำขอขายและรายการสิ่งของสำหรับใช้ในใบชั่งน้ำหนักหน้างาน (UC-05, REQ-FN-002)
+        """
+        order = self.orders.get(order_id)
+        if not order:
+            return None
+        order_copy = dict(order)
+        order_items = [dict(item) for item in self.items.values() if item.get("order_id") == order_id]
+        if not order_items and order.get("items"):
+            order_items = [dict(item) for item in order.get("items")]
+        order_copy["items"] = order_items
+
+        seller_id = order.get("seller_id", "seller-01")
+        seller = self.sellers.get(seller_id) or {}
+        order_copy["seller"] = seller
+        raw_phone = order.get("seller_phone") or seller.get("phone", "0812345678")
+        if len(raw_phone) >= 10:
+            order_copy["seller_phone_masked"] = f"{raw_phone[:2]}X-XXX-{raw_phone[-4:]}"
+        else:
+            order_copy["seller_phone_masked"] = "08X-XXX-XXXX"
+        return order_copy
+
+    def update_order_payment_method(self, order_id: str, payment_method: str) -> dict:
+        """
+        อัปเดตช่องทางการชำระเงินที่ซาเล้งเลือก (D-B06-04)
+        """
+        order = self.orders.get(order_id)
+        if not order:
+            raise KeyError(f"ไม่พบคำขอขายรหัส {order_id}")
+        order["payment_method"] = payment_method
+        order["updated_at"] = datetime.now(timezone.utc).isoformat()
+        return order
+
 
 # Singleton instance สำหรับเข้าถึง Database
 supabase_store = SupabaseStore()
