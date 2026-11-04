@@ -4,10 +4,11 @@ Supabase Client & Data Access Layer
 """
 
 from datetime import datetime, timezone, timedelta
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 import uuid
 import re
 from backend.app.core.config import settings
+from backend.app.models.security_compliance_models import compute_audit_log_hash
 
 
 class SupabaseStore:
@@ -44,6 +45,7 @@ class SupabaseStore:
         self.dispute_reports: Dict[str, dict] = {}
         self.quality_grading_rules: Dict[str, List[dict]] = {}
         self.price_history_logs: List[dict] = []
+        self.collector_gps_history: List[dict] = []
         self._seed_default_benchmark_prices()
         self._seed_default_scrap_categories()
         self._seed_default_saleng_profiles()
@@ -52,6 +54,7 @@ class SupabaseStore:
         self._seed_default_collector_kyc()
         self._seed_default_quality_grading_rules()
         self._seed_default_dispatch_dispute()
+        self._seed_default_security_compliance()
 
     def _seed_default_benchmark_prices(self):
         """กำหนดราคากลางตั้งต้นตามที่ระบุใน spec.md หัวข้อ 1.1 และ D-02"""
@@ -341,7 +344,7 @@ class SupabaseStore:
 
     def _seed_default_saleng_profiles(self):
         """กำหนดรายชื่อซาเล้งตั้งต้นที่ผ่าน KYC และเปิดรับงาน (UC-03, REQ-QA-001, D-00-01)"""
-        profiles = [
+        profiles: List[Dict[str, Any]] = [
             {
                 "saleng_id": "saleng-01",
                 "display_name": "ลุงสมชาย ซาเล้งสุทธิสาร",
@@ -456,10 +459,14 @@ class SupabaseStore:
             },
         ]
         for p in profiles:
-            p.setdefault("account_status", "ACTIVE")
-            p.setdefault("penalty_reason", None)
-            p.setdefault("penalized_at", None)
-            p.setdefault("penalized_by", None)
+            if "account_status" not in p:
+                p["account_status"] = "ACTIVE"
+            if "penalty_reason" not in p:
+                p["penalty_reason"] = None
+            if "penalized_at" not in p:
+                p["penalized_at"] = None
+            if "penalized_by" not in p:
+                p["penalized_by"] = None
             self.saleng_profiles[str(p["saleng_id"])] = p
 
         # Seed favorite เบื้องต้นสำหรับ seller-01 -> saleng-01
@@ -675,21 +682,40 @@ class SupabaseStore:
                 return r
         return None
 
-    def add_audit_log(self, action: str | dict, entity_id: str = "", actor_id: str = "", details: Optional[dict] = None):
+    def add_audit_log(self, action: str | dict, entity_id: str = "", actor_id: str = "", details: Optional[dict] = None, actor_role: Optional[str] = None):
         if isinstance(action, dict):
             entry = action
             action = entry.get("action", "")
             entity_id = entry.get("entity_id", "")
             actor_id = entry.get("actor_id", "")
+            actor_role = entry.get("actor_role") or actor_role
             details = entry.get("details", {})
+        
+        if not actor_role:
+            if actor_id:
+                actor_id_str = str(actor_id)
+                if actor_id_str.startswith("admin-") or "admin" in actor_id_str.lower():
+                    actor_role = "ADMIN"
+                elif actor_id_str.startswith("saleng-") or actor_id_str.startswith("col-"):
+                    actor_role = "COLLECTOR"
+                elif actor_id_str.startswith("seller-") or actor_id_str.startswith("sel-"):
+                    actor_role = "SELLER"
+                else:
+                    actor_role = "SYSTEM"
+            else:
+                actor_role = "SYSTEM"
+
+        timestamp = datetime.now(timezone.utc).isoformat()
         log_entry = {
             "log_id": str(uuid.uuid4()),
             "action": action,
             "entity_id": entity_id,
             "actor_id": actor_id,
+            "actor_role": actor_role,
             "details": details or {},
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": timestamp,
         }
+        log_entry["log_hash"] = compute_audit_log_hash(log_entry)
         self.audit_logs.append(log_entry)
         return log_entry
 
@@ -1522,17 +1548,13 @@ class SupabaseStore:
         entity_id: str = "",
     ) -> dict:
         """บันทึกประวัติการทำงานลง audit_logs ตาม REQ-SEC-001"""
-        log_entry = {
-            "log_id": str(uuid.uuid4()),
-            "action": action,
-            "entity_id": entity_id or actor_id,
-            "actor_id": actor_id,
-            "actor_role": actor_role,
-            "details": details or {},
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-        }
-        self.audit_logs.append(log_entry)
-        return log_entry
+        return self.add_audit_log(
+            action=action,
+            entity_id=entity_id or actor_id,
+            actor_id=actor_id,
+            actor_role=actor_role,
+            details=details or {},
+        )
 
     def get_audit_logs(self, action_filter: Optional[str] = None) -> List[dict]:
         """ดึงรายการ audit_logs ทั้งหมดหรือกรองตาม action"""
@@ -1711,21 +1733,18 @@ class SupabaseStore:
         บันทึกประวัติการสื่อสารลงใน audit_logs (REQ-SEC-001)
         action: "COLLECTOR_SENT_MESSAGE" หรือ "COLLECTOR_INITIATED_CALL"
         """
-        log_id = f"audit-{uuid.uuid4().hex[:8]}"
-        log_entry = {
-            "id": log_id,
-            "log_id": log_id,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "action": action,
-            "entity_id": order_id,
-            "actor_id": saleng_id,
-            "actor_role": "COLLECTOR",
-            "order_id": order_id,
-            "saleng_id": saleng_id,
-            "details": details or {},
-        }
-        self.audit_logs.append(log_entry)
-        return log_entry
+        details_copy = dict(details or {})
+        details_copy.update({"order_id": order_id, "saleng_id": saleng_id})
+        entry = self.add_audit_log(
+            action=action,
+            entity_id=order_id,
+            actor_id=saleng_id,
+            actor_role="COLLECTOR",
+            details=details_copy,
+        )
+        entry["order_id"] = order_id
+        entry["saleng_id"] = saleng_id
+        return entry
 
     def get_order_weighing_sheet(self, order_id: str) -> Optional[dict]:
         """
@@ -2479,17 +2498,17 @@ class SupabaseStore:
         ดึงรายการข้อพิพาททั้งหมด หรือกรองตามสถานะ
         รองรับ UC-13, D-A03-01
         """
-        results = []
+        results: List[dict] = []
         for disp in self.dispute_reports.values():
             if status_filter and status_filter.upper() != "ALL":
                 if disp.get("status") != status_filter.upper():
                     continue
-            order_id = disp.get("order_id")
-            order = self.orders.get(order_id, {})
-            seller_id = disp.get("seller_id") or order.get("seller_id", "")
-            buyer_id = disp.get("buyer_id") or order.get("assigned_saleng_id") or order.get("collector_id", "")
-            seller = self.sellers.get(seller_id, {})
-            buyer = self.saleng_profiles.get(buyer_id, {})
+            order_id = str(disp.get("order_id") or "")
+            order = self.orders.get(order_id, {}) if order_id else {}
+            seller_id = str(disp.get("seller_id") or order.get("seller_id") or "")
+            buyer_id = str(disp.get("buyer_id") or order.get("assigned_saleng_id") or order.get("collector_id") or "")
+            seller = self.sellers.get(seller_id, {}) if seller_id else {}
+            buyer = self.saleng_profiles.get(buyer_id, {}) if buyer_id else {}
             summary = {
                 "dispute_id": disp.get("dispute_id"),
                 "order_id": order_id,
@@ -2504,7 +2523,7 @@ class SupabaseStore:
                 "arbitrated_amount": disp.get("arbitrated_amount"),
             }
             results.append(summary)
-        return sorted(results, key=lambda x: x.get("created_at", ""), reverse=True)
+        return sorted(results, key=lambda x: str(x.get("created_at") or ""), reverse=True)
 
     def get_dispute_dossier(self, dispute_id: str) -> Optional[dict]:
         """
@@ -2515,15 +2534,15 @@ class SupabaseStore:
         if not disp:
             return None
 
-        order_id = disp.get("order_id")
-        order = self.orders.get(order_id, {})
-        seller_id = disp.get("seller_id") or order.get("seller_id", "")
-        buyer_id = disp.get("buyer_id") or order.get("assigned_saleng_id", "")
-        seller = self.sellers.get(seller_id, {})
-        buyer = self.saleng_profiles.get(buyer_id, {})
+        order_id = str(disp.get("order_id") or "")
+        order = self.orders.get(order_id, {}) if order_id else {}
+        seller_id = str(disp.get("seller_id") or order.get("seller_id") or "")
+        buyer_id = str(disp.get("buyer_id") or order.get("assigned_saleng_id") or "")
+        seller = self.sellers.get(seller_id, {}) if seller_id else {}
+        buyer = self.saleng_profiles.get(buyer_id, {}) if buyer_id else {}
 
         order_items = [it for it in self.items.values() if it.get("order_id") == order_id]
-        if not order_items and "items" in order:
+        if not order_items and "items" in order and isinstance(order["items"], list):
             order_items = order["items"]
 
         original_order = {
@@ -2602,7 +2621,10 @@ class SupabaseStore:
         if disp.get("status") != "PENDING_ADMIN":
             return False, {}, "ข้อพิพาทได้รับการตัดสินแล้ว"
 
-        order_id = disp.get("order_id")
+        raw_order_id = disp.get("order_id")
+        if not raw_order_id:
+            return False, {}, "ไม่พบคำขอนัดหมายที่เชื่อมโยงกับข้อพิพาท"
+        order_id = str(raw_order_id)
         order = self.orders.get(order_id)
         if not order:
             return False, {}, "ไม่พบคำขอนัดหมายที่เชื่อมโยงกับข้อพิพาท"
@@ -2689,6 +2711,336 @@ class SupabaseStore:
 
         else:
             return False, {}, f"ไม่รองรับคำสั่งตัดสิน: {action}"
+
+    # -------------------------------------------------------------------------
+    # ระบบความปลอดภัย ประวัติร่องรอยตรวจสอบ (Audit Trail) และ PDPA (UC-13, Admin 04)
+    # -------------------------------------------------------------------------
+    def _seed_default_security_compliance(self):
+        """กำหนดข้อมูลเริ่มต้นสำหรับ Audit Trail, PDPA Data Retention และ Community Waste Report"""
+        now = datetime.now(timezone.utc)
+        
+        # 1. ตรวจสอบและคำนวณ log_hash ให้กับ audit_logs ที่มีอยู่เดิม
+        for log in self.audit_logs:
+            if "actor_role" not in log or not log["actor_role"]:
+                actor_id = str(log.get("actor_id", ""))
+                log["actor_role"] = "ADMIN" if "admin" in actor_id.lower() else "SYSTEM"
+            if "log_hash" not in log or not log["log_hash"]:
+                log["log_hash"] = compute_audit_log_hash(log)
+
+        # 2. เพิ่ม Seed Logs หากยังมีไม่มากพอ
+        if len(self.audit_logs) < 3:
+            baseline_logs: List[Dict[str, Any]] = [
+                {
+                    "action": "PRICE_BENCHMARK_UPDATED",
+                    "actor_id": "admin-001",
+                    "actor_role": "ADMIN",
+                    "entity_id": "bench-cardboard-01",
+                    "details": {"category": "MAT-CARDBOARD", "min_price": 3.0, "max_price": 4.0},
+                },
+                {
+                    "action": "DISPATCH_OVERRIDE",
+                    "actor_id": "admin-001",
+                    "actor_role": "ADMIN",
+                    "entity_id": "order-disp-01",
+                    "details": {"order_id": "order-disp-01", "new_collector_id": "saleng-001", "reason": "คำสั่งแอดมินแทรกแซง"},
+                },
+                {
+                    "action": "KYC_APPROVED",
+                    "actor_id": "admin-001",
+                    "actor_role": "ADMIN",
+                    "entity_id": "kyc-saleng-01",
+                    "details": {"collector_id": "saleng-001", "status": "APPROVED"},
+                },
+            ]
+            for item in baseline_logs:
+                details_dict = item.get("details")
+                self.add_audit_log(
+                    action=str(item.get("action", "")),
+                    entity_id=str(item.get("entity_id", "")),
+                    actor_id=str(item.get("actor_id", "")),
+                    actor_role=str(item.get("actor_role", "ADMIN")),
+                    details=details_dict if isinstance(details_dict, dict) else {},
+                )
+
+        # 3. Seed Collector GPS History สำหรับทดสอบ PDPA Retention (เกณฑ์ 90 วัน)
+        self.collector_gps_history = [
+            {
+                "gps_id": "gps-seed-01",
+                "collector_id": "saleng-001",
+                "latitude": 13.736717,
+                "longitude": 100.523186,
+                "recorded_at": (now - timedelta(days=10)).isoformat(),
+            },
+            {
+                "gps_id": "gps-seed-02",
+                "collector_id": "saleng-001",
+                "latitude": 13.736800,
+                "longitude": 100.523200,
+                "recorded_at": (now - timedelta(days=95)).isoformat(),
+            },
+            {
+                "gps_id": "gps-seed-03",
+                "collector_id": "saleng-002",
+                "latitude": 13.740000,
+                "longitude": 100.530000,
+                "recorded_at": (now - timedelta(days=120)).isoformat(),
+            },
+        ]
+
+        # 4. Seed Completed Orders สำหรับ Community Waste Report และ PDPA Address Masking
+        order_comp_1 = {
+            "id": "order-comp-comm-01",
+            "order_id": "order-comp-comm-01",
+            "order_number": "ORD-202611-COMM01",
+            "seller_id": "sel-seed-01",
+            "collector_id": "saleng-001",
+            "status": "S7",
+            "district": "ปทุมวัน",
+            "subdistrict": "ลุมพินี",
+            "seller_address": "99/1 ซอยร่วมฤดี แขวงลุมพินี เขตปทุมวัน กทม.",
+            "seller_address_masked": "*** ซอยร่วมฤดี แขวงลุมพินี เขตปทุมวัน กทม.",
+            "is_address_masked": False,
+            "created_at": (now - timedelta(days=3, hours=2)).isoformat(),
+            "updated_at": (now - timedelta(days=3)).isoformat(),
+            "completed_at": (now - timedelta(days=3)).isoformat(),
+            "total_weight": 35.0,
+            "total_price": 147.5,
+        }
+        self.orders["order-comp-comm-01"] = order_comp_1
+        self.items["item-comm-01"] = {
+            "id": "item-comm-01",
+            "order_id": "order-comp-comm-01",
+            "category_code": "MAT-CARDBOARD",
+            "category_name": "กระดาษลัง",
+            "weight_kg": 25.0,
+            "unit": "kg",
+            "unit_price": 3.5,
+            "total_price": 87.5,
+        }
+        self.items["item-comm-02"] = {
+            "id": "item-comm-02",
+            "order_id": "order-comp-comm-01",
+            "category_code": "MAT-PLASTIC-BOTTLE",
+            "category_name": "ขวดพลาสติก",
+            "weight_kg": 10.0,
+            "unit": "kg",
+            "unit_price": 6.0,
+            "total_price": 60.0,
+        }
+
+        order_comp_2 = {
+            "id": "order-comp-comm-02",
+            "order_id": "order-comp-comm-02",
+            "order_number": "ORD-202611-COMM02",
+            "seller_id": "sel-seed-02",
+            "collector_id": "saleng-002",
+            "status": "S7",
+            "district": "คลองเตย",
+            "subdistrict": "พระโขนง",
+            "seller_address": "55/4 สุขุมวิท 42 แขวงพระโขนง เขตคลองเตย กทม.",
+            "seller_address_masked": "*** สุขุมวิท 42 แขวงพระโขนง เขตคลองเตย กทม.",
+            "is_address_masked": False,
+            "created_at": (now - timedelta(hours=2)).isoformat(),
+            "updated_at": (now - timedelta(hours=1)).isoformat(),
+            "completed_at": (now - timedelta(hours=1)).isoformat(),
+            "total_weight": 50.0,
+            "total_price": 200.0,
+        }
+        self.orders["order-comp-comm-02"] = order_comp_2
+        self.items["item-comm-03"] = {
+            "id": "item-comm-03",
+            "order_id": "order-comp-comm-02",
+            "category_code": "MAT-CARDBOARD",
+            "category_name": "กระดาษลัง",
+            "weight_kg": 50.0,
+            "unit": "kg",
+            "unit_price": 4.0,
+            "total_price": 200.0,
+        }
+
+    def query_audit_logs(
+        self,
+        action: Optional[str] = None,
+        actor_role: Optional[str] = None,
+        actor_id: Optional[str] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> Tuple[int, List[dict]]:
+        """
+        สืบค้นประวัติ Audit Trail กรองตามเงื่อนไข พร้อมทำ Pagination
+        รองรับ D-A04-01, REQ-SEC-001
+        """
+        results = list(self.audit_logs)
+
+        if action:
+            results = [log for log in results if log.get("action") == action]
+        if actor_role:
+            results = [log for log in results if str(log.get("actor_role", "")).upper() == actor_role.upper()]
+        if actor_id:
+            results = [log for log in results if log.get("actor_id") == actor_id]
+        if start_date:
+            results = [log for log in results if str(log.get("timestamp", "")) >= start_date]
+        if end_date:
+            results = [log for log in results if str(log.get("timestamp", "")) <= end_date]
+
+        # เรียงลำดับจากใหม่ล่าสุดไปเก่าสุด
+        results.sort(key=lambda x: str(x.get("timestamp", "")), reverse=True)
+        total_records = len(results)
+        paged_results = results[offset : offset + limit]
+        return total_records, paged_results
+
+    def verify_audit_logs_integrity(self) -> Tuple[int, bool, List[str]]:
+        """
+        ตรวจสอบความสมบูรณ์ของบันทึก Audit Logs ด้วย SHA-256 (Immutability Check)
+        รองรับ REQ-SEC-001, P-07, D-A04-05
+        """
+        corrupted_log_ids: List[str] = []
+        for log in self.audit_logs:
+            expected_hash = compute_audit_log_hash(log)
+            actual_hash = log.get("log_hash")
+            if not actual_hash or actual_hash != expected_hash:
+                corrupted_log_ids.append(log.get("log_id", "unknown"))
+
+        is_valid = len(corrupted_log_ids) == 0
+        return len(self.audit_logs), is_valid, corrupted_log_ids
+
+    def get_community_waste_report(
+        self,
+        period: Optional[str] = None,
+        district_filter: Optional[str] = None,
+    ) -> List[dict]:
+        """
+        สร้างรายงานสถิติขยะรีไซเคิลชุมชนรายเขต/แขวง แบบนิรนาม 100% ปลอด PII
+        รองรับ D-A04-03, REQ-SEC-002, AC-A04-05
+        """
+        grouped: Dict[Tuple[str, str, str], dict] = {}
+        for order in self.orders.values():
+            if order.get("status") not in ("S7", "COMPLETED"):
+                continue
+
+            district = order.get("district") or "ไม่ระบุเขต"
+            subdistrict = order.get("subdistrict") or "ไม่ระบุแขวง"
+            completed_at = order.get("completed_at") or order.get("updated_at") or ""
+            current_period = completed_at[:7] if len(completed_at) >= 7 else "2026-11"
+
+            if district_filter and district != district_filter:
+                continue
+            if period and not completed_at.startswith(period):
+                continue
+
+            order_id = order.get("id") or order.get("order_id")
+            # ดึงรายการขยะที่อยู่ในออเดอร์นี้
+            matched_items = [item for item in self.items.values() if item.get("order_id") == order_id]
+            for item in matched_items:
+                cat_name = item.get("category_name") or "ขยะรีไซเคิลทั่วไป"
+                key = (district, subdistrict, cat_name)
+                weight = float(item.get("weight_kg", 0.0))
+                amount = float(item.get("total_price", 0.0))
+
+                if key not in grouped:
+                    grouped[key] = {
+                        "district": district,
+                        "subdistrict": subdistrict,
+                        "category_name": cat_name,
+                        "total_weight_kg": 0.0,
+                        "total_amount_baht": 0.0,
+                        "total_transactions": 0,
+                        "period": period or current_period,
+                    }
+                grouped[key]["total_weight_kg"] += weight
+                grouped[key]["total_amount_baht"] += amount
+                grouped[key]["total_transactions"] += 1
+
+        results = list(grouped.values())
+        for r in results:
+            r["total_weight_kg"] = round(r["total_weight_kg"], 2)
+            r["total_amount_baht"] = round(r["total_amount_baht"], 2)
+        return results
+
+    def get_pdpa_retention_status(self) -> dict:
+        """
+        ตรวจสอบสถานะการเก็บรักษาข้อมูลตามกฎหมาย PDPA (GPS 90 วัน, Masked Address 24 ชม.)
+        รองรับ D-A04-04, REQ-SEC-002, CT-01
+        """
+        now = datetime.now(timezone.utc)
+        gps_cutoff = now - timedelta(days=90)
+        address_cutoff = now - timedelta(hours=24)
+
+        total_gps = len(self.collector_gps_history)
+        expired_gps = 0
+        for g in self.collector_gps_history:
+            recorded_str = g.get("recorded_at", "")
+            if recorded_str:
+                rec_dt = datetime.fromisoformat(recorded_str.replace("Z", "+00:00"))
+                if rec_dt < gps_cutoff:
+                    expired_gps += 1
+
+        completed_orders = [o for o in self.orders.values() if o.get("status") in ("S7", "S9", "COMPLETED", "CANCELLED")]
+        unmasked_gt_24h = 0
+        for o in completed_orders:
+            completed_str = o.get("completed_at") or o.get("cancelled_at") or o.get("updated_at") or ""
+            is_masked = o.get("is_address_masked", False)
+            if completed_str and not is_masked:
+                comp_dt = datetime.fromisoformat(completed_str.replace("Z", "+00:00"))
+                if comp_dt < address_cutoff:
+                    unmasked_gt_24h += 1
+
+        return {
+            "total_gps_records": total_gps,
+            "expired_gps_records": expired_gps,
+            "retention_policy_gps_days": 90,
+            "total_completed_orders": len(completed_orders),
+            "unmasked_completed_orders_gt_24h": unmasked_gt_24h,
+            "retention_policy_address_hours": 24,
+            "last_checked_at": now.isoformat(),
+        }
+
+    def purge_expired_pdpa_data(self, admin_id: str) -> Tuple[int, int]:
+        """
+        ล้างพิกัด GPS ซาเล้งที่เกิน 90 วัน และ Mask ข้อมูลที่อยู่ผู้ขายหลังจบงานเกิน 24 ชม. ถาวร
+        รองรับ D-A04-04, REQ-SEC-002, CT-01
+        """
+        now = datetime.now(timezone.utc)
+        gps_cutoff = now - timedelta(days=90)
+        address_cutoff = now - timedelta(hours=24)
+
+        initial_gps_count = len(self.collector_gps_history)
+        self.collector_gps_history = [
+            g for g in self.collector_gps_history
+            if datetime.fromisoformat(g.get("recorded_at", "").replace("Z", "+00:00")) >= gps_cutoff
+        ]
+        purged_gps_count = initial_gps_count - len(self.collector_gps_history)
+
+        completed_orders = [o for o in self.orders.values() if o.get("status") in ("S7", "S9", "COMPLETED", "CANCELLED")]
+        masked_orders_count = 0
+        for o in completed_orders:
+            completed_str = o.get("completed_at") or o.get("cancelled_at") or o.get("updated_at") or ""
+            is_masked = o.get("is_address_masked", False)
+            if completed_str and not is_masked:
+                comp_dt = datetime.fromisoformat(completed_str.replace("Z", "+00:00"))
+                if comp_dt < address_cutoff:
+                    masked_addr = o.get("seller_address_masked") or "*** (Masked ตามนโยบาย PDPA)"
+                    o["seller_address"] = masked_addr
+                    o["is_address_masked"] = True
+                    masked_orders_count += 1
+
+        # บันทึกประวัติการ Purge ลงใน Audit Trail
+        self.add_audit_log(
+            action="ADMIN_PURGED_EXPIRED_DATA",
+            entity_id="pdpa-retention-job",
+            actor_id=admin_id,
+            actor_role="DPO",
+            details={
+                "purged_gps_count": purged_gps_count,
+                "masked_orders_count": masked_orders_count,
+                "retention_policy_gps_days": 90,
+                "retention_policy_address_hours": 24,
+            },
+        )
+
+        return purged_gps_count, masked_orders_count
 
 
 # Singleton instance สำหรับเข้าถึง Database

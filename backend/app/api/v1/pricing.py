@@ -107,6 +107,7 @@ from backend.app.api.v1.post_job import router as post_job_router
 from backend.app.api.v1.user_verification_penalty import router as admin_user_router
 from backend.app.api.v1.benchmark_price_grading import router as admin_benchmark_router
 from backend.app.api.v1.dispatch_dispute import router as admin_dispatch_dispute_router
+from backend.app.api.v1.security_compliance import router as admin_security_compliance_router
 
 # Application instance สำหรับทดสอบและเชื่อมต่อ Server
 app = FastAPI(
@@ -135,4 +136,5 @@ app.include_router(post_job_router, prefix="/api/v1/collectors")
 app.include_router(admin_user_router, prefix="/api/v1/admin")
 app.include_router(admin_benchmark_router, prefix="/api/v1/admin")
 app.include_router(admin_dispatch_dispute_router, prefix="/api/v1/admin")
+app.include_router(admin_security_compliance_router, prefix="/api/v1/admin/compliance")
 

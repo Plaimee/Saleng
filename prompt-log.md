@@ -2637,6 +2637,54 @@
 
 ---
 
+## บันทึก #101 — `/implement T-01..08` (พัฒนาระบบตรวจสอบ ความปลอดภัย และปฏิบัติตามกฎหมาย Admin Feature 04 เสร็จสมบูรณ์ 100%)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/implement T-01..08`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `backend/app/models/security_compliance_models.py` (Data Models, Pydantic Schemas, ฟังก์ชันคำนวณ `compute_audit_log_hash` SHA-256)
+  - `backend/app/core/supabase.py` (ขยาย `SupabaseStore`: คำนวณ `log_hash` อัตโนมัติใน `add_audit_log`, `record_audit_log`, `add_billing_audit_log`, เมธอด `query_audit_logs`, `verify_audit_logs_integrity`, `get_community_waste_report`, `get_pdpa_retention_status`, `purge_expired_pdpa_data`, และ `_seed_default_security_compliance`)
+  - `backend/app/services/security_compliance_service.py` (Service Layer ตรวจสอบ RBAC 4 บทบาท, บริหารจัดการ Audit Trail, Integrity Check, Anonymized Community Report, และ PDPA Retention & Purge)
+  - `backend/app/api/v1/security_compliance.py` (FastAPI Router สำหรับ 7 Endpoints ภายใต้แท็ก Admin - Security & Compliance)
+  - `backend/app/api/v1/pricing.py` (เมานต์ `admin_security_compliance_router` ภายใต้ prefix `/api/v1/admin/compliance`)
+  - `frontend/src/services/adminSecurityComplianceApi.js` (Frontend API Client 7 ฟังก์ชันพร้อม Header แอดมิน `X-Admin-Role`)
+  - `frontend/src/components/admin/AuditTrailViewer.jsx` (คอมโพเนนต์ตรวจสอบ Audit Trail, กรองหลายมิติ, Verify SHA-256 Hash, ส่งออก CSV/JSON)
+  - `frontend/src/components/admin/CommunityWasteReportView.jsx` (คอมโพเนนต์รายงานสถิติขยะชุมชนรายเขต No PII 100% พร้อมปุ่มส่งออก CSV)
+  - `frontend/src/components/admin/PdpaRetentionPanel.jsx` (คอมโพเนนต์ตรวจสอบสถานะ Retention GPS 90 วัน / Masked Address 24 ชม. และปุ่มสั่ง Purge ข้อมูลหมดอายุ)
+  - `frontend/src/components/admin/AdminSecurityComplianceView.jsx` (หน้าจอหลัก 3 แท็บ กำกับ `data-req="UC-13"`, แถบ Online-only `CC-05`, ทัชทาร์เก็ตปุ่มกด $\ge 48\text{px}$ ทุกปุ่ม)
+  - **ชุดทดสอบ Backend (Pytest):**
+    - `backend/tests/test_T01_security_compliance_models.py` (4 passed)
+    - `backend/tests/test_AC_A04_01_audit_log_query_export.py` (5 passed)
+    - `backend/tests/test_AC_A04_02_immutable_audit_integrity.py` (2 passed)
+    - `backend/tests/test_AC_A04_03_rbac_enforcement.py` (5 passed)
+    - `backend/tests/test_AC_A04_04_pdpa_retention_purge.py` (2 passed)
+    - `backend/tests/test_AC_A04_05_community_waste_report.py` (3 passed)
+    - `backend/tests/test_e2e_admin_security_compliance.py` (1 passed)
+  - **ชุดทดสอบ Frontend (Vitest):**
+    - `frontend/tests/adminSecurityComplianceApi.test.mjs` (5 passed)
+    - `frontend/tests/AC-A04-01.test.jsx` (2 passed)
+    - `frontend/tests/AC-A04-02.test.jsx` (1 passed)
+    - `frontend/tests/AC-A04-03.test.jsx` (1 passed)
+  - `specs/admin/04-audit-security-and-compliance/tasks.md` (ปรับสถานะเป็น `completed` และติ๊กเสร็จ `[x]` ครบ `T-01` ถึง `T-08`)
+- **ผลการตรวจ 5 ด่าน (Quality Gates):**
+  1. **ด่านที่ 1 (ความตรงตามสเปก):** ตรวจสอบย้อนกลับรหัส `UC-13`, `REQ-SEC-001`, `REQ-SEC-002`, `REQ-OP-001`, `REQ-UX-001`, `CT-01`, `P-07`, `D-A04-01..06`, `AC-A04-01..05` ครบถ้วน 100%
+  2. **ด่านที่ 2 (ความถูกต้องตาม Constraints):**
+     - `CC-01`: ทัชทาร์เก็ตปุ่มกด $\ge 48\text{px}$ (`min-h-[48px]`, `min-w-[48px]`) ทุกปุ่มบนหน้าจอ React
+     - `CC-03`: ควบคุมการเข้าถึงด้วย Header `X-Admin-Role` แยก 4 บทบาท (`ADMIN`, `AUDITOR`, `DPO`, `SUPPORT`) บล็อกคำขอไม่มีสิทธิ์ด้วย 403 Forbidden
+     - `CC-04`: Transactional & Append-only integrity ใน Store Layer
+     - `CC-05`: Online-only UI พร้อมข้อความแจ้งเตือนโหมดออนไลน์
+     - `CC-06`: ปลอด PII 100% ในรายงานสถิติขยะชุมชนรายเขต
+     - `REQ-SEC-001` / `P-07`: SHA-256 Checksum ตรวจสอบความถูกต้องและป้องกันการดัดแปลงย้อนหลัง
+     - `REQ-SEC-002` / `CT-01`: PDPA Data Retention ล้างพิกัด GPS เกิน 90 วัน และ Mask ที่อยู่หลังจบงานเกิน 24 ชม.
+  3. **ด่านที่ 3 (Automated Test Pass):**
+     - Backend: 352 passed, 0 failed ในเวลา 1.08 วินาที
+     - Frontend: 106 test files passed, 283 passed, 0 failed ในเวลา 7.57 วินาที
+  4. **ด่านที่ 4 (Zero Regression):** ไม่มีฟีเจอร์เดิมใดๆ ได้รับผลกระทบหรือทดสอบไม่ผ่าน
+  5. **ด่านที่ 5 (Prompt Log Complete):** บันทึกประวัติและผลลัพธ์ลงใน `prompt-log.md` เรียบร้อย
+- **สถานะ:** ฟีเจอร์ Admin 04 (และกลุ่ม Admin ครบทั้ง 4 ฟีเจอร์) พัฒนาเสร็จสิ้นสมบูรณ์ 100% พร้อมส่งมอบและตรวจรับ
+
+
+---
+
 ## บันทึก #97 — `/implement T-01..08` (พัฒนาระบบศูนย์ควบคุมการจับคู่งานและข้อพิพาท Admin 03 ครบทั้ง 8 Tasks)
 - **วันที่:** 2026-11-04
 - **คำสั่งที่ใช้:** `/implement T-01..08`
@@ -2682,3 +2730,122 @@
   4. Non-goals: ไม่สร้าง Voice Bot, ไม่สร้าง AI วิเคราะห์เสียง/วิดีโอสด, ไม่สร้าง Escrow Wallet ตามที่กำหนดไว้
   5. ปรับปรุงสถานะ: อัปเดต `specs/admin/03-dispatch-and-dispute-center/tasks.md` เป็นสถานะ `completed`
 - **สถานะ:** พัฒนาเสร็จสมบูรณ์ 100%
+
+
+---
+
+## บันทึก #98 — `/clarify specs/admin/04-audit-security-and-compliance/spec.md` (เคลียร์จุดกำกวมระบบตรวจสอบ ความปลอดภัย และปฏิบัติตามกฎหมาย Admin 04)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/clarify specs/admin/04-audit-security-and-compliance/spec.md`
+- **ไฟล์ที่ AI อ่าน:** `AGENTS.md`, `specs/admin/04-audit-security-and-compliance/spec.md` (Draft), `specs/000-shared/constraints.md`, `docs/srs/operations.md`, `docs/srs/catalogue.md`, `docs/srs/decisions.md`
+- **ไฟล์ที่สร้าง/แก้ไข:** `specs/admin/04-audit-security-and-compliance/spec.md` (อัปเกรดเป็น Version 2.0 สถานะ `reviewed-post-clarify`)
+- **ข้อสรุปและผลการตัดสินใจ 6 ข้อ (`D-A04-01` ถึง `D-A04-06`):**
+  1. **`D-A04-01` (การค้นหา กรอง และส่งออก Audit Trail Log):** รองรับการกรองตาม `action`, `actor_id`, `actor_role` (`ADMIN`, `AUDITOR`, `COLLECTOR`, `SELLER`), ช่วงวันที่ `start_date` ถึง `end_date` พร้อม pagination และปุ่มส่งออกไฟล์ `CSV` และ `JSON`
+  2. **`D-A04-02` (การบังคับใช้ RBAC 4 บทบาท):** กำหนด Header `X-Admin-Role`:
+     - `ADMIN`: เข้าถึงและจัดการได้ทุกฟังก์ชัน
+     - `AUDITOR`: สิทธิ์ Read-only สำหรับดู Audit Log และดาวน์โหลดรายงานสถิติชุมชน (บล็อกการแก้ไขด้วย `403 Forbidden`)
+     - `DPO`: เข้าถึงแดชบอร์ด PDPA Compliance และสั่ง Purge ข้อมูลส่วนบุคคลที่หมดอายุ
+     - `SUPPORT`: ช่วยเหลือผู้ใช้ทั่วไป แต่ห้ามเข้าถึงระบบ Audit Log เชิงลึก
+     - ปฏิเสธคำขอที่ไม่มีสิทธิ์ด้วย `HTTP 403 Forbidden`
+  3. **`D-A04-03` (รายงานสถิติขยะชุมชน Anonymized Report):** จัดกลุ่มสถิติระดับเขต/แขวง รายเดือน/ปี แสดงน้ำหนักรวม (`กก.`), มูลค่ารวม (`บาท`), รอบรับซื้อ ปลอดข้อมูล PII 100% ส่งออกเป็น `CSV` และ `JSON` สำหรับส่งมอบ กทม. และเทศบาล
+  4. **`D-A04-04` (นโยบาย Data Retention & Purge ตาม PDPA):** พิกัด GPS ซาเล้งเก็บรักษาไว้ไม่เกิน **90 วัน** เพื่อตรวจสอบข้อพิพาท หลังจากนั้น Purge ทิ้ง ข้อมูลบ้านเลขที่ผู้ขายเปิดเผยเฉพาะช่วงเดินทาง และกลับมา Masked ถาวรหลังจบงานเกิน **24 ชั่วโมง** พร้อม API สำหรับ DPO สั่งล้างข้อมูลหมดอายุ
+  5. **`D-A04-05` (Immutable Audit Trail & Hash Verification):** บันทึกระเบียนลง `audit_logs` แบบ Append-only ทุกระเบียนคำนวณ `log_hash` ด้วย `SHA-256` พร้อม API ตรวจสอบ Integrity เพื่อยืนยันว่าไม่มีการแก้ไขย้อนหลัง
+  6. **`D-A04-06` (หน้าจอแดชบอร์ดความปลอดภัยและตรวจสอบ):** คอมโพเนนต์ SPA 3 แท็บ (Audit Trail Viewer, Anonymized Community Report, PDPA Compliance & Retention) กำกับ `data-req="UC-13"`, ทัชทาร์เก็ตปุ่มกด $\ge 48\text{px}$ ทุกปุ่ม, ทำงานในโหมด Online-only (`CC-05`)
+- **สถานะ:** Clarification เสร็จสมบูรณ์ สเปก Version 2.0 พร้อมสำหรับการวางแผนในขั้นตอน `/plan specs/admin/04-audit-security-and-compliance/spec.md`
+
+
+---
+
+## บันทึก #99 — `/plan specs/admin/04-audit-security-and-compliance/spec.md` (จัดทำแผนสถาปัตยกรรมระบบตรวจสอบ ความปลอดภัย และปฏิบัติตามกฎหมาย Admin 04)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/plan specs/admin/04-audit-security-and-compliance/spec.md`
+- **ไฟล์ที่ AI อ่าน:** `AGENTS.md`, `specs/admin/04-audit-security-and-compliance/spec.md` (v2.0), `specs/000-shared/constraints.md`, `docs/srs/operations.md`, `docs/srs/use-cases.md` (`UC-13`), `docs/srs/catalogue.md` (`REQ-SEC-001..002`)
+- **ไฟล์ที่สร้าง:**
+  - `specs/admin/04-audit-security-and-compliance/plan.md` (แผนทางเทคนิค 8 ส่วนตามมาตรฐาน agent-pack v2: สถาปัตยกรรม, โครงสร้างไฟล์, ฐานข้อมูล, API Specification, แผนระบบภายนอก, แผนหน้าจอ React SPA, แผน Automated Tests, และตารางตรวจ Constraints กลาง 13 ข้อ)
+- **ประเด็นสำคัญใน plan.md:**
+  1. **สถาปัตยกรรมและเทคโนโลยี (ทีมเลือกเอง ไม่ได้มาจาก spec):**
+     - Backend: Python 3.11 + FastAPI (`security_compliance.py`, `security_compliance_service.py`, `security_compliance_models.py`)
+     - State Store: Supabase Store (`audit_logs` พร้อม SHA-256 Hash, `orders`, `pickup_locations`)
+     - Frontend: React 18 + TailwindCSS (`AdminSecurityComplianceView.jsx`, `AuditTrailViewer.jsx`, `CommunityWasteReportView.jsx`, `PdpaRetentionPanel.jsx`, `adminSecurityComplianceApi.js`)
+  2. **โครงสร้างโมเดลข้อมูลและ API:**
+     - ตาราง `audit_logs` บันทึกแบบ Append-only เพิ่มฟิลด์ `log_hash` (SHA-256)
+     - API Endpoints:
+       - `GET /api/v1/admin/compliance/audit-logs` (สืบค้นและกรอง Audit Log)
+       - `GET /api/v1/admin/compliance/audit-logs/export` (ส่งออกไฟล์ CSV / JSON)
+       - `GET /api/v1/admin/compliance/audit-logs/verify-integrity` (ตรวจสอบความถูกต้องของ Hash)
+       - `GET /api/v1/admin/compliance/reports/community-waste` (สรุปสถิติขยะชุมชน ปลอด PII 100%)
+       - `GET /api/v1/admin/compliance/reports/community-waste/export` (ส่งออกรายงานชุมชนสำหรับ กทม./เทศบาล)
+       - `GET /api/v1/admin/compliance/retention-status` (ตรวจสอบสถานะ Retention พิกัด > 90 วัน)
+       - `POST /api/v1/admin/compliance/purge-expired` (สั่ง Purge พิกัดหมดอายุและ Masking ข้อมูลหลัง 24 ชม.)
+  3. **การปฏิบัติตาม Constraints กลาง:** ครบทั้ง 13 ข้อตาม `specs/000-shared/constraints.md` โดยเฉพาะ `CC-01` (ปุ่ม $\ge 48\text{px}$), `CC-03` (สิทธิ์ `X-Admin-Role` แยก 4 บทบาท), `CC-05` (Online-only), `CC-06` (ปลอด PII 100%), `REQ-SEC-001` (SHA-256 Hash ใน Audit Log), และ `REQ-SEC-002` (PDPA Retention 90 วัน)
+- **สถานะ:** แผน `plan.md` สมบูรณ์ พร้อมเข้าสู่ขั้นตอนการแตกงานย่อย `/tasks specs/admin/04-audit-security-and-compliance/plan.md`
+
+
+---
+
+## บันทึก #100 — `/tasks specs/admin/04-audit-security-and-compliance/plan.md` (แตกงานย่อยระบบตรวจสอบ ความปลอดภัย และปฏิบัติตามกฎหมาย Admin 04)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/tasks specs/admin/04-audit-security-and-compliance/plan.md`
+- **ไฟล์ที่ AI อ่าน:** `AGENTS.md`, `specs/admin/04-audit-security-and-compliance/plan.md` (v1.0), `specs/admin/04-audit-security-and-compliance/spec.md` (v2.0), `specs/000-shared/constraints.md`, `docs/srs/operations.md`
+- **ไฟล์ที่สร้าง:** `specs/admin/04-audit-security-and-compliance/tasks.md`
+- **ผลลัพธ์การแตกงานย่อย (8 งาน `T-01` ถึง `T-08` ครบ 6 ช่องต่อ Task):**
+  1. **`T-01`:** สร้าง Data Models และ Schema สำหรับระบบตรวจสอบ ความปลอดภัย และ PDPA (`security_compliance_models.py`, `compute_audit_log_hash`, `supabase.py` ขยาย store methods และ seed ข้อมูล, `test_T01_security_compliance_models.py`)
+  2. **`T-02`:** สร้าง Service และ API สืบค้น กรอง และส่งออก Audit Trail Log (`query_audit_logs`, `export_audit_logs`, เมานต์ใน `pricing.py`, `test_AC_A04_01_audit_log_query_export.py`)
+  3. **`T-03`:** สร้าง Service และ API ยืนยันความไม่เปลี่ยนแปลงของ Audit Log ด้วย SHA-256 Hash (`verify_audit_integrity`, `test_AC_A04_02_immutable_audit_integrity.py`)
+  4. **`T-04`:** พัฒนาระบบควบคุมการเข้าถึงตามบทบาท (RBAC Enforcement 4 Roles: `ADMIN`, `AUDITOR`, `DPO`, `SUPPORT`, `test_AC_A04_03_rbac_enforcement.py`)
+  5. **`T-05`:** สร้าง Service และ API จัดการนโยบายการจัดเก็บและทำลายข้อมูลส่วนบุคคล (`get_retention_status`, `purge_expired_data`, `test_AC_A04_04_pdpa_retention_purge.py`)
+  6. **`T-06`:** สร้าง Service และ API สรุปและส่งออกรายงานสถิติขยะชุมชนแบบไม่ระบุตัวตน (`get_community_waste_report`, `export_community_waste_report`, `test_AC_A04_05_community_waste_report.py`)
+  7. **`T-07`:** สร้าง Frontend API Client และคอมโพเนนต์ React แดชบอร์ดตรวจสอบและความปลอดภัย (`adminSecurityComplianceApi.js`, `adminSecurityComplianceApi.test.mjs`, `AuditTrailViewer.jsx`, `CommunityWasteReportView.jsx`, `PdpaRetentionPanel.jsx`, `AdminSecurityComplianceView.jsx` พร้อม `data-req="UC-13"`, ปุ่ม $\ge 48\text{px}$)
+  8. **`T-08`:** สร้างชุดทดสอบ Vitest Component Tests (`AC-A04-01.test.jsx`, `AC-A04-02.test.jsx`, `AC-A04-03.test.jsx`), Integration E2E Test Suite (`test_e2e_admin_security_compliance.py`) และตรวจรับ 5 ด่าน
+- **ตารางตรวจทานท้ายไฟล์:**
+  - ตาราง Two-way Traceability Matrix ครบทั้ง 5 AC (`AC-A04-01` ถึง `AC-A04-05`) รองรับทั้งหลังบ้าน หน้าบ้าน และ E2E
+  - ตาราง Constraints Traceability Matrix ครบทั้ง 13 ข้อ (`CC-01..06`, `REQ-SEC-001..002`, `REQ-OP-001..002`, `D-00-01..03`)
+- **สถานะ:** แตกงานย่อยเสร็จสมบูรณ์ พร้อมดำเนินการพัฒนาในขั้นตอน `/implement T-01..08`
+
+
+---
+
+## บันทึก #101 — `/implement T-01..08` (พัฒนาระบบตรวจสอบ ความปลอดภัย และปฏิบัติตามกฎหมาย Admin Feature 04 เสร็จสมบูรณ์ 100%)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/implement T-01..08`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `backend/app/models/security_compliance_models.py` (Data Models, Pydantic Schemas, ฟังก์ชันคำนวณ `compute_audit_log_hash` SHA-256)
+  - `backend/app/core/supabase.py` (ขยาย `SupabaseStore`: คำนวณ `log_hash` อัตโนมัติใน `add_audit_log`, `record_audit_log`, `add_billing_audit_log`, เมธอด `query_audit_logs`, `verify_audit_logs_integrity`, `get_community_waste_report`, `get_pdpa_retention_status`, `purge_expired_pdpa_data`, และ `_seed_default_security_compliance`)
+  - `backend/app/services/security_compliance_service.py` (Service Layer ตรวจสอบ RBAC 4 บทบาท, บริหารจัดการ Audit Trail, Integrity Check, Anonymized Community Report, และ PDPA Retention & Purge)
+  - `backend/app/api/v1/security_compliance.py` (FastAPI Router สำหรับ 7 Endpoints ภายใต้แท็ก Admin - Security & Compliance)
+  - `backend/app/api/v1/pricing.py` (เมานต์ `admin_security_compliance_router` ภายใต้ prefix `/api/v1/admin/compliance`)
+  - `frontend/src/services/adminSecurityComplianceApi.js` (Frontend API Client 7 ฟังก์ชันพร้อม Header แอดมิน `X-Admin-Role`)
+  - `frontend/src/components/admin/AuditTrailViewer.jsx` (คอมโพเนนต์ตรวจสอบ Audit Trail, กรองหลายมิติ, Verify SHA-256 Hash, ส่งออก CSV/JSON)
+  - `frontend/src/components/admin/CommunityWasteReportView.jsx` (คอมโพเนนต์รายงานสถิติขยะชุมชนรายเขต No PII 100% พร้อมปุ่มส่งออก CSV)
+  - `frontend/src/components/admin/PdpaRetentionPanel.jsx` (คอมโพเนนต์ตรวจสอบสถานะ Retention GPS 90 วัน / Masked Address 24 ชม. และปุ่มสั่ง Purge ข้อมูลหมดอายุ)
+  - `frontend/src/components/admin/AdminSecurityComplianceView.jsx` (หน้าจอหลัก 3 แท็บ กำกับ `data-req="UC-13"`, แถบ Online-only `CC-05`, ทัชทาร์เก็ตปุ่มกด $\ge 48\text{px}$ ทุกปุ่ม)
+  - **ชุดทดสอบ Backend (Pytest):**
+    - `backend/tests/test_T01_security_compliance_models.py` (4 passed)
+    - `backend/tests/test_AC_A04_01_audit_log_query_export.py` (5 passed)
+    - `backend/tests/test_AC_A04_02_immutable_audit_integrity.py` (2 passed)
+    - `backend/tests/test_AC_A04_03_rbac_enforcement.py` (5 passed)
+    - `backend/tests/test_AC_A04_04_pdpa_retention_purge.py` (2 passed)
+    - `backend/tests/test_AC_A04_05_community_waste_report.py` (3 passed)
+    - `backend/tests/test_e2e_admin_security_compliance.py` (1 passed)
+  - **ชุดทดสอบ Frontend (Vitest):**
+    - `frontend/tests/adminSecurityComplianceApi.test.mjs` (5 passed)
+    - `frontend/tests/AC-A04-01.test.jsx` (2 passed)
+    - `frontend/tests/AC-A04-02.test.jsx` (1 passed)
+    - `frontend/tests/AC-A04-03.test.jsx` (1 passed)
+  - `specs/admin/04-audit-security-and-compliance/tasks.md` (ปรับสถานะเป็น `completed` และติ๊กเสร็จ `[x]` ครบ `T-01` ถึง `T-08`)
+- **ผลการตรวจ 5 ด่าน (Quality Gates):**
+  1. **ด่านที่ 1 (ความตรงตามสเปก):** ตรวจสอบย้อนกลับรหัส `UC-13`, `REQ-SEC-001`, `REQ-SEC-002`, `REQ-OP-001`, `REQ-UX-001`, `CT-01`, `P-07`, `D-A04-01..06`, `AC-A04-01..05` ครบถ้วน 100%
+  2. **ด่านที่ 2 (ความถูกต้องตาม Constraints):**
+     - `CC-01`: ทัชทาร์เก็ตปุ่มกด $\ge 48\text{px}$ (`min-h-[48px]`, `min-w-[48px]`) ทุกปุ่มบนหน้าจอ React
+     - `CC-03`: ควบคุมการเข้าถึงด้วย Header `X-Admin-Role` แยก 4 บทบาท (`ADMIN`, `AUDITOR`, `DPO`, `SUPPORT`) บล็อกคำขอไม่มีสิทธิ์ด้วย 403 Forbidden
+     - `CC-04`: Transactional & Append-only integrity ใน Store Layer
+     - `CC-05`: Online-only UI พร้อมข้อความแจ้งเตือนโหมดออนไลน์
+     - `CC-06`: ปลอด PII 100% ในรายงานสถิติขยะชุมชนรายเขต
+     - `REQ-SEC-001` / `P-07`: SHA-256 Checksum ตรวจสอบความถูกต้องและป้องกันการดัดแปลงย้อนหลัง
+     - `REQ-SEC-002` / `CT-01`: PDPA Data Retention ล้างพิกัด GPS เกิน 90 วัน และ Mask ที่อยู่หลังจบงานเกิน 24 ชม.
+  3. **ด่านที่ 3 (Automated Test Pass):**
+     - Backend: 352 passed, 0 failed ในเวลา 1.08 วินาที
+     - Frontend: 106 test files passed, 283 passed, 0 failed ในเวลา 7.57 วินาที
+  4. **ด่านที่ 4 (Zero Regression):** ไม่มีฟีเจอร์เดิมใดๆ ได้รับผลกระทบหรือทดสอบไม่ผ่าน
+  5. **ด่านที่ 5 (Prompt Log Complete):** บันทึกประวัติและผลลัพธ์ลงใน `prompt-log.md` เรียบร้อย
+- **สถานะ:** ฟีเจอร์ Admin 04 (และกลุ่ม Admin ครบทั้ง 4 ฟีเจอร์) พัฒนาเสร็จสิ้นสมบูรณ์ 100% พร้อมส่งมอบและตรวจรับ
