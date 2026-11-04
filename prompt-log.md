@@ -898,6 +898,52 @@
 
 ---
 
+## บันทึก #73 — `/implement T-01..08` (พัฒนาระบบจัดการงานและเส้นทางของซาเล้ง — Buyer 04)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/implement T-01..08` (อ้างอิง `specs/buyer/04-job-and-route-management/tasks.md`)
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - **Backend Models & Schemas (`T-01`):** `backend/app/models/job_route_models.py` (Pydantic models, navigation URL builder), ขยาย `backend/app/core/supabase.py` (เพิ่ม `claim_order_occ`, `revert_order_to_pending`, `get_collector_active_jobs`), และชุดทดสอบ `backend/tests/test_T01_job_route_models.py`
+  - **Backend Services & APIs (`T-02`, `T-03`, `T-04`, `T-05`):**
+    - `backend/app/services/job_route_service.py` (Atomic claim ด้วย OCC version column, skip job, active queue พร้อม greedy route optimization, start transit S3 -> S4 พร้อมล็อกปุ่มยกเลิกผู้ขาย, collector cancel พร้อมคืนสถานะ S2 อัตโนมัติและบันทึก audit log)
+    - `backend/app/api/v1/job_route.py` (FastAPI router ติดตั้ง 5 endpoints ภายใต้ `/api/v1/collectors`)
+    - `backend/app/api/v1/pricing.py` (Mount router)
+  - **Backend Tests (`T-02` ถึง `T-05`):**
+    - `backend/tests/test_AC_B04_01_atomic_claim.py`
+    - `backend/tests/test_AC_B04_02_skip_job.py`
+    - `backend/tests/test_AC_B04_03_address_unmasking.py`
+    - `backend/tests/test_AC_B04_04_active_queue_route.py`
+    - `backend/tests/test_AC_B04_05_in_transit_lock.py`
+    - `backend/tests/test_AC_B04_06_collector_cancel.py`
+  - **Frontend API Client & Cache (`T-06`):**
+    - `frontend/src/services/jobRouteApi.js` (Methods: `claimJob`, `skipJob`, `getActiveQueue`, `startTransit`, `cancelJob`, พร้อมแคช `saleng_active_schedule_cache` และคิวออฟไลน์ `saleng_offline_transit_queue` พร้อม `idempotency_key`)
+    - `frontend/tests/jobRouteApi.test.mjs` (11 unit tests ผ่าน 100%)
+  - **Frontend React Components (`T-07`):**
+    - `frontend/src/components/ActiveJobCard.jsx` (ปุ่มนำทาง GPS, ปุ่มเริ่มเดินทาง, ปุ่มสละสิทธิ์ ทัชทาร์เก็ต >= 48px)
+    - `frontend/src/components/RouteOptimizationBar.jsx` (แถบ Waypoint timeline, ระยะทางรวม, ETA)
+    - `frontend/src/components/CollectorCancelModal.jsx` (Modal สละสิทธิ์ 4 เหตุผล พร้อมระบุหมายเหตุ)
+    - `frontend/src/components/ClaimConflictModal.jsx` (Modal แจ้งเตือนเมื่อเกิด 409 Conflict "มีผู้รับงานนี้แล้ว")
+    - `frontend/src/components/ActiveJobQueueView.jsx` (หน้ารวมคิวงานสะสม, แถบความจุรถ, และ Offline banner)
+  - **Frontend Component Tests & Integration E2E Suite (`T-08`):**
+    - `frontend/tests/AC-B04-01.test.jsx` (Single Collector Atomic Claim & 409 Conflict Modal)
+    - `frontend/tests/AC-B04-02.test.jsx` (Skip Job Option)
+    - `frontend/tests/AC-B04-03.test.jsx` (Address Unmasking & GPS Navigation Launch)
+    - `frontend/tests/AC-B04-04.test.jsx` (Active Queue & Route Ordering)
+    - `frontend/tests/AC-B04-05.test.jsx` (In-Transit Status Transition & Seller Cancel Lock)
+    - `frontend/tests/AC-B04-06.test.jsx` (Collector Cancellation with Automatic State Reversion)
+    - `backend/tests/test_e2e_buyer_job_route_management.py` (6 integration lifecycle tests)
+  - **Task Checklist:** อัปเดต `specs/buyer/04-job-and-route-management/tasks.md` เป็นสถานะ `completed` (`T-01..08` เป็น `[DONE]`)
+- **การตรวจสอบ 5 ด่านก่อนจบงาน:**
+  1. **สเปกตรง 100%:** ทุกฟังก์ชันรองรับ `UC-04`, `UC-09`, `UC-12`, `BR-02`, `BR-03`, `AC-B04-01..07` และการตัดสินใจ `D-B04-01..06` ครบถ้วน
+  2. **ไม่มีโค้ดเดาเอง:** นำทาง GPS ใช้ URL Scheme ภายนอก, Concurrency ใช้ OCC `version` column, ยกเลิกงานคืนสถานะ S2 และเคลียร์ `collector_id = None` ตามกฎ
+  3. **ไม่ละเมิด Constraints:** Mobile-first ปุ่มกด >= 48px (`REQ-UX-001`, `CC-01`), Offline cache & queue (`CC-05`, `REQ-OP-001`), PII Masking ก่อนรับงาน (`REQ-SEC-002`, `CC-06`), Audit Logging (`REQ-SEC-001`)
+  4. **Automated Tests ผ่าน 100%:**
+     - Backend (Pytest): **208 passed, 0 failed** (ครอบคลุมโมเดล, ทุก AC, และ E2E)
+     - Frontend (Vitest): **71 test files passed, 178 tests passed, 0 failed** (ครอบคลุม API client, ทุก AC component test)
+  5. **Zero Regression:** ชุดทดสอบเดิมทั้งหมดของระบบผู้ขาย (Seller 01-09) และระบบผู้ซื้อ (Buyer 01-03) ยังคงผ่าน 100% ไม่มีข้อผิดพลาด
+- **สถานะ:** ฟีเจอร์ Buyer 04: ระบบจัดการงานและเส้นทาง (`specs/buyer/04-job-and-route-management/`) พัฒนาและตรวจรับเสร็จสมบูรณ์ 100%
+
+---
+
 ## บันทึก #45 — `/implement T-01..08` (พัฒนาระบบบัญชีและการเข้าใช้งานของผู้ขาย Seller Account & Access ครบวงจร)
 - **วันที่:** 2026-11-03
 - **คำสั่งที่ใช้:** `/implement T-01..08`
@@ -993,6 +1039,52 @@
   2. **Two-way Traceability Matrix:** เกณฑ์การยอมรับทุกข้อ (`AC-S02-01` ถึง `AC-S02-05`) เชื่อมโยงกับงานย่อยและชื่อไฟล์ชุดทดสอบอย่างครบถ้วน
   3. **Constraints Traceability:** ตรวจสอบข้อจำกัดกลางทั้ง 13 ข้อตาม `specs/000-shared/constraints.md` ครบถ้วน
 - **สถานะ:** แตกงานย่อยเสร็จสมบูรณ์ พร้อมสำหรับการเริ่มพัฒนางานย่อยในขั้นตอน `/implement T-01..08`
+
+---
+
+## บันทึก #73 — `/implement T-01..08` (พัฒนาระบบจัดการงานและเส้นทางของซาเล้ง — Buyer 04)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/implement T-01..08` (อ้างอิง `specs/buyer/04-job-and-route-management/tasks.md`)
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - **Backend Models & Schemas (`T-01`):** `backend/app/models/job_route_models.py` (Pydantic models, navigation URL builder), ขยาย `backend/app/core/supabase.py` (เพิ่ม `claim_order_occ`, `revert_order_to_pending`, `get_collector_active_jobs`), และชุดทดสอบ `backend/tests/test_T01_job_route_models.py`
+  - **Backend Services & APIs (`T-02`, `T-03`, `T-04`, `T-05`):**
+    - `backend/app/services/job_route_service.py` (Atomic claim ด้วย OCC version column, skip job, active queue พร้อม greedy route optimization, start transit S3 -> S4 พร้อมล็อกปุ่มยกเลิกผู้ขาย, collector cancel พร้อมคืนสถานะ S2 อัตโนมัติและบันทึก audit log)
+    - `backend/app/api/v1/job_route.py` (FastAPI router ติดตั้ง 5 endpoints ภายใต้ `/api/v1/collectors`)
+    - `backend/app/api/v1/pricing.py` (Mount router)
+  - **Backend Tests (`T-02` ถึง `T-05`):**
+    - `backend/tests/test_AC_B04_01_atomic_claim.py`
+    - `backend/tests/test_AC_B04_02_skip_job.py`
+    - `backend/tests/test_AC_B04_03_address_unmasking.py`
+    - `backend/tests/test_AC_B04_04_active_queue_route.py`
+    - `backend/tests/test_AC_B04_05_in_transit_lock.py`
+    - `backend/tests/test_AC_B04_06_collector_cancel.py`
+  - **Frontend API Client & Cache (`T-06`):**
+    - `frontend/src/services/jobRouteApi.js` (Methods: `claimJob`, `skipJob`, `getActiveQueue`, `startTransit`, `cancelJob`, พร้อมแคช `saleng_active_schedule_cache` และคิวออฟไลน์ `saleng_offline_transit_queue` พร้อม `idempotency_key`)
+    - `frontend/tests/jobRouteApi.test.mjs` (11 unit tests ผ่าน 100%)
+  - **Frontend React Components (`T-07`):**
+    - `frontend/src/components/ActiveJobCard.jsx` (ปุ่มนำทาง GPS, ปุ่มเริ่มเดินทาง, ปุ่มสละสิทธิ์ ทัชทาร์เก็ต >= 48px)
+    - `frontend/src/components/RouteOptimizationBar.jsx` (แถบ Waypoint timeline, ระยะทางรวม, ETA)
+    - `frontend/src/components/CollectorCancelModal.jsx` (Modal สละสิทธิ์ 4 เหตุผล พร้อมระบุหมายเหตุ)
+    - `frontend/src/components/ClaimConflictModal.jsx` (Modal แจ้งเตือนเมื่อเกิด 409 Conflict "มีผู้รับงานนี้แล้ว")
+    - `frontend/src/components/ActiveJobQueueView.jsx` (หน้ารวมคิวงานสะสม, แถบความจุรถ, และ Offline banner)
+  - **Frontend Component Tests & Integration E2E Suite (`T-08`):**
+    - `frontend/tests/AC-B04-01.test.jsx` (Single Collector Atomic Claim & 409 Conflict Modal)
+    - `frontend/tests/AC-B04-02.test.jsx` (Skip Job Option)
+    - `frontend/tests/AC-B04-03.test.jsx` (Address Unmasking & GPS Navigation Launch)
+    - `frontend/tests/AC-B04-04.test.jsx` (Active Queue & Route Ordering)
+    - `frontend/tests/AC-B04-05.test.jsx` (In-Transit Status Transition & Seller Cancel Lock)
+    - `frontend/tests/AC-B04-06.test.jsx` (Collector Cancellation with Automatic State Reversion)
+    - `backend/tests/test_e2e_buyer_job_route_management.py` (6 integration lifecycle tests)
+  - **Task Checklist:** อัปเดต `specs/buyer/04-job-and-route-management/tasks.md` เป็นสถานะ `completed` (`T-01..08` เป็น `[DONE]`)
+- **การตรวจสอบ 5 ด่านก่อนจบงาน:**
+  1. **สเปกตรง 100%:** ทุกฟังก์ชันรองรับ `UC-04`, `UC-09`, `UC-12`, `BR-02`, `BR-03`, `AC-B04-01..07` และการตัดสินใจ `D-B04-01..06` ครบถ้วน
+  2. **ไม่มีโค้ดเดาเอง:** นำทาง GPS ใช้ URL Scheme ภายนอก, Concurrency ใช้ OCC `version` column, ยกเลิกงานคืนสถานะ S2 และเคลียร์ `collector_id = None` ตามกฎ
+  3. **ไม่ละเมิด Constraints:** Mobile-first ปุ่มกด >= 48px (`REQ-UX-001`, `CC-01`), Offline cache & queue (`CC-05`, `REQ-OP-001`), PII Masking ก่อนรับงาน (`REQ-SEC-002`, `CC-06`), Audit Logging (`REQ-SEC-001`)
+  4. **Automated Tests ผ่าน 100%:**
+     - Backend (Pytest): **208 passed, 0 failed** (ครอบคลุมโมเดล, ทุก AC, และ E2E)
+     - Frontend (Vitest): **71 test files passed, 178 tests passed, 0 failed** (ครอบคลุม API client, ทุก AC component test)
+  5. **Zero Regression:** ชุดทดสอบเดิมทั้งหมดของระบบผู้ขาย (Seller 01-09) และระบบผู้ซื้อ (Buyer 01-03) ยังคงผ่าน 100% ไม่มีข้อผิดพลาด
+- **สถานะ:** ฟีเจอร์ Buyer 04: ระบบจัดการงานและเส้นทาง (`specs/buyer/04-job-and-route-management/`) พัฒนาและตรวจรับเสร็จสมบูรณ์ 100%
 
 
 ---
@@ -1098,6 +1190,52 @@
   2. **Two-way Traceability Matrix:** เกณฑ์การยอมรับทุกข้อ (`AC-S03-01` ถึง `AC-S03-05`) เชื่อมโยงกับงานย่อยและชื่อไฟล์ชุดทดสอบอย่างครบถ้วน
   3. **Constraints Traceability:** ตรวจสอบข้อจำกัดกลางทั้ง 13 ข้อตาม `specs/000-shared/constraints.md` ครบถ้วน
 - **สถานะ:** แตกงานย่อยเสร็จสมบูรณ์ พร้อมสำหรับการเริ่มพัฒนางานย่อยในขั้นตอน `/implement T-01..08`
+
+---
+
+## บันทึก #73 — `/implement T-01..08` (พัฒนาระบบจัดการงานและเส้นทางของซาเล้ง — Buyer 04)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/implement T-01..08` (อ้างอิง `specs/buyer/04-job-and-route-management/tasks.md`)
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - **Backend Models & Schemas (`T-01`):** `backend/app/models/job_route_models.py` (Pydantic models, navigation URL builder), ขยาย `backend/app/core/supabase.py` (เพิ่ม `claim_order_occ`, `revert_order_to_pending`, `get_collector_active_jobs`), และชุดทดสอบ `backend/tests/test_T01_job_route_models.py`
+  - **Backend Services & APIs (`T-02`, `T-03`, `T-04`, `T-05`):**
+    - `backend/app/services/job_route_service.py` (Atomic claim ด้วย OCC version column, skip job, active queue พร้อม greedy route optimization, start transit S3 -> S4 พร้อมล็อกปุ่มยกเลิกผู้ขาย, collector cancel พร้อมคืนสถานะ S2 อัตโนมัติและบันทึก audit log)
+    - `backend/app/api/v1/job_route.py` (FastAPI router ติดตั้ง 5 endpoints ภายใต้ `/api/v1/collectors`)
+    - `backend/app/api/v1/pricing.py` (Mount router)
+  - **Backend Tests (`T-02` ถึง `T-05`):**
+    - `backend/tests/test_AC_B04_01_atomic_claim.py`
+    - `backend/tests/test_AC_B04_02_skip_job.py`
+    - `backend/tests/test_AC_B04_03_address_unmasking.py`
+    - `backend/tests/test_AC_B04_04_active_queue_route.py`
+    - `backend/tests/test_AC_B04_05_in_transit_lock.py`
+    - `backend/tests/test_AC_B04_06_collector_cancel.py`
+  - **Frontend API Client & Cache (`T-06`):**
+    - `frontend/src/services/jobRouteApi.js` (Methods: `claimJob`, `skipJob`, `getActiveQueue`, `startTransit`, `cancelJob`, พร้อมแคช `saleng_active_schedule_cache` และคิวออฟไลน์ `saleng_offline_transit_queue` พร้อม `idempotency_key`)
+    - `frontend/tests/jobRouteApi.test.mjs` (11 unit tests ผ่าน 100%)
+  - **Frontend React Components (`T-07`):**
+    - `frontend/src/components/ActiveJobCard.jsx` (ปุ่มนำทาง GPS, ปุ่มเริ่มเดินทาง, ปุ่มสละสิทธิ์ ทัชทาร์เก็ต >= 48px)
+    - `frontend/src/components/RouteOptimizationBar.jsx` (แถบ Waypoint timeline, ระยะทางรวม, ETA)
+    - `frontend/src/components/CollectorCancelModal.jsx` (Modal สละสิทธิ์ 4 เหตุผล พร้อมระบุหมายเหตุ)
+    - `frontend/src/components/ClaimConflictModal.jsx` (Modal แจ้งเตือนเมื่อเกิด 409 Conflict "มีผู้รับงานนี้แล้ว")
+    - `frontend/src/components/ActiveJobQueueView.jsx` (หน้ารวมคิวงานสะสม, แถบความจุรถ, และ Offline banner)
+  - **Frontend Component Tests & Integration E2E Suite (`T-08`):**
+    - `frontend/tests/AC-B04-01.test.jsx` (Single Collector Atomic Claim & 409 Conflict Modal)
+    - `frontend/tests/AC-B04-02.test.jsx` (Skip Job Option)
+    - `frontend/tests/AC-B04-03.test.jsx` (Address Unmasking & GPS Navigation Launch)
+    - `frontend/tests/AC-B04-04.test.jsx` (Active Queue & Route Ordering)
+    - `frontend/tests/AC-B04-05.test.jsx` (In-Transit Status Transition & Seller Cancel Lock)
+    - `frontend/tests/AC-B04-06.test.jsx` (Collector Cancellation with Automatic State Reversion)
+    - `backend/tests/test_e2e_buyer_job_route_management.py` (6 integration lifecycle tests)
+  - **Task Checklist:** อัปเดต `specs/buyer/04-job-and-route-management/tasks.md` เป็นสถานะ `completed` (`T-01..08` เป็น `[DONE]`)
+- **การตรวจสอบ 5 ด่านก่อนจบงาน:**
+  1. **สเปกตรง 100%:** ทุกฟังก์ชันรองรับ `UC-04`, `UC-09`, `UC-12`, `BR-02`, `BR-03`, `AC-B04-01..07` และการตัดสินใจ `D-B04-01..06` ครบถ้วน
+  2. **ไม่มีโค้ดเดาเอง:** นำทาง GPS ใช้ URL Scheme ภายนอก, Concurrency ใช้ OCC `version` column, ยกเลิกงานคืนสถานะ S2 และเคลียร์ `collector_id = None` ตามกฎ
+  3. **ไม่ละเมิด Constraints:** Mobile-first ปุ่มกด >= 48px (`REQ-UX-001`, `CC-01`), Offline cache & queue (`CC-05`, `REQ-OP-001`), PII Masking ก่อนรับงาน (`REQ-SEC-002`, `CC-06`), Audit Logging (`REQ-SEC-001`)
+  4. **Automated Tests ผ่าน 100%:**
+     - Backend (Pytest): **208 passed, 0 failed** (ครอบคลุมโมเดล, ทุก AC, และ E2E)
+     - Frontend (Vitest): **71 test files passed, 178 tests passed, 0 failed** (ครอบคลุม API client, ทุก AC component test)
+  5. **Zero Regression:** ชุดทดสอบเดิมทั้งหมดของระบบผู้ขาย (Seller 01-09) และระบบผู้ซื้อ (Buyer 01-03) ยังคงผ่าน 100% ไม่มีข้อผิดพลาด
+- **สถานะ:** ฟีเจอร์ Buyer 04: ระบบจัดการงานและเส้นทาง (`specs/buyer/04-job-and-route-management/`) พัฒนาและตรวจรับเสร็จสมบูรณ์ 100%
 
 
 ---
@@ -1205,6 +1343,52 @@
   3. **Constraints Traceability:** ตรวจสอบข้อจำกัดกลางทั้ง 13 ข้อตาม `specs/000-shared/constraints.md` ครบถ้วน
 - **สถานะ:** แตกงานย่อยเสร็จสมบูรณ์ พร้อมสำหรับการเริ่มพัฒนางานย่อยในขั้นตอน `/implement T-01..08`
 
+---
+
+## บันทึก #73 — `/implement T-01..08` (พัฒนาระบบจัดการงานและเส้นทางของซาเล้ง — Buyer 04)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/implement T-01..08` (อ้างอิง `specs/buyer/04-job-and-route-management/tasks.md`)
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - **Backend Models & Schemas (`T-01`):** `backend/app/models/job_route_models.py` (Pydantic models, navigation URL builder), ขยาย `backend/app/core/supabase.py` (เพิ่ม `claim_order_occ`, `revert_order_to_pending`, `get_collector_active_jobs`), และชุดทดสอบ `backend/tests/test_T01_job_route_models.py`
+  - **Backend Services & APIs (`T-02`, `T-03`, `T-04`, `T-05`):**
+    - `backend/app/services/job_route_service.py` (Atomic claim ด้วย OCC version column, skip job, active queue พร้อม greedy route optimization, start transit S3 -> S4 พร้อมล็อกปุ่มยกเลิกผู้ขาย, collector cancel พร้อมคืนสถานะ S2 อัตโนมัติและบันทึก audit log)
+    - `backend/app/api/v1/job_route.py` (FastAPI router ติดตั้ง 5 endpoints ภายใต้ `/api/v1/collectors`)
+    - `backend/app/api/v1/pricing.py` (Mount router)
+  - **Backend Tests (`T-02` ถึง `T-05`):**
+    - `backend/tests/test_AC_B04_01_atomic_claim.py`
+    - `backend/tests/test_AC_B04_02_skip_job.py`
+    - `backend/tests/test_AC_B04_03_address_unmasking.py`
+    - `backend/tests/test_AC_B04_04_active_queue_route.py`
+    - `backend/tests/test_AC_B04_05_in_transit_lock.py`
+    - `backend/tests/test_AC_B04_06_collector_cancel.py`
+  - **Frontend API Client & Cache (`T-06`):**
+    - `frontend/src/services/jobRouteApi.js` (Methods: `claimJob`, `skipJob`, `getActiveQueue`, `startTransit`, `cancelJob`, พร้อมแคช `saleng_active_schedule_cache` และคิวออฟไลน์ `saleng_offline_transit_queue` พร้อม `idempotency_key`)
+    - `frontend/tests/jobRouteApi.test.mjs` (11 unit tests ผ่าน 100%)
+  - **Frontend React Components (`T-07`):**
+    - `frontend/src/components/ActiveJobCard.jsx` (ปุ่มนำทาง GPS, ปุ่มเริ่มเดินทาง, ปุ่มสละสิทธิ์ ทัชทาร์เก็ต >= 48px)
+    - `frontend/src/components/RouteOptimizationBar.jsx` (แถบ Waypoint timeline, ระยะทางรวม, ETA)
+    - `frontend/src/components/CollectorCancelModal.jsx` (Modal สละสิทธิ์ 4 เหตุผล พร้อมระบุหมายเหตุ)
+    - `frontend/src/components/ClaimConflictModal.jsx` (Modal แจ้งเตือนเมื่อเกิด 409 Conflict "มีผู้รับงานนี้แล้ว")
+    - `frontend/src/components/ActiveJobQueueView.jsx` (หน้ารวมคิวงานสะสม, แถบความจุรถ, และ Offline banner)
+  - **Frontend Component Tests & Integration E2E Suite (`T-08`):**
+    - `frontend/tests/AC-B04-01.test.jsx` (Single Collector Atomic Claim & 409 Conflict Modal)
+    - `frontend/tests/AC-B04-02.test.jsx` (Skip Job Option)
+    - `frontend/tests/AC-B04-03.test.jsx` (Address Unmasking & GPS Navigation Launch)
+    - `frontend/tests/AC-B04-04.test.jsx` (Active Queue & Route Ordering)
+    - `frontend/tests/AC-B04-05.test.jsx` (In-Transit Status Transition & Seller Cancel Lock)
+    - `frontend/tests/AC-B04-06.test.jsx` (Collector Cancellation with Automatic State Reversion)
+    - `backend/tests/test_e2e_buyer_job_route_management.py` (6 integration lifecycle tests)
+  - **Task Checklist:** อัปเดต `specs/buyer/04-job-and-route-management/tasks.md` เป็นสถานะ `completed` (`T-01..08` เป็น `[DONE]`)
+- **การตรวจสอบ 5 ด่านก่อนจบงาน:**
+  1. **สเปกตรง 100%:** ทุกฟังก์ชันรองรับ `UC-04`, `UC-09`, `UC-12`, `BR-02`, `BR-03`, `AC-B04-01..07` และการตัดสินใจ `D-B04-01..06` ครบถ้วน
+  2. **ไม่มีโค้ดเดาเอง:** นำทาง GPS ใช้ URL Scheme ภายนอก, Concurrency ใช้ OCC `version` column, ยกเลิกงานคืนสถานะ S2 และเคลียร์ `collector_id = None` ตามกฎ
+  3. **ไม่ละเมิด Constraints:** Mobile-first ปุ่มกด >= 48px (`REQ-UX-001`, `CC-01`), Offline cache & queue (`CC-05`, `REQ-OP-001`), PII Masking ก่อนรับงาน (`REQ-SEC-002`, `CC-06`), Audit Logging (`REQ-SEC-001`)
+  4. **Automated Tests ผ่าน 100%:**
+     - Backend (Pytest): **208 passed, 0 failed** (ครอบคลุมโมเดล, ทุก AC, และ E2E)
+     - Frontend (Vitest): **71 test files passed, 178 tests passed, 0 failed** (ครอบคลุม API client, ทุก AC component test)
+  5. **Zero Regression:** ชุดทดสอบเดิมทั้งหมดของระบบผู้ขาย (Seller 01-09) และระบบผู้ซื้อ (Buyer 01-03) ยังคงผ่าน 100% ไม่มีข้อผิดพลาด
+- **สถานะ:** ฟีเจอร์ Buyer 04: ระบบจัดการงานและเส้นทาง (`specs/buyer/04-job-and-route-management/`) พัฒนาและตรวจรับเสร็จสมบูรณ์ 100%
+
 
 ---
 
@@ -1311,6 +1495,52 @@
   2. **Two-way Traceability Matrix:** เกณฑ์การยอมรับทุกข้อ (`AC-B01-01` ถึง `AC-B01-05`) เชื่อมโยงกับงานย่อยและชื่อไฟล์ชุดทดสอบอย่างครบถ้วน
   3. **Constraints Traceability:** ตรวจสอบข้อจำกัดกลางทั้ง 13 ข้อตาม `specs/000-shared/constraints.md` ครบถ้วน
 - **สถานะ:** แตกงานย่อยเสร็จสมบูรณ์ พร้อมสำหรับการเริ่มพัฒนางานย่อยในขั้นตอน `/implement T-01..08`
+
+---
+
+## บันทึก #73 — `/implement T-01..08` (พัฒนาระบบจัดการงานและเส้นทางของซาเล้ง — Buyer 04)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/implement T-01..08` (อ้างอิง `specs/buyer/04-job-and-route-management/tasks.md`)
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - **Backend Models & Schemas (`T-01`):** `backend/app/models/job_route_models.py` (Pydantic models, navigation URL builder), ขยาย `backend/app/core/supabase.py` (เพิ่ม `claim_order_occ`, `revert_order_to_pending`, `get_collector_active_jobs`), และชุดทดสอบ `backend/tests/test_T01_job_route_models.py`
+  - **Backend Services & APIs (`T-02`, `T-03`, `T-04`, `T-05`):**
+    - `backend/app/services/job_route_service.py` (Atomic claim ด้วย OCC version column, skip job, active queue พร้อม greedy route optimization, start transit S3 -> S4 พร้อมล็อกปุ่มยกเลิกผู้ขาย, collector cancel พร้อมคืนสถานะ S2 อัตโนมัติและบันทึก audit log)
+    - `backend/app/api/v1/job_route.py` (FastAPI router ติดตั้ง 5 endpoints ภายใต้ `/api/v1/collectors`)
+    - `backend/app/api/v1/pricing.py` (Mount router)
+  - **Backend Tests (`T-02` ถึง `T-05`):**
+    - `backend/tests/test_AC_B04_01_atomic_claim.py`
+    - `backend/tests/test_AC_B04_02_skip_job.py`
+    - `backend/tests/test_AC_B04_03_address_unmasking.py`
+    - `backend/tests/test_AC_B04_04_active_queue_route.py`
+    - `backend/tests/test_AC_B04_05_in_transit_lock.py`
+    - `backend/tests/test_AC_B04_06_collector_cancel.py`
+  - **Frontend API Client & Cache (`T-06`):**
+    - `frontend/src/services/jobRouteApi.js` (Methods: `claimJob`, `skipJob`, `getActiveQueue`, `startTransit`, `cancelJob`, พร้อมแคช `saleng_active_schedule_cache` และคิวออฟไลน์ `saleng_offline_transit_queue` พร้อม `idempotency_key`)
+    - `frontend/tests/jobRouteApi.test.mjs` (11 unit tests ผ่าน 100%)
+  - **Frontend React Components (`T-07`):**
+    - `frontend/src/components/ActiveJobCard.jsx` (ปุ่มนำทาง GPS, ปุ่มเริ่มเดินทาง, ปุ่มสละสิทธิ์ ทัชทาร์เก็ต >= 48px)
+    - `frontend/src/components/RouteOptimizationBar.jsx` (แถบ Waypoint timeline, ระยะทางรวม, ETA)
+    - `frontend/src/components/CollectorCancelModal.jsx` (Modal สละสิทธิ์ 4 เหตุผล พร้อมระบุหมายเหตุ)
+    - `frontend/src/components/ClaimConflictModal.jsx` (Modal แจ้งเตือนเมื่อเกิด 409 Conflict "มีผู้รับงานนี้แล้ว")
+    - `frontend/src/components/ActiveJobQueueView.jsx` (หน้ารวมคิวงานสะสม, แถบความจุรถ, และ Offline banner)
+  - **Frontend Component Tests & Integration E2E Suite (`T-08`):**
+    - `frontend/tests/AC-B04-01.test.jsx` (Single Collector Atomic Claim & 409 Conflict Modal)
+    - `frontend/tests/AC-B04-02.test.jsx` (Skip Job Option)
+    - `frontend/tests/AC-B04-03.test.jsx` (Address Unmasking & GPS Navigation Launch)
+    - `frontend/tests/AC-B04-04.test.jsx` (Active Queue & Route Ordering)
+    - `frontend/tests/AC-B04-05.test.jsx` (In-Transit Status Transition & Seller Cancel Lock)
+    - `frontend/tests/AC-B04-06.test.jsx` (Collector Cancellation with Automatic State Reversion)
+    - `backend/tests/test_e2e_buyer_job_route_management.py` (6 integration lifecycle tests)
+  - **Task Checklist:** อัปเดต `specs/buyer/04-job-and-route-management/tasks.md` เป็นสถานะ `completed` (`T-01..08` เป็น `[DONE]`)
+- **การตรวจสอบ 5 ด่านก่อนจบงาน:**
+  1. **สเปกตรง 100%:** ทุกฟังก์ชันรองรับ `UC-04`, `UC-09`, `UC-12`, `BR-02`, `BR-03`, `AC-B04-01..07` และการตัดสินใจ `D-B04-01..06` ครบถ้วน
+  2. **ไม่มีโค้ดเดาเอง:** นำทาง GPS ใช้ URL Scheme ภายนอก, Concurrency ใช้ OCC `version` column, ยกเลิกงานคืนสถานะ S2 และเคลียร์ `collector_id = None` ตามกฎ
+  3. **ไม่ละเมิด Constraints:** Mobile-first ปุ่มกด >= 48px (`REQ-UX-001`, `CC-01`), Offline cache & queue (`CC-05`, `REQ-OP-001`), PII Masking ก่อนรับงาน (`REQ-SEC-002`, `CC-06`), Audit Logging (`REQ-SEC-001`)
+  4. **Automated Tests ผ่าน 100%:**
+     - Backend (Pytest): **208 passed, 0 failed** (ครอบคลุมโมเดล, ทุก AC, และ E2E)
+     - Frontend (Vitest): **71 test files passed, 178 tests passed, 0 failed** (ครอบคลุม API client, ทุก AC component test)
+  5. **Zero Regression:** ชุดทดสอบเดิมทั้งหมดของระบบผู้ขาย (Seller 01-09) และระบบผู้ซื้อ (Buyer 01-03) ยังคงผ่าน 100% ไม่มีข้อผิดพลาด
+- **สถานะ:** ฟีเจอร์ Buyer 04: ระบบจัดการงานและเส้นทาง (`specs/buyer/04-job-and-route-management/`) พัฒนาและตรวจรับเสร็จสมบูรณ์ 100%
 
 ---
 
@@ -1423,7 +1653,6 @@
   3. **Constraints Traceability:** ตรวจสอบข้อจำกัดกลางทั้ง 13 ข้อตาม `specs/000-shared/constraints.md` ครบถ้วน
 - **สถานะ:** แตกงานย่อยเสร็จสมบูรณ์ พร้อมสำหรับการเริ่มพัฒนางานย่อยในขั้นตอน `/implement T-01..08`
 
-
 ---
 
 ## บันทึก #65 — `/implement T-01..08` (พัฒนาระบบค้นหาและแสดงงานรับซื้อตามพิกัด Buyer 02 ครบวงจร)
@@ -1529,6 +1758,52 @@
   3. **Constraints Traceability:** ตรวจสอบข้อจำกัดกลางทั้ง 13 ข้อตาม `specs/000-shared/constraints.md` ครบถ้วน
 - **สถานะ:** แตกงานย่อยเสร็จสมบูรณ์ พร้อมสำหรับการเริ่มพัฒนางานย่อยในขั้นตอน `/implement T-01..08`
 
+---
+
+## บันทึก #73 — `/implement T-01..08` (พัฒนาระบบจัดการงานและเส้นทางของซาเล้ง — Buyer 04)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/implement T-01..08` (อ้างอิง `specs/buyer/04-job-and-route-management/tasks.md`)
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - **Backend Models & Schemas (`T-01`):** `backend/app/models/job_route_models.py` (Pydantic models, navigation URL builder), ขยาย `backend/app/core/supabase.py` (เพิ่ม `claim_order_occ`, `revert_order_to_pending`, `get_collector_active_jobs`), และชุดทดสอบ `backend/tests/test_T01_job_route_models.py`
+  - **Backend Services & APIs (`T-02`, `T-03`, `T-04`, `T-05`):**
+    - `backend/app/services/job_route_service.py` (Atomic claim ด้วย OCC version column, skip job, active queue พร้อม greedy route optimization, start transit S3 -> S4 พร้อมล็อกปุ่มยกเลิกผู้ขาย, collector cancel พร้อมคืนสถานะ S2 อัตโนมัติและบันทึก audit log)
+    - `backend/app/api/v1/job_route.py` (FastAPI router ติดตั้ง 5 endpoints ภายใต้ `/api/v1/collectors`)
+    - `backend/app/api/v1/pricing.py` (Mount router)
+  - **Backend Tests (`T-02` ถึง `T-05`):**
+    - `backend/tests/test_AC_B04_01_atomic_claim.py`
+    - `backend/tests/test_AC_B04_02_skip_job.py`
+    - `backend/tests/test_AC_B04_03_address_unmasking.py`
+    - `backend/tests/test_AC_B04_04_active_queue_route.py`
+    - `backend/tests/test_AC_B04_05_in_transit_lock.py`
+    - `backend/tests/test_AC_B04_06_collector_cancel.py`
+  - **Frontend API Client & Cache (`T-06`):**
+    - `frontend/src/services/jobRouteApi.js` (Methods: `claimJob`, `skipJob`, `getActiveQueue`, `startTransit`, `cancelJob`, พร้อมแคช `saleng_active_schedule_cache` และคิวออฟไลน์ `saleng_offline_transit_queue` พร้อม `idempotency_key`)
+    - `frontend/tests/jobRouteApi.test.mjs` (11 unit tests ผ่าน 100%)
+  - **Frontend React Components (`T-07`):**
+    - `frontend/src/components/ActiveJobCard.jsx` (ปุ่มนำทาง GPS, ปุ่มเริ่มเดินทาง, ปุ่มสละสิทธิ์ ทัชทาร์เก็ต >= 48px)
+    - `frontend/src/components/RouteOptimizationBar.jsx` (แถบ Waypoint timeline, ระยะทางรวม, ETA)
+    - `frontend/src/components/CollectorCancelModal.jsx` (Modal สละสิทธิ์ 4 เหตุผล พร้อมระบุหมายเหตุ)
+    - `frontend/src/components/ClaimConflictModal.jsx` (Modal แจ้งเตือนเมื่อเกิด 409 Conflict "มีผู้รับงานนี้แล้ว")
+    - `frontend/src/components/ActiveJobQueueView.jsx` (หน้ารวมคิวงานสะสม, แถบความจุรถ, และ Offline banner)
+  - **Frontend Component Tests & Integration E2E Suite (`T-08`):**
+    - `frontend/tests/AC-B04-01.test.jsx` (Single Collector Atomic Claim & 409 Conflict Modal)
+    - `frontend/tests/AC-B04-02.test.jsx` (Skip Job Option)
+    - `frontend/tests/AC-B04-03.test.jsx` (Address Unmasking & GPS Navigation Launch)
+    - `frontend/tests/AC-B04-04.test.jsx` (Active Queue & Route Ordering)
+    - `frontend/tests/AC-B04-05.test.jsx` (In-Transit Status Transition & Seller Cancel Lock)
+    - `frontend/tests/AC-B04-06.test.jsx` (Collector Cancellation with Automatic State Reversion)
+    - `backend/tests/test_e2e_buyer_job_route_management.py` (6 integration lifecycle tests)
+  - **Task Checklist:** อัปเดต `specs/buyer/04-job-and-route-management/tasks.md` เป็นสถานะ `completed` (`T-01..08` เป็น `[DONE]`)
+- **การตรวจสอบ 5 ด่านก่อนจบงาน:**
+  1. **สเปกตรง 100%:** ทุกฟังก์ชันรองรับ `UC-04`, `UC-09`, `UC-12`, `BR-02`, `BR-03`, `AC-B04-01..07` และการตัดสินใจ `D-B04-01..06` ครบถ้วน
+  2. **ไม่มีโค้ดเดาเอง:** นำทาง GPS ใช้ URL Scheme ภายนอก, Concurrency ใช้ OCC `version` column, ยกเลิกงานคืนสถานะ S2 และเคลียร์ `collector_id = None` ตามกฎ
+  3. **ไม่ละเมิด Constraints:** Mobile-first ปุ่มกด >= 48px (`REQ-UX-001`, `CC-01`), Offline cache & queue (`CC-05`, `REQ-OP-001`), PII Masking ก่อนรับงาน (`REQ-SEC-002`, `CC-06`), Audit Logging (`REQ-SEC-001`)
+  4. **Automated Tests ผ่าน 100%:**
+     - Backend (Pytest): **208 passed, 0 failed** (ครอบคลุมโมเดล, ทุก AC, และ E2E)
+     - Frontend (Vitest): **71 test files passed, 178 tests passed, 0 failed** (ครอบคลุม API client, ทุก AC component test)
+  5. **Zero Regression:** ชุดทดสอบเดิมทั้งหมดของระบบผู้ขาย (Seller 01-09) และระบบผู้ซื้อ (Buyer 01-03) ยังคงผ่าน 100% ไม่มีข้อผิดพลาด
+- **สถานะ:** ฟีเจอร์ Buyer 04: ระบบจัดการงานและเส้นทาง (`specs/buyer/04-job-and-route-management/`) พัฒนาและตรวจรับเสร็จสมบูรณ์ 100%
+
 
 ---
 
@@ -1584,3 +1859,118 @@
   5. **การไม่เกิด Regression:**
      - ชุดทดสอบเดิมทั้งหมดของระบบฝั่ง Seller และ Buyer 01, 02 ยังคงผ่าน 100%
 - **สถานะ:** การพัฒนา `T-01..08` เสร็จสมบูรณ์ พร้อมส่งมอบงานรอบ Buyer Feature 03
+
+
+---
+
+## บันทึก #70 — `/clarify specs/buyer/04-job-and-route-management/spec.md` (ตรวจความกำกวมรอบที่ 1 และสรุปการตัดสินใจ)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/clarify specs/buyer/04-job-and-route-management/spec.md`
+- **ไฟล์ที่อ่าน:** `specs/buyer/04-job-and-route-management/spec.md` (ฉบับร่างเดิม), `specs/SPEC-ROUTE/spec.md`, `specs/SPEC-ROUTE/rules.md`, `specs/SPEC-ROUTE/models.md`, `docs/srs/UC-04.md`, `specs/000-shared/constraints.md`
+- **จุดกำกวมที่พบและคำถามที่ถามทีม (`Q-01` ถึง `Q-06`):**
+  1. `Q-01` (`CC-04`, `BR-02`): กลไก Atomic Claim ในการป้องกันรับงานซ้ำ (ในร่างเดิมมี Redis Lock ซึ่งขัดกับข้อจำกัดกลาง `CC-04` ที่กำหนดให้ใช้ PostgreSQL OCC)
+  2. `Q-02` (`BR-03`, `REQ-CON-003`): ขอบเขต Route Optimization และจำนวนงานที่รับได้ในคิววิ่งสะสม
+  3. `Q-03` (`UC-09`, `CC-01`): รูปแบบการเชื่อมต่อระบบนำทาง GPS ใน Mobile-First Web SPA
+  4. `Q-04` (`BR-03`, `MD-STM-04`): วงจรชีวิตเมื่อซาเล้งกดยกเลิกงานในสถานะ `S3` หรือ `S4`
+  5. `Q-05` (`AC-S05-02`, `AC-S05-04`): ข้อมูลโปรไฟล์ซาเล้งที่ต้องเปิดเผยและส่งแจ้งเตือนให้ผู้ขายทราบเมื่อรับงาน
+  6. `Q-06` (`REQ-OP-001`, `CC-05`): พฤติกรรมตารางนัดหมายและการเปลี่ยนสถานะในโหมดออฟไลน์
+- **ข้อสรุปการตัดสินใจ (`D-B04-01` ถึง `D-B04-06`):**
+  - **`D-B04-01`:** ตัด Redis ออกและใช้ PostgreSQL Optimistic Concurrency Control (`version` column) ตาม `CC-04` และ `BR-02`
+  - **`D-B04-02`:** รับงานสะสมในสถานะ `S3` ได้ตราบใดที่น้ำหนักรวมไม่เกินความจุรถ `200 กก.` (`BR-03`) และจัดลำดับด้วย Nearest-Neighbor ตามช่วงเวลานัดหมาย
+  - **`D-B04-03`:** การนำทาง GPS ทำงานโดยเปิดแอปนำทางภายนอก (Google Maps / Apple Maps) ผ่าน URL Scheme มาตรฐาน
+  - **`D-B04-04`:** เมื่อซาเล้งกดยกเลิกในสถานะ `S3` ระบบจะคืนสถานะคำขอขายกลับเป็น `S2 (Pending)` อัตโนมัติ เพื่อให้ซาเล้งคนอื่นรับต่อได้ทันที และบันทึกลง `audit_logs`
+  - **`D-B04-05`:** เมื่อรับงานสำเร็จ ระบบจะผูกข้อมูลซาเล้งและส่ง Event แจ้งเตือนไปยังหน้าจอติดตามของผู้ขายทันที
+  - **`D-B04-06`:** แคชตารางงานลงใน `localStorage` ให้เปิดดูที่อยู่จริงและเบอร์โทรได้แม้ออฟไลน์ และเก็บคำขอเปลี่ยนสถานะใน `Offline Queue` พร้อม `idempotency_key`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/buyer/04-job-and-route-management/spec.md` (ปรับปรุงเป็น Version `2.0`, สถานะ `reviewed-post-clarify` ครบถ้วนทั้ง 5 ส่วนหลัก)
+- **สถานะ:** สเปกผ่านการ Clarify เรียบร้อย พร้อมเข้าสู่ขั้นตอน `/plan specs/buyer/04-job-and-route-management/spec.md`
+
+
+---
+
+## บันทึก #71 — `/plan specs/buyer/04-job-and-route-management/spec.md` (แผนสถาปัตยกรรมและการพัฒนาทางเทคนิค)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/plan specs/buyer/04-job-and-route-management/spec.md`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/buyer/04-job-and-route-management/plan.md` (Version `1.0`, สถานะ `ready-for-tasks`, ครบ 8 ส่วนหลักตามมาตรฐานโครงการ)
+- **ประเด็นสำคัญใน plan.md:**
+  1. **เทคโนโลยีที่ใช้:** ระบุกำกับชัดเจนว่า `"ทีมเลือกเอง ไม่ได้มาจาก spec"` (Python 3.11 + FastAPI, Pydantic v2, In-memory Supabase Database Adapter พร้อม OCC version column, React 18 + TailwindCSS Mobile-First SPA ปุ่ม >= 48px, Google Maps Deep Link URL Scheme, Pytest และ Vitest)
+  2. **สถาปัตยกรรมและกลไกสำคัญ (`D-B04-01` ถึง `D-B04-06`):**
+     - `D-B04-01`: ใช้ PostgreSQL Optimistic Concurrency Control (`version` column) ตรวจสอบเงื่อนไข Atomic Claim หากชนกันตอบกลับ HTTP 409 Conflict `"มีผู้รับงานนี้แล้ว"` ตาม `CC-04` และ `BR-02`
+     - `D-B04-02`: รองรับการรับงานสะสมในคิว (`S3`) ตราบใดที่น้ำหนักสะสมไม่เกิน 200 กก. (`BR-03`) และจัดลำดับเส้นทางด้วย Greedy Nearest-Neighbor
+     - `D-B04-03`: เชื่อมต่อระบบนำทาง GPS ด้วย Deep Link URL Scheme มาตรฐานเปิดแอปภายนอก (Google Maps / Apple Maps)
+     - `D-B04-04`: เมื่อซาเล้งกดยกเลิกในสถานะ `S3` คำขอขายจะคืนสถานะกลับเป็น `S2: รอผู้รับงาน` อัตโนมัติ เพื่อให้ซาเล้งอื่นรับต่อได้ทันที และบันทึกประวัติลง `audit_logs`
+     - `D-B04-05`: ส่ง Event แจ้งเตือนข้อมูลซาเล้ง (ชื่อ, เบอร์โทร, ประเภท/ทะเบียนรถ, รูปโปรไฟล์, คะแนนรีวิว) ไปยังหน้าจอติดตามของผู้ขาย (`AC-S05-02..04`)
+     - `D-B04-06`: แคชตารางงานลงใน `localStorage` ให้เปิดดูที่อยู่จริงและเบอร์โทรได้แม้ออฟไลน์ และเก็บคำสั่งเปลี่ยนสถานะใน `Offline Queue` พร้อม `idempotency_key`
+  3. **การออกแบบ API 5 เส้นทาง:** `POST /jobs/{id}/claim`, `POST /jobs/{id}/skip`, `GET /{saleng_id}/active-jobs`, `POST /jobs/{id}/start-transit`, `POST /jobs/{id}/cancel`
+  4. **การออกแบบ Frontend 5 คอมโพเนนต์:** `ActiveJobQueueView`, `ActiveJobCard`, `RouteOptimizationBar`, `CollectorCancelModal`, `ClaimConflictModal` (ทัชทาร์เก็ตทุกปุ่มสูง `>= 48px` ตาม `REQ-UX-001`)
+  5. **ตารางตรวจ Constraints กลาง:** ครบทั้ง 13 ข้อตาม `specs/000-shared/constraints.md` โดยไม่มีการละเว้น
+- **สถานะ:** แผน `plan.md` สมบูรณ์ พร้อมเข้าสู่ขั้นตอนการแตกงานย่อย `/tasks specs/buyer/04-job-and-route-management/plan.md`
+
+
+---
+
+## บันทึก #72 — `/tasks specs/buyer/04-job-and-route-management/plan.md` (รายการงานย่อยและ Two-way Traceability Matrix)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/tasks specs/buyer/04-job-and-route-management/plan.md`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/buyer/04-job-and-route-management/tasks.md` (แตกงานย่อย 8 งาน `T-01` ถึง `T-08` ครบทั้ง 6 คอลัมน์, พร้อมตาราง Two-way Traceability Matrix ครบทุกเกณฑ์ `AC-B04-01..07`, และตาราง Constraints Traceability ครบทั้ง 13 ข้อ)
+- **ประเด็นสำคัญใน tasks.md:**
+  1. **งานย่อย 8 งาน (`T-01` ถึง `T-08`):**
+     - `T-01`: สร้าง Data Models และ Schemas สำหรับระบบจัดการงานและเส้นทาง (`job_route_models.py`, ขยาย `supabase.py` เพิ่ม `claim_order_occ`, `revert_order_to_pending`, `get_collector_active_jobs`)
+     - `T-02`: สร้าง Service และ API กดรับงานแบบ Single Collector Atomic Claim (OCC version column) ป้องกันรับซ้ำ 409 Conflict และเปิดเผย PII (`AC-B04-01`, `AC-04-05`, `BR-02`, `CC-04`, `REQ-SEC-002`)
+     - `T-03`: สร้าง Service และ API ข้ามงาน (Skip Job คงสถานะ S2) และสร้าง URL Scheme เชื่อมต่อระบบนำทาง GPS Google Maps (`AC-B04-02`, `AC-B04-03`, `Extension A2`, `UC-09`, `D-B04-03`)
+     - `T-04`: สร้าง Service และ API คิวงานสะสมและการจัดลำดับเส้นทาง Route Optimization ตรวจสอบน้ำหนักสะสมไม่เกิน 200 กก. (`AC-B04-04`, `BR-03`, `REQ-CON-003`, `D-B04-02`)
+     - `T-05`: สร้าง Service และ API ออกเดินทาง (Start Transit S3 -> S4 ล็อกปุ่มยกเลิกผู้ขาย) และการยกเลิกงานคืนสถานะกลับ S2 อัตโนมัติ (`AC-B04-05`, `AC-B04-06`, `BR-03`, `MD-STM-04`, `D-B04-04`)
+     - `T-06`: สร้าง Frontend API Client และระบบแคชตารางนัดหมาย/คิวออฟไลน์ (`jobRouteApi.js`, `saleng_active_schedule_cache`, `offline_transit_queue` ตาม `CC-05`, `REQ-OP-001`, `D-B04-06`)
+     - `T-07`: พัฒนาคอมโพเนนต์ React ระบบจัดการงานและเส้นทาง Mobile-First SPA (Viewport 375px–414px, ทัชทาร์เก็ตปุ่มกด `>= 48px` ตาม `REQ-UX-001` และ `CC-01`: `ActiveJobQueueView`, `ActiveJobCard`, `RouteOptimizationBar`, `CollectorCancelModal`, `ClaimConflictModal`)
+     - `T-08`: สร้างชุดทดสอบหน้าจอ Vitest Component Tests (`AC-B04-01.test.jsx` ถึง `AC-B04-06.test.jsx`) และ Backend Integration E2E Test Suite (`test_e2e_buyer_job_route_management.py`)
+  2. **Two-way Traceability Matrix:** เกณฑ์การยอมรับครบทั้ง 7 ข้อ (`AC-B04-01` ถึง `AC-B04-07`) เชื่อมโยงกับงานย่อยและชื่อชุดทดสอบอย่างสมบูรณ์
+  3. **Constraints Traceability:** ตรวจสอบข้อจำกัดกลางทั้ง 13 ข้อตาม `specs/000-shared/constraints.md` ครบถ้วน
+- **สถานะ:** แตกงานย่อยเสร็จสมบูรณ์ พร้อมสำหรับการเริ่มพัฒนางานย่อยในขั้นตอน `/implement T-01..08`
+
+---
+
+## บันทึก #73 — `/implement T-01..08` (พัฒนาระบบจัดการงานและเส้นทางของซาเล้ง — Buyer 04)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/implement T-01..08` (อ้างอิง `specs/buyer/04-job-and-route-management/tasks.md`)
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - **Backend Models & Schemas (`T-01`):** `backend/app/models/job_route_models.py` (Pydantic models, navigation URL builder), ขยาย `backend/app/core/supabase.py` (เพิ่ม `claim_order_occ`, `revert_order_to_pending`, `get_collector_active_jobs`), และชุดทดสอบ `backend/tests/test_T01_job_route_models.py`
+  - **Backend Services & APIs (`T-02`, `T-03`, `T-04`, `T-05`):**
+    - `backend/app/services/job_route_service.py` (Atomic claim ด้วย OCC version column, skip job, active queue พร้อม greedy route optimization, start transit S3 -> S4 พร้อมล็อกปุ่มยกเลิกผู้ขาย, collector cancel พร้อมคืนสถานะ S2 อัตโนมัติและบันทึก audit log)
+    - `backend/app/api/v1/job_route.py` (FastAPI router ติดตั้ง 5 endpoints ภายใต้ `/api/v1/collectors`)
+    - `backend/app/api/v1/pricing.py` (Mount router)
+  - **Backend Tests (`T-02` ถึง `T-05`):**
+    - `backend/tests/test_AC_B04_01_atomic_claim.py`
+    - `backend/tests/test_AC_B04_02_skip_job.py`
+    - `backend/tests/test_AC_B04_03_address_unmasking.py`
+    - `backend/tests/test_AC_B04_04_active_queue_route.py`
+    - `backend/tests/test_AC_B04_05_in_transit_lock.py`
+    - `backend/tests/test_AC_B04_06_collector_cancel.py`
+  - **Frontend API Client & Cache (`T-06`):**
+    - `frontend/src/services/jobRouteApi.js` (Methods: `claimJob`, `skipJob`, `getActiveQueue`, `startTransit`, `cancelJob`, พร้อมแคช `saleng_active_schedule_cache` และคิวออฟไลน์ `saleng_offline_transit_queue` พร้อม `idempotency_key`)
+    - `frontend/tests/jobRouteApi.test.mjs` (11 unit tests ผ่าน 100%)
+  - **Frontend React Components (`T-07`):**
+    - `frontend/src/components/ActiveJobCard.jsx` (ปุ่มนำทาง GPS, ปุ่มเริ่มเดินทาง, ปุ่มสละสิทธิ์ ทัชทาร์เก็ต >= 48px)
+    - `frontend/src/components/RouteOptimizationBar.jsx` (แถบ Waypoint timeline, ระยะทางรวม, ETA)
+    - `frontend/src/components/CollectorCancelModal.jsx` (Modal สละสิทธิ์ 4 เหตุผล พร้อมระบุหมายเหตุ)
+    - `frontend/src/components/ClaimConflictModal.jsx` (Modal แจ้งเตือนเมื่อเกิด 409 Conflict "มีผู้รับงานนี้แล้ว")
+    - `frontend/src/components/ActiveJobQueueView.jsx` (หน้ารวมคิวงานสะสม, แถบความจุรถ, และ Offline banner)
+  - **Frontend Component Tests & Integration E2E Suite (`T-08`):**
+    - `frontend/tests/AC-B04-01.test.jsx` (Single Collector Atomic Claim & 409 Conflict Modal)
+    - `frontend/tests/AC-B04-02.test.jsx` (Skip Job Option)
+    - `frontend/tests/AC-B04-03.test.jsx` (Address Unmasking & GPS Navigation Launch)
+    - `frontend/tests/AC-B04-04.test.jsx` (Active Queue & Route Ordering)
+    - `frontend/tests/AC-B04-05.test.jsx` (In-Transit Status Transition & Seller Cancel Lock)
+    - `frontend/tests/AC-B04-06.test.jsx` (Collector Cancellation with Automatic State Reversion)
+    - `backend/tests/test_e2e_buyer_job_route_management.py` (6 integration lifecycle tests)
+  - **Task Checklist:** อัปเดต `specs/buyer/04-job-and-route-management/tasks.md` เป็นสถานะ `completed` (`T-01..08` เป็น `[DONE]`)
+- **การตรวจสอบ 5 ด่านก่อนจบงาน:**
+  1. **สเปกตรง 100%:** ทุกฟังก์ชันรองรับ `UC-04`, `UC-09`, `UC-12`, `BR-02`, `BR-03`, `AC-B04-01..07` และการตัดสินใจ `D-B04-01..06` ครบถ้วน
+  2. **ไม่มีโค้ดเดาเอง:** นำทาง GPS ใช้ URL Scheme ภายนอก, Concurrency ใช้ OCC `version` column, ยกเลิกงานคืนสถานะ S2 และเคลียร์ `collector_id = None` ตามกฎ
+  3. **ไม่ละเมิด Constraints:** Mobile-first ปุ่มกด >= 48px (`REQ-UX-001`, `CC-01`), Offline cache & queue (`CC-05`, `REQ-OP-001`), PII Masking ก่อนรับงาน (`REQ-SEC-002`, `CC-06`), Audit Logging (`REQ-SEC-001`)
+  4. **Automated Tests ผ่าน 100%:**
+     - Backend (Pytest): **208 passed, 0 failed** (ครอบคลุมโมเดล, ทุก AC, และ E2E)
+     - Frontend (Vitest): **71 test files passed, 178 tests passed, 0 failed** (ครอบคลุม API client, ทุก AC component test)
+  5. **Zero Regression:** ชุดทดสอบเดิมทั้งหมดของระบบผู้ขาย (Seller 01-09) และระบบผู้ซื้อ (Buyer 01-03) ยังคงผ่าน 100% ไม่มีข้อผิดพลาด
+- **สถานะ:** ฟีเจอร์ Buyer 04: ระบบจัดการงานและเส้นทาง (`specs/buyer/04-job-and-route-management/`) พัฒนาและตรวจรับเสร็จสมบูรณ์ 100%

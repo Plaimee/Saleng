@@ -1425,6 +1425,66 @@ class SupabaseStore:
             order_copy["location"] = self.pickup_locations.get(loc_id)
         return order_copy
 
+    def claim_order_occ(self, order_id: str, saleng_id: str, expected_version: int) -> dict:
+        """
+        กดรับงานแบบ Atomic ด้วย Optimistic Concurrency Control (OCC) (BR-02, CC-04, D-B04-01)
+        หากชนกันหรือมีผู้รับไปแล้วจะ raise ValueError
+        """
+        order = self.orders.get(order_id)
+        if not order:
+            raise KeyError(f"ไม่พบคำขอขายรหัส {order_id}")
+
+        current_status = order.get("status")
+        if current_status != "S2":
+            raise ValueError(f"คำขอขายนี้ไม่อยู่ในสถานะรอผู้รับงาน (สถานะปัจจุบัน: {current_status}) มีผู้รับงานนี้แล้ว")
+
+        current_version = order.get("version", 1)
+        if current_version != expected_version:
+            raise ValueError(f"ข้อมูลคำขอขายถูกแก้ไขโดยผู้ใช้อื่นแล้ว (version mismatch: {current_version} != {expected_version}) มีผู้รับงานนี้แล้ว")
+
+        now = datetime.now(timezone.utc).isoformat()
+        order["status"] = "S3"
+        order["collector_id"] = saleng_id
+        order["assigned_saleng_id"] = saleng_id
+        order["version"] = current_version + 1
+        order["claimed_at"] = now
+        order["updated_at"] = now
+        return order
+
+    def revert_order_to_pending(self, order_id: str, saleng_id: str, reason: str, note: Optional[str] = None) -> dict:
+        """
+        คืนสถานะคำขอขายกลับเป็น S2 (Pending) เมื่อซาเล้งกดยกเลิกในสถานะ S3 (D-B04-04, MD-STM-04)
+        """
+        order = self.orders.get(order_id)
+        if not order:
+            raise KeyError(f"ไม่พบคำขอขายรหัส {order_id}")
+
+        current_collector = order.get("collector_id") or order.get("assigned_saleng_id")
+        if current_collector != saleng_id:
+            raise ValueError("คุณไม่ใช่ผู้รับผิดชอบคำขอขายนี้ จึงไม่สามารถยกเลิกได้")
+
+        now = datetime.now(timezone.utc).isoformat()
+        order["status"] = "S2"
+        order["collector_id"] = None
+        order["assigned_saleng_id"] = None
+        order["version"] = order.get("version", 1) + 1
+        order["cancel_reason"] = reason
+        order["cancel_note"] = note
+        order["cancelled_at"] = now
+        order["updated_at"] = now
+        return order
+
+    def get_collector_active_jobs(self, saleng_id: str) -> List[dict]:
+        """
+        ดึงรายการงานทั้งหมดในคิวของซาเล้งที่อยู่ในสถานะ S3 (Assigned) หรือ S4 (In-Transit)
+        """
+        active_jobs = []
+        for o in self.orders.values():
+            o_collector = o.get("collector_id") or o.get("assigned_saleng_id")
+            if o_collector == saleng_id and o.get("status") in ("S3", "S4"):
+                active_jobs.append(dict(o))
+        return active_jobs
+
 
 # Singleton instance สำหรับเข้าถึง Database
 supabase_store = SupabaseStore()
