@@ -1356,6 +1356,75 @@ class SupabaseStore:
             return [l for l in self.audit_logs if l.get("action") == action_filter]
         return list(self.audit_logs)
 
+    # -------------------------------------------------------------
+    # ระบบประเมินงานและค่าน้ำมันก่อนรับ (Buyer 03: Pre-Acceptance Evaluation, UC-04, Card 02)
+    # -------------------------------------------------------------
+
+    def get_saleng_current_load(self, saleng_id: str) -> float:
+        """คำนวณน้ำหนักบรรทุกปัจจุบันในรถซาเล้ง (กก.) ตามกฎ BR-03"""
+        profile = self.saleng_profiles.get(saleng_id)
+        if not profile:
+            return 0.0
+
+        # หากมี current_load_kg ระบุไว้โดยตรงในโปรไฟล์
+        if "current_load_kg" in profile and profile["current_load_kg"] is not None:
+            return float(profile["current_load_kg"])
+
+        # รวมน้ำหนักของงานในมือที่กำลังวิ่งไปรับ (สถานะ S3 หรือ S4)
+        active_weight = 0.0
+        for o in self.orders.values():
+            if (
+                o.get("assigned_saleng_id") == saleng_id
+                or o.get("buyer_id") == saleng_id
+            ) and o.get("status") in ("S3", "S4"):
+                active_weight += float(o.get("total_est_weight_kg", 0.0))
+
+        return round(active_weight, 2)
+
+    def set_saleng_current_load(self, saleng_id: str, load_kg: float) -> Optional[dict]:
+        """กำหนดค่าน้ำหนักบรรทุกปัจจุบันของซาเล้งสำหรับการทดสอบและจำลองรอบวิ่ง (BR-03)"""
+        profile = self.saleng_profiles.get(saleng_id)
+        if not profile:
+            return None
+        profile["current_load_kg"] = round(float(load_kg), 2)
+        profile["updated_at"] = datetime.now(timezone.utc).isoformat()
+        return profile
+
+    def update_saleng_online_status(
+        self,
+        saleng_id: str,
+        is_online: bool,
+        current_lat: Optional[float] = None,
+        current_lng: Optional[float] = None,
+    ) -> Optional[dict]:
+        """สลับสถานะความพร้อมรับงาน Online / Offline และซิงก์พิกัดล่าสุด (CC-02)"""
+        profile = self.saleng_profiles.get(saleng_id)
+        if not profile:
+            return None
+        profile["is_online"] = is_online
+        if current_lat is not None:
+            profile["current_lat"] = current_lat
+        if current_lng is not None:
+            profile["current_lng"] = current_lng
+        profile["updated_at"] = datetime.now(timezone.utc).isoformat()
+        return profile
+
+    def get_order_evaluation_data(self, order_id: str) -> Optional[dict]:
+        """ดึงข้อมูลคำขอขายพร้อมรายการสิ่งของและพิกัดสำหรับใช้ประเมินงาน (Card 02)"""
+        order = self.orders.get(order_id)
+        if not order:
+            return None
+        order_copy = dict(order)
+        order_items = [item for item in self.items.values() if item.get("order_id") == order_id]
+        if not order_items and order.get("items"):
+            order_items = order.get("items")
+        order_copy["items"] = order_items
+
+        loc_id = order.get("location_id")
+        if loc_id:
+            order_copy["location"] = self.pickup_locations.get(loc_id)
+        return order_copy
+
 
 # Singleton instance สำหรับเข้าถึง Database
 supabase_store = SupabaseStore()

@@ -1470,3 +1470,117 @@
      - ปุ่มกดบนหน้าจอมือถือมีขนาดความสูงไม่น้อยกว่า `48px` ทุกปุ่มตาม `REQ-UX-001`
      - ซาเล้งที่ยังไม่ผ่าน KYC สามารถเปิดดูงานและแผนที่ได้ แต่ถูกล็อกปุ่มรับงานด้วย Informative Gate Modal ตาม `D-00-01`
   5. **การบันทึกผล:** อัปเดตสถานะ `tasks.md` เป็น `completed` พร้อมเครื่องหมาย `[DONE]` ครบทุกงานย่อย และบันทึกลง `prompt-log.md` เรียบร้อย
+
+
+---
+
+## บันทึก #66 — `/clarify specs/buyer/03-pre-acceptance-evaluation/spec.md` (การประเมินงานและค่าน้ำมันก่อนรับ)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/clarify specs/buyer/03-pre-acceptance-evaluation/spec.md`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/buyer/03-pre-acceptance-evaluation/spec.md` (ปรับปรุงจากฉบับร่างเดิมเป็น Version `2.0`, สถานะ `reviewed-post-clarify`, เพิ่มรายละเอียดขอบเขตงาน 7 ด้าน, Acceptance Criteria 5 ข้อ `AC-B03-01..05`, บันทึกข้อสรุปคำถาม `Q-01` ถึง `Q-06` / `D-B03-01` ถึง `D-B03-06`, และตารางตรวจสอบ Constraints กลางครบทั้ง 13 ข้อ)
+- **ประเด็นที่ค้นพบและข้อสรุปจากการ Clarify:**
+  1. **สูตรคิดค่าน้ำมันตามประเภทยานพาหนะ (`Q-01` / `D-B03-01`):** คำนวณจาก `road_distance_km * fuel_rate` โดยอิงตาม `vehicle_type` ของซาเล้ง: รถปั่น = 0.00 บ./กม., มอเตอร์ไซค์พ่วงข้าง = 2.50 บ./กม., รถกระบะ = 4.50 บ./กม. (Default = 2.50 บ./กม.)
+  2. **การรับมือเมื่อบริการแผนที่ภายนอกล้มเหลว (`Q-02` / `D-B03-02`):** ยึดตาม `CC-03` และ `REQ-OP-002` โดยสลับใช้สูตร `Haversine * 1.35` อัตโนมัติเมื่อบริการแผนที่ภายนอกช้าเกิน 1.5 วินาที พร้อมแสดงป้ายโหมดสำรอง
+  3. **การตรวจสอบความจุรถ (`Q-03` / `D-B03-03`):** นำน้ำหนักปัจจุบันในรถ (`current_load_kg`) + น้ำหนักประเมินของงานใหม่ เทียบกับ `max_capacity_kg` เพื่อจัดสรรพื้นที่รถได้ถูกต้องตาม `BR-03`
+  4. **การบล็อกปุ่มรับงานเมื่อเกินความจุ (`Q-04` / `D-B03-04`):** หากน้ำหนักสะสมรวมเกินความจุรถ ให้เปลี่ยนแถบความจุเป็นสีแดง และ **Disable ปุ่มกดรับงาน** พร้อมแจ้งเตือนให้เคลียร์รอบวิ่งก่อน
+  5. **สถานะ Offline (`Q-05` / `D-B03-05`):** ซาเล้งสถานะ Offline สามารถเปิดดูรายละเอียดและประเมินงานได้ แต่ปุ่มรับงานจะถูกล็อกพร้อมข้อความเตือนให้สลับเป็น Online ก่อน
+  6. **Unverified KYC Gate (`Q-06` / `D-B03-06`):** ซาเล้งที่ยังไม่ผ่าน KYC สามารถดูรายละเอียดงานได้ แต่ปุ่มรับงานจะล็อกด้วยรูปแม่กุญแจ 🔒 และมี Informative Gate Modal นำทางไปยื่นเอกสาร KYC ตามกฎ `D-00-01`
+- **สถานะ:** สเปก `spec.md` ได้รับการปรับปรุงเป็น Version `2.0` (reviewed-post-clarify) เรียบร้อยแล้ว พร้อมสำหรับขั้นตอนการจัดทำแผนพัฒนาทางเทคนิค `/plan`
+
+
+---
+
+## บันทึก #67 — `/plan specs/buyer/03-pre-acceptance-evaluation/spec.md` (แผนสถาปัตยกรรมและการพัฒนาทางเทคนิค)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/plan specs/buyer/03-pre-acceptance-evaluation/spec.md`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/buyer/03-pre-acceptance-evaluation/plan.md` (Version `1.0`, สถานะ `ready-for-tasks`, ออกแบบสถาปัตยกรรมระบบประเมินงานและค่าน้ำมันก่อนรับ, แผนผัง Mermaid Flowchart, การตัดสินใจเชิงเทคนิค `D-B03-01` ถึง `D-B03-06`, Data Models & Schemas, API Endpoints 3 เส้นทาง, แผนพัฒนาหน้าจอ 5 คอมโพเนนต์ Mobile-First SPA ปุ่ม >= 48px, และตารางตรวจสอบ Constraints กลางครบทั้ง 13 ข้อ)
+- **ประเด็นสำคัญใน plan.md:**
+  1. **เทคโนโลยีที่ใช้:** ระบุกำกับชัดเจนว่า `"ทีมเลือกเอง ไม่ได้มาจาก spec"` (Python 3.11 + FastAPI, In-memory Supabase/PostgreSQL Adapter, React 18 + TailwindCSS, Pytest, Vitest + RTL + JSDOM)
+  2. **สถาปัตยกรรมและการคำนวณ (`D-B03-01` ถึง `D-B03-06`):**
+     - `D-B03-01`: คำนวณค่าน้ำมันตามประเภทพาหนะ (`vehicle_type`): รถปั่น 0 บาท/กม., มอเตอร์ไซค์พ่วงข้าง 2.50 บาท/กม., รถกระบะ 4.50 บาท/กม. (Default 2.50 บาท/กม.)
+     - `D-B03-02`: ใช้ Dual-Engine Routing สลับใช้ `Haversine * 1.35` อัตโนมัติเมื่อแผนที่ภายนอกขัดข้อง พร้อม Flag `is_fallback_distance: true` ภายใน `<= 2.0s` (`CC-03`, `REQ-OP-002`)
+     - `D-B03-03` & `D-B03-04`: คำนวณน้ำหนักสะสม `current_load_kg + job_est_weight_kg` เทียบกับ `max_capacity_kg` (200 กก. ตาม `BR-03`, `REQ-CON-003`); หากเกินให้เปลี่ยนแถบความจุเป็นสีแดง และ Disable ปุ่มรับงาน
+     - `D-B03-05`: สลับสถานะ Online/Offline (CC-02); หาก Offline อนุญาตให้ดูรายละเอียดและประเมินค่าน้ำมันได้ แต่ล็อกปุ่มรับงาน
+     - `D-B03-06`: กฎเหล็ก Unverified Collector Gate (`D-00-01`); ซาเล้งที่ยังไม่ผ่าน KYC สามารถดูรายละเอียดได้ แต่ปุ่มรับงานล็อกด้วยรูปกุญแจ 🔒 และมี Gate Modal นำทางไป KYC
+  3. **ตารางตรวจ Constraints กลาง:** ครบทั้ง 13 ข้อตาม `specs/000-shared/constraints.md` สอดคล้องกับ SRS และ Mockup หน้า 62 (`Card 02`)
+- **สถานะ:** แผน `plan.md` พร้อมสำหรับการแตกงานย่อยในขั้นตอน `/tasks`
+
+
+---
+
+## บันทึก #68 — `/tasks specs/buyer/03-pre-acceptance-evaluation/plan.md` (รายการงานย่อยและ Two-way Traceability Matrix)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/tasks specs/buyer/03-pre-acceptance-evaluation/plan.md`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/buyer/03-pre-acceptance-evaluation/tasks.md` (แตกงานย่อย 8 งาน `T-01` ถึง `T-08` ครบทั้ง 6 คอลัมน์, พร้อมตาราง Two-way Traceability Matrix ครบทุกข้อ `AC-B03-01..05`, และตาราง Constraints Traceability ครบทั้ง 13 ข้อ)
+- **ประเด็นสำคัญใน tasks.md:**
+  1. **งานย่อย 8 งาน (`T-01` ถึง `T-08`):**
+     - `T-01`: สร้าง Data Models และ Schema สำหรับระบบประเมินงานและค่าน้ำมัน (`job_evaluation_models.py`, ฟังก์ชัน `calculate_fuel_cost`, ขยาย `supabase.py`)
+     - `T-02`: สร้าง Service และ API ประเมินระยะทางและค่าน้ำมันตามประเภทยานพาหนะ (`AC-B03-01`, `Card 02`, `REQ-FN-002`, `REQ-QA-002`, `AC-04-11`, `D-B03-01`)
+     - `T-03`: สร้างระบบสำรอง Dual-Engine Routing Fallback เมื่อบริการแผนที่ขัดข้อง (`AC-B03-02`, `CC-03`, `REQ-OP-002`, `D-B03-02`)
+     - `T-04`: สร้างระบบตรวจสอบความจุรถซาเล้งและการสลับสถานะ Online/Offline (`AC-B03-03`, `BR-03`, `REQ-CON-003`, `CC-02`, `D-B03-03..05`)
+     - `T-05`: สร้างระบบป้องกันข้อมูลส่วนบุคคล PII & Coordinate Protection และ KYC Gate (`AC-B03-04`, `AC-B03-05`, `REQ-SEC-002`, `D-00-01`, `D-00-02`)
+     - `T-06`: สร้าง Frontend API Client และระบบแคชการประเมินงานออฟไลน์ใน `localStorage` (`CC-05`, `REQ-OP-001`)
+     - `T-07`: พัฒนาคอมโพเนนต์ React ระบบประเมินงานและค่าน้ำมัน (Mobile-First SPA Viewport 375px–414px, ปุ่ม >= 48px ตาม `REQ-UX-001`, แถบความจุรถสะสม เขียว/ฟ้า/แดง)
+     - `T-08`: สร้างชุดทดสอบหน้าจอ Vitest Component Tests และ Backend Integration E2E Test Suite (`AC-B03-01..05`)
+  2. **Two-way Traceability Matrix:** เกณฑ์การยอมรับทุกข้อ (`AC-B03-01` ถึง `AC-B03-05`) เชื่อมโยงกับงานย่อยและชื่อไฟล์ชุดทดสอบอย่างครบถ้วน
+  3. **Constraints Traceability:** ตรวจสอบข้อจำกัดกลางทั้ง 13 ข้อตาม `specs/000-shared/constraints.md` ครบถ้วน
+- **สถานะ:** แตกงานย่อยเสร็จสมบูรณ์ พร้อมสำหรับการเริ่มพัฒนางานย่อยในขั้นตอน `/implement T-01..08`
+
+
+---
+
+## บันทึก #69 — `/implement T-01..08` (พัฒนาระบบประเมินงานและค่าน้ำมันก่อนรับ Buyer 03 ครบถ้วน)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/implement T-01..08`
+- **ขอบเขต:** พัฒนาระบบประเมินรายละเอียดคำขอขายและค่าน้ำมันก่อนรับงาน (Buyer Feature 03: `specs/buyer/03-pre-acceptance-evaluation/`) ตาม Use Case `UC-04` และ User Story `Card 02` บนหน้า 62
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - **Backend Models, Services, และ Router:**
+    - `backend/app/models/job_evaluation_models.py` (Pydantic models: `JobEvaluationResponse`, `EvaluatedItemSummary`, `CollectorStatusToggleRequest`, `CollectorCapacityResponse`, ฟังก์ชันคำนวณค่าน้ำมัน `calculate_fuel_cost` ตามประเภทรถ `TRICYCLE`, `MOTORCYCLE`, `PICKUP` ตาม `D-B03-01`)
+    - `backend/app/core/supabase.py` (เพิ่ม helper methods: `get_saleng_current_load`, `set_saleng_current_load`, `update_saleng_online_status`, `get_order_evaluation_data`)
+    - `backend/app/services/job_evaluation_service.py` (`JobEvaluationService` คำนวณระยะทางถนน ค่าน้ำมัน ความจุรถ ระบบสำรอง Dual-Engine Routing Fallback และการตัดข้อมูล PII)
+    - `backend/app/api/v1/job_evaluation.py` (FastAPI Router สำหรับ `GET /jobs/{order_id}/evaluate`, `PATCH /{saleng_id}/status`, `GET /{saleng_id}/capacity`)
+    - `backend/app/api/v1/pricing.py` (เมานต์ `job_evaluation_router` เข้ากับ `/api/v1/collectors`)
+  - **Backend Tests (Unit, Acceptance, Integration E2E):**
+    - `backend/tests/test_T01_job_evaluation_models.py` (3 tests passed)
+    - `backend/tests/test_AC_B03_01_fuel_cost_estimation.py` (2 tests passed)
+    - `backend/tests/test_AC_B03_02_routing_timeout_fallback.py` (1 test passed)
+    - `backend/tests/test_AC_B03_03_capacity_and_online_toggle.py` (3 tests passed)
+    - `backend/tests/test_AC_B03_04_pii_masking.py` (2 tests passed)
+    - `backend/tests/test_e2e_buyer_pre_acceptance_evaluation.py` (6 tests passed)
+  - **Frontend Services และ Components:**
+    - `frontend/src/services/jobEvaluationApi.js` (API Client รองรับการดึงข้อมูลประเมิน แคชออฟไลน์ใน `localStorage`, สลับสถานะ Online/Offline, ตรวจสอบความจุรถ)
+    - `frontend/src/components/CapacityIndicatorBar.jsx` (แถบแสดงความจุรถสะสม current + job เทียบกับ max 200 กก. พร้อมเตือนสีแดงเมื่อน้ำหนักเกินตาม `BR-03`, `REQ-CON-003`)
+    - `frontend/src/components/OnlineStatusToggle.jsx` (สวิตช์เปิด/ปิด Online/Offline ขนาด >= 48px ตาม `REQ-UX-001`, `CC-01`, `CC-02`)
+    - `frontend/src/components/FuelCostEstimateCard.jsx` (การ์ดแสดงระยะทางถนนจริง ความคลาดเคลื่อน <= 15% ค่าน้ำมันตามประเภทรถ และป้ายสำรอง `⚡ ระยะทางประเมินสำรอง`)
+    - `frontend/src/components/BulkyItemDetailList.jsx` (รายการของเก่าที่จะขาย รูปถ่าย `REQ-FN-004` และป้ายขอคนช่วยยก `need_lifting_help`)
+    - `frontend/src/components/JobEvaluationView.jsx` (หน้าจอหลักรวบรวมทุกคอมโพเนนต์ พร้อม Fixed Bottom Action Bar ขนาด >= 48px รองรับ 4 สถานะ: KYC Locked, Offline Disabled, Overload Disabled, Normal Claim และ KYC Gate Modal ตาม `D-00-01`)
+  - **Frontend Tests (Vitest + RTL):**
+    - `frontend/tests/jobEvaluationApi.test.mjs` (5 tests passed)
+    - `frontend/tests/AC-B03-01.test.jsx` (2 tests passed)
+    - `frontend/tests/AC-B03-02.test.jsx` (2 tests passed)
+    - `frontend/tests/AC-B03-03.test.jsx` (3 tests passed)
+    - `frontend/tests/AC-B03-04.test.jsx` (1 test passed)
+    - `frontend/tests/AC-B03-05.test.jsx` (1 test passed)
+  - **Tasks:**
+    - `specs/buyer/03-pre-acceptance-evaluation/tasks.md` (ปรับสถานะเป็น `completed`, มาร์ก `T-01` ถึง `T-08` เป็น `[DONE]`)
+- **การตรวจสอบ 5 ด่านก่อนจบงาน (5-point verification checklist):**
+  1. **ความครบถ้วนของ Automated Tests:**
+     - Backend (Pytest): ผ่าน 189/189 ข้อ (100% pass)
+     - Frontend (Vitest): ผ่าน 155/155 ข้อ (100% pass)
+  2. **ความตรงตามสเปก (`spec.md` v2.0):**
+     - คำนวณค่าน้ำมันตรงตามประเภทรถ (`D-B03-01`): รถซาเล้งถีบ 0.00 บ./กม., มอเตอร์ไซค์พ่วงข้าง 2.50 บ./กม., รถกระบะ 4.50 บ./กม.
+     - ระบบสำรอง Dual-Engine Routing Fallback (`Haversine * 1.35`) เมื่อช้ากว่า 1.5 วินาที พร้อมส่ง Flag `is_fallback_distance: true` (`CC-03`, `REQ-OP-002`)
+     - ตรวจสอบน้ำหนักสะสมเกิน 200 กก. บล็อกรับงานด้วย `CAPACITY_EXCEEDED` (`BR-03`, `REQ-CON-003`)
+     - สลับสถานะ Online/Offline และบล็อกรับงานเมื่อ Offline (`CC-02`, `D-B03-05`)
+     - ซ่อนข้อมูลส่วนบุคคล PII และพิกัดจริง 100% ด้วย Coordinate Fuzzing (±300–500 ม.) (`REQ-SEC-002`, `D-00-02`, `CC-06`)
+     - ซาเล้งที่ยังไม่ผ่าน KYC สามารถเปิดดูรายละเอียดได้ แต่ปุ่มรับงานล็อก 🔒 และเปิด Gate Modal นำทางไป KYC (`D-00-01`, `AC-B03-05`)
+  3. **การปฏิบัติตาม Constraints กลาง:**
+     - รองรับ `CC-01..06`, `REQ-SEC-001..002`, `REQ-OP-001..002`, `D-00-01..03` ครบถ้วน
+  4. **การตรวจสอบย้อนกลับและชื่ออ้างอิง:**
+     - ฟังก์ชันและชุดทดสอบตั้งชื่ออ้างอิง `AC-B03-01..05`, `T-01..08` ตรงตามข้อกำหนด
+  5. **การไม่เกิด Regression:**
+     - ชุดทดสอบเดิมทั้งหมดของระบบฝั่ง Seller และ Buyer 01, 02 ยังคงผ่าน 100%
+- **สถานะ:** การพัฒนา `T-01..08` เสร็จสมบูรณ์ พร้อมส่งมอบงานรอบ Buyer Feature 03
