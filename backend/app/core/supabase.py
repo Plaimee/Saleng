@@ -4,7 +4,7 @@ Supabase Client & Data Access Layer
 """
 
 from datetime import datetime, timezone, timedelta
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 import uuid
 import re
 from backend.app.core.config import settings
@@ -40,6 +40,8 @@ class SupabaseStore:
         self.collector_kyc_submissions: Dict[str, dict] = {}
         self.audit_logs: List[dict] = []
         self.chat_messages: List[dict] = []
+        self.collector_favorite_sellers: List[dict] = []
+        self.dispute_reports: Dict[str, dict] = {}
         self._seed_default_benchmark_prices()
         self._seed_default_scrap_categories()
         self._seed_default_saleng_profiles()
@@ -110,7 +112,7 @@ class SupabaseStore:
             },
         ]
         for p in default_prices:
-            self.benchmark_prices[p["category_code"]] = p
+            self.benchmark_prices[str(p["category_code"])] = p
 
     def _seed_default_scrap_categories(self):
         """กำหนดหมวดหมู่ของเก่าและคู่มือภาพ 3 กลุ่มหลักตาม spec.md และ Card 03"""
@@ -213,7 +215,7 @@ class SupabaseStore:
             },
         ]
         for c in categories:
-            self.scrap_categories[c["category_code"]] = c
+            self.scrap_categories[str(c["category_code"])] = c
 
     def _seed_default_saleng_profiles(self):
         """กำหนดรายชื่อซาเล้งตั้งต้นที่ผ่าน KYC และเปิดรับงาน (UC-03, REQ-QA-001, D-00-01)"""
@@ -332,7 +334,7 @@ class SupabaseStore:
             },
         ]
         for p in profiles:
-            self.saleng_profiles[p["saleng_id"]] = p
+            self.saleng_profiles[str(p["saleng_id"])] = p
 
         # Seed favorite เบื้องต้นสำหรับ seller-01 -> saleng-01
         self.seller_favorites.append({
@@ -472,7 +474,10 @@ class SupabaseStore:
         order.update(updates)
         order["version"] = order.get("version", 1) + 1
         self.orders[order_id] = order
-        return self.get_order(order_id)
+        updated_order = self.get_order(order_id)
+        if updated_order is None:
+            raise ValueError(f"ไม่พบคำขอรหัส: {order_id}")
+        return updated_order
 
     def update_item(self, item_id: str, updates: dict) -> dict:
         item = self.items.get(item_id)
@@ -499,7 +504,7 @@ class SupabaseStore:
                 return r
         return None
 
-    def add_audit_log(self, action: str | dict, entity_id: str = "", actor_id: str = "", details: dict = None):
+    def add_audit_log(self, action: str | dict, entity_id: str = "", actor_id: str = "", details: Optional[dict] = None):
         if isinstance(action, dict):
             entry = action
             action = entry.get("action", "")
@@ -522,9 +527,12 @@ class SupabaseStore:
     # -------------------------------------------------------------------------
     def create_review(self, review_data: dict) -> dict:
         order_id = review_data.get("order_id")
+        if not order_id:
+            raise ValueError("review_data ต้องระบุ order_id")
+        order_id_str = str(order_id)
         # ตรวจสอบความซ้ำซ้อน: 1 คำขอ รีวิวได้ 1 ครั้ง (P-01, Q-02)
-        if self.get_review_by_order(order_id):
-            raise ValueError(f"คำขอรหัส {order_id} ได้รับการส่งรีวิวแล้ว")
+        if self.get_review_by_order(order_id_str):
+            raise ValueError(f"คำขอรหัส {order_id_str} ได้รับการส่งรีวิวแล้ว")
 
         review_id = review_data.get("id") or str(uuid.uuid4())
         review_data["id"] = review_id
@@ -534,7 +542,9 @@ class SupabaseStore:
         self.collector_reviews[review_id] = review_data
         return review_data
 
-    def get_review_by_order(self, order_id: str) -> Optional[dict]:
+    def get_review_by_order(self, order_id: Optional[str]) -> Optional[dict]:
+        if not order_id:
+            return None
         for r in self.collector_reviews.values():
             if r.get("order_id") == order_id:
                 return r
@@ -584,11 +594,13 @@ class SupabaseStore:
         )
 
     def get_seller_favorites(self, seller_id: str) -> List[str]:
-        return [
-            fav.get("collector_id") or fav.get("saleng_id")
-            for fav in self.seller_favorites
-            if fav["seller_id"] == seller_id
-        ]
+        favorites: List[str] = []
+        for fav in self.seller_favorites:
+            if fav.get("seller_id") == seller_id:
+                cid = fav.get("collector_id") or fav.get("saleng_id")
+                if cid is not None:
+                    favorites.append(str(cid))
+        return favorites
 
     # -------------------------------------------------------------------------
     # ระบบประวัติการขายที่ปิดงานสำเร็จ (Sales History - REQ-FN-005, AC-S07-03)
@@ -1577,6 +1589,69 @@ class SupabaseStore:
         order["payment_method"] = payment_method
         order["updated_at"] = datetime.now(timezone.utc).isoformat()
         return order
+
+    def get_collector_favorite_sellers(self, collector_id: str) -> List[dict]:
+        """
+        ดึงรายการลูกค้าประจำที่ซาเล้งปักหมุดไว้ (UC-10, AC-B07-02, D-B07-03)
+        """
+        return [fav for fav in self.collector_favorite_sellers if fav.get("collector_id") == collector_id]
+
+    def toggle_collector_favorite_seller(
+        self,
+        collector_id: str,
+        seller_id: str,
+        notes: Optional[str] = None,
+        lat: Optional[float] = None,
+        lng: Optional[float] = None,
+        seller_name: Optional[str] = None,
+        seller_phone_masked: Optional[str] = None,
+    ) -> Tuple[bool, dict]:
+        """
+        สลับสถานะลูกค้าประจำ (Toggle Bookmark: เพิ่มเข้า / ยกเลิกออก) (AC-B07-02)
+        """
+        existing_idx = next(
+            (idx for idx, f in enumerate(self.collector_favorite_sellers)
+             if f.get("collector_id") == collector_id and f.get("seller_id") == seller_id),
+            None
+        )
+
+        now = datetime.now(timezone.utc).isoformat()
+        if existing_idx is not None:
+            removed = self.collector_favorite_sellers.pop(existing_idx)
+            return False, removed
+        else:
+            # ดึงข้อมูลผู้ขายหากไม่ได้ส่งมา
+            seller = self.sellers.get(seller_id) or {}
+            raw_phone = seller.get("phone", "0812345678")
+            masked_phone = seller_phone_masked or (f"{raw_phone[:2]}X-XXX-{raw_phone[-4:]}" if len(raw_phone) >= 10 else "08X-XXX-XXXX")
+            s_name = seller_name or seller.get("display_name", f"ลูกค้า {seller_id}")
+
+            new_fav = {
+                "id": str(uuid.uuid4()),
+                "collector_id": collector_id,
+                "seller_id": seller_id,
+                "seller_name": s_name,
+                "seller_phone_masked": masked_phone,
+                "latitude": float(lat if lat is not None else seller.get("latitude", 13.7563)),
+                "longitude": float(lng if lng is not None else seller.get("longitude", 100.5018)),
+                "notes": notes or "",
+                "created_at": now,
+                "updated_at": now,
+            }
+            self.collector_favorite_sellers.append(new_fav)
+            return True, new_fav
+
+    def create_dispute_report(self, dispute_data: dict) -> dict:
+        """
+        บันทึกรายงานข้อพิพาทหน้างาน (UC-13, REQ-FN-006, AC-B07-03, D-B07-01)
+        """
+        dispute_id = dispute_data.get("dispute_id") or f"DISP-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{str(uuid.uuid4())[:4].upper()}"
+        dispute_data["dispute_id"] = dispute_id
+        if "created_at" not in dispute_data:
+            dispute_data["created_at"] = datetime.now(timezone.utc).isoformat()
+        dispute_data["status"] = dispute_data.get("status", "PENDING_ADMIN")
+        self.dispute_reports[dispute_id] = dispute_data
+        return dispute_data
 
 
 # Singleton instance สำหรับเข้าถึง Database

@@ -2205,3 +2205,103 @@
   4. **Mockups:** โครงสร้างป้ายภาษาไทย, ขนาดปุ่มสัมผัส >= 48px, และแอตทริบิวต์ `data-req="UC-07"` ครบถ้วน
   5. **Non-goals:** ไม่มี In-App digital wallet หรือ payment gateway SDK ตามขอบเขต `D-B06-04` และบังคับใช้ Two-Party Safety Gate 100%
 - **สถานะ:** พัฒนาและตรวจรับระบบคิดเงินและออกใบเสร็จ Buyer 06 สำเร็จสมบูรณ์ พร้อมส่งมอบงาน
+
+---
+
+## บันทึก #82 — `/clarify specs/buyer/07-post-job/spec.md` (เคลียร์จุดกำกวมระบบหลังจบงาน Buyer 07)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/clarify specs/buyer/07-post-job/spec.md`
+- **ไฟล์ที่ AI อ่าน:** `AGENTS.md`, `specs/buyer/07-post-job/spec.md` (v1.0), `specs/000-shared/constraints.md`, `docs/srs/use-cases.md` (`UC-10`, `UC-13`), `specs/002-route/models.md` (`MD-STM-04`), `specs/seller/07-post-transaction/spec.md`
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/buyer/07-post-job/spec.md` (ยกระดับเป็น Version `2.0`, สถานะ `reviewed-post-clarify`, เพิ่มตาราง Resolved Questions `Q-01` ถึง `Q-06`)
+- **ประเด็นคำถามและข้อสรุปที่ทีมเห็นชอบ:**
+  1. `Q-01` (สถานะปลายทางของการรายงานผู้ขาย): เปลี่ยนสถานะเป็น `S8: Disputed` ส่งเรื่องเข้าคิว Admin (`UC-13`, `UC-11`) และปลดล็อกซาเล้งออกจากงานเพื่อไปรับงานถัดไปในคิวได้
+  2. `Q-02` (จุดที่รายงานผู้ขายได้): อนุญาตให้รายงานได้ทั้งในสถานะ `S3: En Route` (กรณี No-show) และ `S4: Weighing` (กรณีของปนเปื้อน/ไม่ตรงสเปกอย่างมาก)
+  3. `Q-03` (ข้อมูลลูกค้าประจำตาม PDPA): จัดเก็บลงตาราง `collector_favorite_sellers` ประกอบด้วย `collector_id`, `seller_id`, พิกัด (`latitude`, `longitude`), ป้ายชื่อ/บันทึกย่อส่วนตัว, และ Mask เบอร์โทรศัพท์เป็น `08X-XXX-XXXX` (`REQ-SEC-002`, `CC-06`)
+  4. `Q-04` (การให้คะแนนผู้ขาย): ซาเล้งไม่มีการให้คะแนนดาว 1–5 ดาวแก่ผู้ขาย แต่เน้นการปักหมุดลูกค้าประจำสำหรับผู้ขายที่ดี และรายงานข้อพิพาทเมื่อพบปัญหา
+  5. `Q-05` (สถิติสรุปสะสม): แสดงการ์ดสรุป 3 มิติ (รายจ่ายรวม, น้ำหนักรวม, จำนวนงานสำเร็จ) พร้อมตัวกรองรายวัน/รายเดือน และรายการคำขอ `S7` ที่เปิดดูใบเสร็จดิจิทัลได้
+  6. `Q-06` (Non-goals): ไม่ทำแชทคุยต่อหลังจบงาน (`S7`), ไม่ทำระบบจ่ายเงินชดเชยค่าเดินทางอัตโนมัติ, ไม่เปิดเผย PII ที่ไม่ Mask เกิน 24 ชม., และไม่ทำระบบรีวิวดาวผู้ขาย
+- **สถานะ:** เคลียร์จุดกำกวมเสร็จสมบูรณ์ สเปกพร้อมเข้าสู่ขั้นตอน `/plan specs/buyer/07-post-job/spec.md`
+
+---
+
+## บันทึก #83 — `/plan specs/buyer/07-post-job/spec.md` (วางแผนระบบหลังจบงานซาเล้ง Buyer 07)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/plan specs/buyer/07-post-job/spec.md`
+- **ไฟล์ที่ AI อ่าน:** `AGENTS.md`, `specs/buyer/07-post-job/spec.md` (v2.0), `specs/000-shared/constraints.md`, `docs/srs/use-cases.md` (`UC-10`, `UC-13`), `specs/002-route/models.md` (`MD-STM-04`)
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/buyer/07-post-job/plan.md` (สร้างเอกสารแผนสถาปัตยกรรม 8 ส่วนสมบูรณ์)
+- **ประเด็นสำคัญใน plan.md:**
+  1. **เทคโนโลยี:** Python 3.11 + FastAPI (Pydantic v2), Supabase / PostgreSQL (Optimistic Locking ด้วย `version`), React 18 + TailwindCSS (Mobile-First SPA, ปุ่มกดทัชทาร์เก็ต `>= 48px`), Pytest และ Vitest
+  2. **โครงสร้างไฟล์และตารางข้อมูล:**
+     - Data Models: `backend/app/models/post_job_models.py`
+     - Backend Service & API: `backend/app/services/post_job_service.py` และ `backend/app/api/v1/post_job.py`
+     - Database: `collector_favorite_sellers`, `dispute_reports`, `waste_pickup_orders`, `audit_logs`
+     - Frontend API Client & Components: `postJobApi.js`, `PurchaseHistoryCard.jsx`, `RegularCustomerList.jsx`, `SellerMismatchReportModal.jsx`, `PostJobCollectorView.jsx` (`data-req="UC-10"`)
+  3. **การออกแบบ API 4 เส้นทาง:**
+     - `GET /api/v1/collectors/post-job/history` (ประวัติรับซื้อ + สถิติสะสม 3 มิติ)
+     - `GET /api/v1/collectors/post-job/regular-customers` (รายชื่อลูกค้าประจำ)
+     - `POST /api/v1/collectors/post-job/regular-customers` (Toggle ปักหมุดลูกค้าประจำ)
+     - `POST /api/v1/collectors/post-job/report-mismatch` (รายงานข้อพิพาทหน้างาน S3/S4 -> S8)
+  4. **การปฏิบัติตาม Constraints กลาง:** ครบทั้ง 13 ข้อตาม `specs/000-shared/constraints.md` โดยเฉพาะ `CC-01` (ปุ่ม >= 48px), `CC-05` (Offline Cache ใน `localStorage`), `CC-06` (PDPA Masking เบอร์โทรเป็น `08X-XXX-XXXX` และซ่อนบ้านเลขที่เกิน 24 ชม.), `REQ-SEC-001` (Audit Logging), และ `D-00-01` (KYC Verified Gate)
+- **สถานะ:** แผน `plan.md` สมบูรณ์ พร้อมเข้าสู่ขั้นตอนการแตกงานย่อย `/tasks specs/buyer/07-post-job/plan.md`
+
+---
+
+## บันทึก #84 — `/tasks specs/buyer/07-post-job/plan.md` (แตกงานย่อยระบบหลังจบงานซาเล้ง Buyer 07)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/tasks specs/buyer/07-post-job/plan.md`
+- **ไฟล์ที่ AI อ่าน:** `AGENTS.md`, `specs/buyer/07-post-job/spec.md` (v2.0), `specs/buyer/07-post-job/plan.md` (v1.0), `specs/000-shared/constraints.md`, `docs/srs/use-cases.md` (`UC-10`, `UC-13`), `specs/002-route/models.md` (`MD-STM-04`)
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `specs/buyer/07-post-job/tasks.md` (แตกงานย่อย 8 งาน `T-01` ถึง `T-08` ครบทั้ง 6 คอลัมน์, พร้อมตาราง Two-way Traceability Matrix ครบทุกข้อ `AC-B07-01..05`, และตาราง Constraints Traceability ครบทั้ง 13 ข้อ)
+- **ประเด็นสำคัญใน tasks.md:**
+  1. **งานย่อย 8 งาน (`T-01` ถึง `T-08`):**
+     - `T-01`: สร้าง Data Models และ Schema สำหรับระบบหลังจบงานซาเล้ง (`post_job_models.py`, ขยาย `supabase.py` เพิ่มตาราง `collector_favorite_sellers`, `dispute_reports`, helper methods, และ `test_T01_post_job_models.py`)
+     - `T-02`: สร้าง Service และ API ประวัติการรับซื้อและสถิติสะสม 3 มิติ (`post_job_service.py`, `post_job.py`, `pricing.py`, `test_AC_B07_01_history_log.py`)
+     - `T-03`: สร้าง Service และ API จัดการลูกค้าประจำ (`collector_favorite_sellers`) และบันทึกย่อส่วนตัว (`post_job_service.py`, `post_job.py`, `test_AC_B07_02_regular_customer.py`)
+     - `T-04`: สร้าง Service และ API รายงานข้อพิพาทหน้างานกรณี No-show หรือของไม่ตรงสเปก เปลี่ยนสถานะเป็น `S8: Disputed` และปลดล็อกซาเล้ง (`post_job_service.py`, `post_job.py`, `test_AC_B07_03_seller_mismatch.py`)
+     - `T-05`: สร้าง Frontend API Client และระบบแคชออฟไลน์ (`postJobApi.js`, `postJobApi.test.mjs`, `CC-05`, `REQ-OP-001`)
+     - `T-06`: พัฒนาคอมโพเนนต์ React ระบบประวัติและลูกค้าประจำ (`PurchaseHistoryCard`, `RegularCustomerList`, `SellerMismatchReportModal`, `PostJobCollectorView` ทัชทาร์เก็ตทุกปุ่ม >= 48px ตาม `REQ-UX-001`, `CC-01`)
+     - `T-07`: สร้างชุดทดสอบหน้าจอ Vitest Component Tests สำหรับระบบหลังจบงาน (`AC-B07-01.test.jsx`, `AC-B07-02.test.jsx`, `AC-B07-03.test.jsx`)
+     - `T-08`: สร้างชุดทดสอบ Integration E2E Test Suite เต็มวงรอบ (`test_e2e_buyer_post_job.py`)
+  2. **Two-way Traceability Matrix:** เกณฑ์การยอมรับทุกข้อ (`AC-B07-01` ถึง `AC-B07-05`) เชื่อมโยงกับงานย่อยและชื่อไฟล์ชุดทดสอบอย่างครบถ้วน
+  3. **Constraints Traceability:** ตรวจสอบข้อจำกัดกลางทั้ง 13 ข้อตาม `specs/000-shared/constraints.md` ครบถ้วน
+- **สถานะ:** แตกงานย่อยเสร็จสมบูรณ์ พร้อมสำหรับการเริ่มพัฒนางานย่อยในขั้นตอน `/implement T-01..08`
+
+
+---
+
+## บันทึก #85 — `/implement T-01..08` (พัฒนาระบบหลังจบงานซาเล้ง Buyer 07: Post-Job Management)
+- **วันที่:** 2026-11-04
+- **คำสั่งที่ใช้:** `/implement T-01..08`
+- **ไฟล์ที่ AI อ่าน:** `AGENTS.md`, `specs/buyer/07-post-job/spec.md` (v2.0), `specs/buyer/07-post-job/plan.md` (v1.0), `specs/buyer/07-post-job/tasks.md` (v1.0), `specs/000-shared/constraints.md`, `docs/srs/use-cases.md` (`UC-10`, `UC-13`), `specs/002-route/models.md` (`MD-STM-04`)
+- **ไฟล์ที่สร้าง/แก้ไข:**
+  - `backend/app/models/post_job_models.py` (สร้าง Data Models และ Pydantic v2 schemas: PurchaseHistorySummary, PurchaseHistoryItem, PurchaseHistoryResponse, RegularCustomerItem, ToggleRegularCustomerRequest, ToggleRegularCustomerResponse, ReportSellerMismatchRequest, ReportSellerMismatchResponse)
+  - `backend/app/core/supabase.py` (ขยาย mock Supabase store เพิ่มตาราง `collector_favorite_sellers`, `dispute_reports`, helper methods: `get_collector_favorite_sellers`, `toggle_collector_favorite_seller`, `create_dispute_report`)
+  - `backend/app/services/post_job_service.py` (สร้าง Service ตรรกะธุรกิจหลังจบงาน: ดึงประวัติ S7 พร้อมสรุปสถิติ 3 มิติ, กรอง All/Today/Month, PII masking 08X-XXX-XXXX, จัดการลูกค้าประจำพร้อมพิกัดและบันทึกย่อ <= 200 ตัวอักษร, รายงานข้อพิพาทหน้างาน S3/S4 -> S8: Disputed พร้อมปลดล็อก active_collector_lock และ Audit Logging REQ-SEC-001)
+  - `backend/app/api/v1/post_job.py` (สร้าง FastAPI Router 4 endpoints: GET /history, GET /regular-customers, POST /regular-customers, POST /report-mismatch พร้อม KYC gate D-00-01)
+  - `backend/app/api/v1/pricing.py` (เมานต์ post_job.router เข้ากับ API v1)
+  - `backend/tests/test_T01_post_job_models.py` (ชุดทดสอบ Pydantic models & Store methods 4 เคส: ผ่าน 100%)
+  - `backend/tests/test_AC_B07_01_history_log.py` (ชุดทดสอบประวัติรับซื้อ สถิติสะสม 3 มิติ และ PII masking 3 เคส: ผ่าน 100%)
+  - `backend/tests/test_AC_B07_02_regular_customer.py` (ชุดทดสอบลูกค้าประจำ Toggle & Notes 2 เคส: ผ่าน 100%)
+  - `backend/tests/test_AC_B07_03_seller_mismatch.py` (ชุดทดสอบรายงานข้อพิพาท S3/S4 -> S8 และปลดล็อกซาเล้ง 4 เคส: ผ่าน 100%)
+  - `backend/tests/test_e2e_buyer_post_job.py` (Integration E2E test ครอบคลุมวงจร S7 history, favorite seller, dispute S3/S4->S8, audit logs 1 เคส: ผ่าน 100%)
+  - `frontend/src/services/postJobApi.js` (สร้าง API client สำหรับฝั่งหน้าบ้าน พร้อม LocalStorage caching CC-05, REQ-OP-001)
+  - `frontend/src/components/PurchaseHistoryCard.jsx` (คอมโพเนนต์แสดงผลประวัติรับซื้อ S7, สถิติสะสม 3 มิติ, ปุ่มดูใบเสร็จ, ปุ่มปักหมุดลูกค้าประจำ ทัชทาร์เก็ต >= 48px REQ-UX-001)
+  - `frontend/src/components/RegularCustomerList.jsx` (คอมโพเนนต์รายชื่อลูกค้าประจำ พร้อมบันทึกย่อส่วนตัว ปุ่มนำทางพิกัด และปุ่มลบ)
+  - `frontend/src/components/SellerMismatchReportModal.jsx` (คอมโพเนนต์โมดอลรายงานข้อพิพาทหน้างาน บังคับแนบรูปหลักฐาน REQ-FN-006 ทัชทาร์เก็ต >= 48px)
+  - `frontend/src/components/PostJobCollectorView.jsx` (หน้าจอหลักรวบรวมประวัติและลูกค้าประจำ กำกับ data-req="UC-10")
+  - `frontend/tests/postJobApi.test.mjs` (ชุดทดสอบ API client & Offline cache 6 เคส: ผ่าน 100%)
+  - `frontend/tests/AC-B07-01.test.jsx` (Vitest UI Component Test: ประวัติรับซื้อ, สถิติ 3 มิติ, ตัวกรอง, PII masking 2 เคส: ผ่าน 100%)
+  - `frontend/tests/AC-B07-02.test.jsx` (Vitest UI Component Test: ปักหมุดลูกค้าประจำ, บันทึกย่อ Notes 3 เคส: ผ่าน 100%)
+  - `frontend/tests/AC-B07-03.test.jsx` (Vitest UI Component Test: โมดอลรายงานข้อพิพาทหน้างาน แนบรูปหลักฐาน 2 เคส: ผ่าน 100%)
+  - `specs/buyer/07-post-job/tasks.md` (อัปเดตสถานะ T-01 ถึง T-08 เป็น [DONE] และอัปเดตสถานะรวมเป็น completed)
+- **ผลการตรวจ 5 ด่านหลังจบงาน (Checkpoints):**
+  1. **Automated Tests:**
+     - Backend (Pytest): ผ่าน 100% รวม 265 passed, 0 failed ใน 0.94s
+     - Frontend (Vitest): ผ่าน 100% รวม 89 test files, 227 passed, 0 failed ใน 7.19s
+  2. **Constraints กลาง:** ปฏิบัติตามครบถ้วน (`CC-01` ทัชทาร์เก็ตปุ่มกด >= 48px, `CC-04` Optimistic concurrency, `CC-05` Offline Cache ใน LocalStorage, `CC-06` / `REQ-SEC-002` PII masking เบอร์โทร `08X-XXX-XXXX`, `D-00-01` KYC gate)
+  3. **Traceability:** ฟังก์ชันและคอมโพเนนต์ทุกชิ้นอ้างอิง `UC-10`, `UC-13`, `REQ-FN-005`, `REQ-FN-006`, `REQ-SEC-001`, `REQ-SEC-002`, `REQ-OP-001`, `REQ-UX-001`, `AC-B07-01..05` ครบถ้วน
+  4. **Mockups:** โครงสร้างป้ายภาษาไทย, ปุ่มกดขนาดใหญ่ >= 48px, และแอตทริบิวต์ `data-req="UC-10"` ครบถ้วน
+  5. **Non-goals:** ไม่มีแชทต่อหลัง S7, ไม่มีการจ่ายชดเชยค่าเดินทางอัตโนมัติ (เป็นดุลยพินิจ Admin ใน UC-13), ไม่เปิดเผย PII ที่ไม่ Mask เกิน 24 ชม., และไม่มีระบบรีวิวดาวผู้ขาย (ใช้ปักหมุดลูกค้าประจำแทน) ตาม `D-B07-04` และ `D-B07-06`
+- **สถานะ:** พัฒนาและตรวจรับระบบหลังจบงานซาเล้ง Buyer 07 สำเร็จสมบูรณ์ พร้อมส่งมอบงาน
