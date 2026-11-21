@@ -1,0 +1,340 @@
+/* Bold Golden Yellow / Jet Black / Crisp White (70-20-10) — Refined & Highly Readable */
+:root {
+  /* 70% Golden Yellow */
+  --sp-yellow: #ffc400;
+  --sp-yellow-bright: #ffd21f;
+  --sp-yellow-deep: #f59e0b;
+  --sp-yellow-surface: #fffdf2;
+  --sp-yellow-soft: #fef9c3;
+
+  /* 20% Jet Black */
+  --sp-black: #0a0a0a;
+  --sp-black-soft: #1f1f23;
+  --sp-muted: #6b7280;
+
+  /* 10% Pure White */
+  --sp-white: #ffffff;
+  --sp-border: #e5e7eb;
+}
+
+body {
+  background-color: var(--sp-yellow-surface);
+  color: var(--sp-black);
+  font-family: 'Prompt', -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Clean Readable Canvas with subtle Golden Top Band */
+.sp-page-bg {
+  background-color: var(--sp-yellow-surface);
+  color: var(--sp-black);
+}
+
+/* Main Header: Vibrant Golden Yellow */
+.sp-header-gradient {
+  background: linear-gradient(90deg, #ffba00 0%, #ffc800 55%, #ffd21f 100%);
+  color: var(--sp-black);
+  box-shadow: 0 2px 12px rgba(10, 10, 10, 0.08);
+}
+
+/* Top Utility Bar: Crisp Jet Black */
+.sp-topbar {
+  background: var(--sp-black);
+  color: var(--sp-white);
+}
+
+/* Auth Hero: Dominant Golden Yellow + Jet Black Diagonal Split */
+.sp-auth-hero {
+  background: linear-gradient(115deg, #ffae00 0%, #ffc400 48%, #ffd000 100%);
+  color: var(--sp-black);
+  position: relative;
+  overflow: hidden;
+}
+
+.sp-auth-hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 44%;
+  height: 100%;
+  background: var(--sp-black);
+  clip-path: polygon(28% 0, 100% 0, 100% 100%, 0% 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.sp-auth-hero::after {
+  content: '';
+  position: absolute;
+  bottom: -60px;
+  left: -60px;
+  width: 260px;
+  height: 260px;
+  border-radius: 9999px;
+  border: 18px solid rgba(10, 10, 10, 0.05);
+  pointer-events: none;
+  z-index: 0;
+}
+
+@media (max-width: 1023px) {
+  .sp-auth-hero::before {
+    width: 100%;
+    height: 45%;
+    top: auto;
+    bottom: 0;
+    clip-path: polygon(0 18%, 100% 0, 100% 100%, 0% 100%);
+  }
+}
+
+/* Bold Black Headline Stamp */
+.sp-hero-stamp {
+  display: inline-block;
+  background: var(--sp-black);
+  color: var(--sp-white);
+  padding: 6px 18px;
+  border-radius: 10px;
+  box-shadow: 4px 4px 0px rgba(255, 255, 255, 0.9);
+}
+
+/* Sleek Elevated Auth Card */
+.sp-auth-card {
+  background: var(--sp-white);
+  border-radius: 24px;
+  border: 1px solid rgba(10, 10, 10, 0.08);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25), 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+/* Segmented Pill Tabs inside Auth Card */
+.sp-segmented {
+  display: flex;
+  background: #f4f4f5;
+  padding: 4px;
+  border-radius: 9999px;
+  gap: 4px;
+}
+
+.sp-auth-tab {
+  flex: 1;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #71717a;
+  border-radius: 9999px;
+  transition: all 0.18s ease;
+}
+
+.sp-auth-tab:hover {
+  color: var(--sp-black);
+}
+
+.sp-auth-tab-active {
+  background: var(--sp-black);
+  color: var(--sp-white);
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(10, 10, 10, 0.2);
+}
+
+/* Primary CTA Button: Jet Black Pill */
+.sp-btn-primary {
+  background-color: var(--sp-black);
+  color: var(--sp-white);
+  border: none;
+  border-radius: 9999px;
+  font-weight: 700;
+  transition: background-color 0.15s ease, color 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+  box-shadow: 0 4px 12px rgba(10, 10, 10, 0.2);
+  min-height: 46px;
+}
+
+.sp-btn-primary:hover:not(:disabled) {
+  background-color: var(--sp-black-soft);
+  color: var(--sp-yellow-bright);
+}
+
+.sp-btn-primary:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.sp-btn-primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Crisp Modern Input */
+.sp-input {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 16px;
+  border: 1.5px solid #e4e4e7;
+  border-radius: 12px;
+  font-size: 14px;
+  color: var(--sp-black);
+  background: #fafafa;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.sp-input:focus {
+  outline: none;
+  background: var(--sp-white);
+  border-color: var(--sp-black);
+  box-shadow: 0 0 0 4px rgba(255, 196, 0, 0.35);
+}
+
+/* Clean Primary Nav Pills (4 Main Journey Tabs) */
+.sp-nav-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 9999px;
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(10, 10, 10, 0.8);
+  background: rgba(255, 255, 255, 0.45);
+  transition: all 0.16s ease;
+  white-space: nowrap;
+}
+
+.sp-nav-pill:hover {
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--sp-black);
+}
+
+.sp-nav-pill-active {
+  background: var(--sp-black);
+  color: var(--sp-yellow-bright);
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(10, 10, 10, 0.22);
+}
+
+.sp-nav-pill-active:hover {
+  background: var(--sp-black-soft);
+  color: var(--sp-white);
+}
+
+/* Clean Elevated Workspace Card (NO harsh black borders — calm & readable) */
+.sp-workspace-card {
+  background: var(--sp-white);
+  border-radius: 20px;
+  border: 1px solid rgba(10, 10, 10, 0.08);
+  box-shadow: 0 6px 24px rgba(10, 10, 10, 0.05);
+}
+
+/* Shopee-Style Order Status Underline Sub-Tabs */
+.sp-subtab {
+  position: relative;
+  padding: 12px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #6b7280;
+  border-bottom: 3px solid transparent;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.sp-subtab:hover {
+  color: var(--sp-black);
+}
+
+.sp-subtab-active {
+  color: var(--sp-black);
+  font-weight: 700;
+  border-bottom-color: var(--sp-yellow);
+  background: #fffdf5;
+}
+
+/* Journey Stepper Pills */
+.sp-step-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 14px;
+  border: 1.5px solid #e5e7eb;
+  background: #ffffff;
+  color: #52525b;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.15s ease;
+  text-align: left;
+}
+
+.sp-step-btn:hover {
+  border-color: #d4d4d8;
+  background: #fafafa;
+  color: var(--sp-black);
+}
+
+.sp-step-btn-active {
+  border-color: var(--sp-black);
+  background: #fef9c3;
+  color: var(--sp-black);
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(10, 10, 10, 0.08);
+}
+
+.sp-step-num {
+  width: 26px;
+  height: 26px;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+  background: #f4f4f5;
+  color: #52525b;
+  flex-shrink: 0;
+}
+
+.sp-step-btn-active .sp-step-num {
+  background: var(--sp-black);
+  color: var(--sp-yellow-bright);
+}
+
+/* Highlight cards on Golden Yellow Hero */
+.sp-hero-card {
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--sp-black);
+  border: 1px solid rgba(10, 10, 10, 0.12);
+  box-shadow: 0 6px 20px rgba(10, 10, 10, 0.08);
+}
+
+.sp-badge-dark {
+  background-color: var(--sp-black);
+  color: var(--sp-white);
+}
+
+.sp-logout-btn {
+  background: var(--sp-yellow);
+  color: var(--sp-black);
+  font-weight: 700;
+  border-radius: 9999px;
+  transition: background-color 0.15s ease;
+}
+
+.sp-logout-btn:hover {
+  background: var(--sp-white);
+}
+
+/* Mobile Bottom Bar: Jet Black Anchor with Golden Yellow Active */
+.sp-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--sp-black);
+  color: var(--sp-white);
+  border-top: 2px solid var(--sp-yellow);
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.16);
+  z-index: 40;
+}
+
+.sp-no-scrollbar::-webkit-scrollbar {
+  height: 4px;
+}
+.sp-no-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(10, 10, 10, 0.2);
+  border-radius: 9999px;
+}

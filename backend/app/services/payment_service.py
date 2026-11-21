@@ -159,9 +159,10 @@ class PaymentService:
         confirmed_at = datetime.now(timezone.utc).isoformat()
         total_settled = order.get("total_settled_amount", 0.0)
 
-        # ปลดล็อกและเปลี่ยนสถานะเป็น S6 (รอยืนยันชำระเงิน)
+        # ปลดล็อกและเปลี่ยนสถานะเป็น S6 (รอยืนยันชำระเงิน) พร้อมตั้งแฟล็ก seller_confirmed_weight ให้ฝั่งซาเล้ง
         self.store.update_order(order_id, {
             "status": "S6",
+            "seller_confirmed_weight": True,
             "seller_confirmed_weight_at": confirmed_at,
         })
 

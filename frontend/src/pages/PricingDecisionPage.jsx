@@ -16,6 +16,9 @@ import {
 export default function PricingDecisionPage({
   sellerId = "22222222-2222-2222-2222-222222222222",
   pickupLocationId = "33333333-3333-3333-3333-333333333333",
+  initialBasket = [],
+  showCalculator = true,
+  onOrderSubmitted,
   apiBaseUrl,
   fetchFn = fetch,
 }) {
@@ -25,7 +28,14 @@ export default function PricingDecisionPage({
     isOffline: false,
     offlineNotice: "",
   });
-  const [basket, setBasket] = useState([]);
+  const [basket, setBasket] = useState(() => initialBasket || []);
+
+  // ซิงก์รายการจากขั้นที่ 1 เข้าตะกร้าประเมินราคาอัตโนมัติ
+  useEffect(() => {
+    if (initialBasket && initialBasket.length > 0) {
+      setBasket(initialBasket);
+    }
+  }, [initialBasket]);
   const [isGuardModalOpen, setIsGuardModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(null);
@@ -99,6 +109,7 @@ export default function PricingDecisionPage({
         setIsGuardModalOpen(false);
         setOrderSuccess(result.data);
         setBasket([]);
+        if (onOrderSubmitted) onOrderSubmitted(result.data);
       } else if (result.error === "MINIMUM_THRESHOLD_NOT_MET") {
         // บล็อกและเปิดป๊อปอัปทางเลือก (AC-S04-03)
         setIsGuardModalOpen(true);
@@ -112,76 +123,98 @@ export default function PricingDecisionPage({
 
   return (
     <div
-      className="min-h-screen bg-gray-50 flex flex-col items-center p-3 sm:p-4 text-gray-800 font-sans"
+      className="w-full text-black font-sans space-y-5"
       data-req="CC-01"
       data-testid="pricing-decision-page"
     >
-      {/* Mobile-First Container (จำกัดกว้างสุด 420px สำหรับมือถือตาม CC-01) */}
-      <div className="w-full max-w-md">
-        {/* Header แพลตฟอร์ม */}
-        <header className="mb-3 text-center">
-          <div className="inline-block bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider mb-1">
-            Saleng Platform • ผู้ขาย
+      {/* Header Banner: Golden Yellow + Jet Black */}
+      <header className="rounded-2xl p-4 bg-yellow-400 border-2 border-black shadow-sm flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-black text-yellow-400 flex items-center justify-center text-xl flex-shrink-0">
+            💰
           </div>
-          <h1 className="text-lg font-black text-gray-900 tracking-tight">
-            ระบบราคาและการตัดสินใจ
-          </h1>
-          <p className="text-xs text-gray-500">
-            ตรวจสอบราคากลางรายวันและประเมินมูลค่าก่อนนัดหมาย
-          </p>
-        </header>
-
-        {/* ข้อความแจ้งเตือนความผิดพลาดทั่วไป */}
-        {generalError && (
-          <div className="bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl p-3 mb-3" data-testid="general-error-banner">
-            {generalError}
-          </div>
-        )}
-
-        {/* การ์ดความสำเร็จเมื่อส่งคำขอเสร็จสิ้น */}
-        {orderSuccess && (
-          <div className="bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-xl p-4 mb-4 text-center" data-testid="order-success-card">
-            <span className="text-3xl block mb-1">🎉</span>
-            <h4 className="font-bold text-sm mb-1">{orderSuccess.message}</h4>
-            <p className="text-xs text-emerald-700">
-              รหัสคำขอ: <span className="font-mono font-bold">{orderSuccess.order_id.slice(0, 8)}...</span> | สถานะ: <span className="font-bold">{orderSuccess.status}</span>
+          <div>
+            <span className="inline-block bg-black text-yellow-400 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider mb-0.5">
+              Saleng Platform • ผู้ขาย
+            </span>
+            <h1 className="text-base sm:text-lg font-extrabold text-black tracking-tight leading-tight">
+              ระบบราคาและการตัดสินใจ
+            </h1>
+            <p className="text-xs text-black/80">
+              ตรวจสอบราคากลางรายวันและประเมินมูลค่าก่อนนัดหมาย
             </p>
           </div>
+        </div>
+        {basket.length > 0 && (
+          <div className="px-4 py-2 rounded-xl bg-black text-yellow-400 text-right">
+            <div className="text-[10px] text-white/80 font-medium">ยอดประเมินในตะกร้า ({basket.length} รายการ)</div>
+            <div className="text-sm font-extrabold">{basketTotals.min}–{basketTotals.max} บาท</div>
+          </div>
         )}
+      </header>
 
-        {/* 1. ตารางราคากลางอ้างอิงรายวัน */}
-        <BenchmarkPriceTable
-          prices={benchmarkData.prices}
-          lastUpdatedAt={benchmarkData.last_updated_at}
-          isOffline={benchmarkData.isOffline}
-          offlineNotice={benchmarkData.offlineNotice}
-        />
+      {/* ข้อความแจ้งเตือนความผิดพลาดทั่วไป */}
+      {generalError && (
+        <div className="bg-rose-50 border-2 border-rose-300 text-rose-700 text-xs font-semibold rounded-xl p-3" data-testid="general-error-banner">
+          ⚠️ {generalError}
+        </div>
+      )}
 
-        {/* 2. ฟอร์มเลือกของเก่าและคำนวณราคา */}
-        <ItemPriceCalculator
-          benchmarkPrices={benchmarkData.prices}
-          onAddItem={handleAddItem}
-        />
+      {/* การ์ดความสำเร็จเมื่อส่งคำขอเสร็จสิ้น */}
+      {orderSuccess && (
+        <div className="bg-yellow-100 border-2 border-black text-black rounded-2xl p-4 text-center shadow-sm" data-testid="order-success-card">
+          <span className="text-3xl block mb-1">🎉</span>
+          <h4 className="font-extrabold text-sm mb-1">{orderSuccess.message}</h4>
+          <p className="text-xs text-zinc-800">
+            รหัสคำขอ: <span className="font-mono font-bold">{orderSuccess.order_id.slice(0, 8)}...</span> | สถานะ: <span className="font-bold">{orderSuccess.status}</span>
+          </p>
+        </div>
+      )}
 
-        {/* 3. ตะกร้าและแถบสรุปยอดรวม Min-Max */}
-        <MultiItemBasketSummary
-          basket={basket}
-          onRemoveItem={handleRemoveItem}
-          totalMin={basketTotals.min}
-          totalMax={basketTotals.max}
-          onSubmitOrder={() => handlePerformSubmit("DIRECT")}
-          isSubmitting={isSubmitting}
-        />
+      {/* Responsive 2-Column Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        {/* ซ้าย (7 ส่วน): ตารางราคากลางอ้างอิงรายวัน */}
+        <div className="lg:col-span-7 bg-yellow-50/90 rounded-2xl p-4 border border-yellow-300">
+          <BenchmarkPriceTable
+            prices={benchmarkData.prices}
+            lastUpdatedAt={benchmarkData.last_updated_at}
+            isOffline={benchmarkData.isOffline}
+            offlineNotice={benchmarkData.offlineNotice}
+          />
+        </div>
 
-        {/* 4. ป๊อปอัปแจ้งเตือนเมื่อไม่ถึงเกณฑ์ขั้นต่ำ 500 บาท */}
-        <ThresholdGuardModal
-          isOpen={isGuardModalOpen}
-          onClose={() => setIsGuardModalOpen(false)}
-          totalMin={basketTotals.min}
-          totalBags={basketTotals.bags}
-          onSelectAlternative={(altType) => handlePerformSubmit(altType)}
-        />
+        {/* ขวา (5 ส่วน): ตะกร้าสรุปยอด + เครื่องคำนวณเพิ่มเติม */}
+        <div className="lg:col-span-5 space-y-4">
+          <div className="bg-yellow-50/90 rounded-2xl p-4 border-2 border-black shadow-sm">
+            <MultiItemBasketSummary
+              basket={basket}
+              onRemoveItem={handleRemoveItem}
+              totalMin={basketTotals.min}
+              totalMax={basketTotals.max}
+              onSubmitOrder={() => handlePerformSubmit("DIRECT")}
+              isSubmitting={isSubmitting}
+            />
+          </div>
+
+          {showCalculator && (
+            <div className="bg-white rounded-2xl p-4 border border-yellow-300 shadow-xs">
+              <ItemPriceCalculator
+                benchmarkPrices={benchmarkData.prices}
+                onAddItem={handleAddItem}
+              />
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* 4. ป๊อปอัปแจ้งเตือนเมื่อไม่ถึงเกณฑ์ขั้นต่ำ 500 บาท */}
+      <ThresholdGuardModal
+        isOpen={isGuardModalOpen}
+        onClose={() => setIsGuardModalOpen(false)}
+        totalMin={basketTotals.min}
+        totalBags={basketTotals.bags}
+        onSelectAlternative={(altType) => handlePerformSubmit(altType)}
+      />
     </div>
   );
 }

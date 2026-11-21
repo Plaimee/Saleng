@@ -151,46 +151,50 @@ export default function JobSearchPanel({
 
   return (
     <div
-      className="max-w-md mx-auto bg-gray-50 min-h-screen flex flex-col pb-16 font-sans text-gray-800"
+      className="w-full flex flex-col space-y-4 font-sans text-black"
       data-req="UC-04"
       data-testid="job-search-panel"
     >
-      {/* Header แผงค้นหางาน */}
-      <header className="bg-emerald-700 text-white p-4 shadow-sm flex items-center justify-between sticky top-0 z-40">
-        <div>
-          <h1 className="text-base font-bold flex items-center gap-1.5">
-            <span>♻️</span>
-            <span>ค้นหางานรับซื้อของเก่า</span>
-          </h1>
-          <p className="text-xs text-emerald-100 mt-0.5">
-            รัศมีทำการ: <span className="font-bold underline">{radiusKm} กม.</span>
-            {isOfflineCached && ' (โหมดแคชออฟไลน์)'}
-          </p>
+      {/* Header แผงค้นหางาน (Golden Yellow + Jet Black) */}
+      <header className="rounded-2xl p-4 bg-yellow-400 border-2 border-black shadow-sm flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-black text-yellow-400 flex items-center justify-center text-xl flex-shrink-0">
+            📡
+          </div>
+          <div>
+            <h1 className="text-base sm:text-lg font-extrabold text-black flex items-center gap-1.5">
+              <span>ค้นหางานรับซื้อของเก่าใกล้คุณ</span>
+            </h1>
+            <p className="text-xs text-black/80 mt-0.5">
+              รัศมีทำการ: <span className="font-bold underline">{radiusKm} กม.</span>
+              {isOfflineCached && ' (โหมดแคชออฟไลน์)'}
+            </p>
+          </div>
         </div>
 
         <button
           type="button"
           data-testid="btn-manual-refresh"
           onClick={() => fetchJobs(false)}
-          className="min-h-[48px] px-3 bg-emerald-800/80 hover:bg-emerald-800 text-white text-xs font-semibold rounded-lg flex items-center gap-1 transition-colors active:scale-95"
+          className="min-h-[44px] px-4 bg-black hover:bg-zinc-800 text-yellow-400 text-xs font-bold rounded-full flex items-center gap-1.5 transition-colors shadow"
           title="รีเฟรชข้อมูลงาน"
         >
           <span>🔄</span>
-          <span>รีเฟรช</span>
+          <span>รีเฟรชงานใหม่</span>
         </button>
       </header>
 
       {/* Segmented Control Tab Switcher (List ⇄ Map) [REQ-UX-001 >= 48px, Q-04] */}
-      <div className="bg-white p-2 border-b border-gray-200">
-        <div className="grid grid-cols-2 gap-2 bg-gray-100 p-1 rounded-xl">
+      <div className="bg-yellow-50/90 p-2 rounded-2xl border border-yellow-300">
+        <div className="grid grid-cols-2 gap-2 bg-black p-1 rounded-full">
           <button
             type="button"
             data-testid="tab-list-view"
             onClick={() => setActiveTab('LIST')}
-            className={`min-h-[48px] rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-1.5 ${
+            className={`min-h-[48px] rounded-full font-bold text-sm transition-all flex items-center justify-center gap-1.5 ${
               activeTab === 'LIST'
-                ? 'bg-white text-emerald-700 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
+                ? 'bg-yellow-400 text-black shadow'
+                : 'text-zinc-300 hover:text-white'
             }`}
           >
             <span>📋</span>
@@ -201,10 +205,10 @@ export default function JobSearchPanel({
             type="button"
             data-testid="tab-map-view"
             onClick={() => setActiveTab('MAP')}
-            className={`min-h-[48px] rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-1.5 ${
+            className={`min-h-[48px] rounded-full font-bold text-sm transition-all flex items-center justify-center gap-1.5 ${
               activeTab === 'MAP'
-                ? 'bg-white text-emerald-700 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
+                ? 'bg-yellow-400 text-black shadow'
+                : 'text-zinc-300 hover:text-white'
             }`}
           >
             <span>🗺️</span>

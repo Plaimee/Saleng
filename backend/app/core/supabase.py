@@ -1218,9 +1218,9 @@ class SupabaseStore:
             "rejection_reason": None,
             "rating": 5.0,
             "completed_jobs_count": 0,
-            "current_lat": 13.7563,
-            "current_lng": 100.5018,
-            "is_online": False,
+            "current_lat": 13.7910,
+            "current_lng": 100.5760,
+            "is_online": True,
             "accepted_categories": [
                 "MAT-CARDBOARD",
                 "MAT-WHITE-PAPER",

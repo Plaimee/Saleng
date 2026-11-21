@@ -105,26 +105,30 @@ export default function BuyerSearchPanel({
     <div
       data-req="UC-03"
       data-testid="buyer-search-panel"
-      className="max-w-md mx-auto p-4 space-y-4 bg-gray-50/50 min-h-screen"
+      className="w-full space-y-5 font-sans"
     >
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-base font-extrabold text-gray-900 flex items-center gap-1.5">
-            <span>🔍</span>
-            <span>ค้นหาและเลือกผู้รับซื้อ</span>
-          </h2>
-          <p className="text-[11px] text-gray-500">
-            เลือกซาเล้งที่ผ่านการยืนยันตัวตนในรัศมีของคุณ
-          </p>
+      {/* Header Banner: Golden Yellow + Jet Black */}
+      <div className="rounded-2xl p-4 bg-yellow-400 border-2 border-black shadow-sm flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-black text-yellow-400 flex items-center justify-center text-xl flex-shrink-0">
+            🛺
+          </div>
+          <div>
+            <h2 className="text-base sm:text-lg font-extrabold text-black leading-tight">
+              ค้นหาและเลือกผู้รับซื้อใกล้ฉัน
+            </h2>
+            <p className="text-xs text-black/80">
+              เลือกซาเล้งที่ผ่านการยืนยันตัวตน 100% ในรัศมีของคุณ
+            </p>
+          </div>
         </div>
         <button
           type="button"
           data-testid="refresh-btn"
           onClick={fetchCollectors}
-          className="p-2 text-xs text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50"
+          className="px-4 py-2 text-xs font-bold text-yellow-400 bg-black rounded-full hover:bg-zinc-800 transition shadow"
         >
-          🔄 รีเฟรช
+          🔄 รีเฟรชรายชื่อ
         </button>
       </div>
 
@@ -132,7 +136,7 @@ export default function BuyerSearchPanel({
       {isOffline && (
         <div
           data-testid="offline-alert"
-          className="p-2.5 bg-amber-500/10 border border-amber-300 text-amber-900 rounded-2xl text-[11px] flex items-center space-x-2"
+          className="p-3 bg-amber-100 border border-amber-400 text-amber-950 rounded-2xl text-xs font-medium flex items-center space-x-2"
         >
           <span>⚠️</span>
           <span>โหมดออฟไลน์: กำลังแสดงรายชื่อผู้รับซื้อล่าสุดที่บันทึกไว้ในอุปกรณ์</span>
@@ -143,69 +147,74 @@ export default function BuyerSearchPanel({
       {matchedOrder && (
         <div
           data-testid="matched-success-banner"
-          className="p-3.5 bg-emerald-50 border border-emerald-300 rounded-2xl space-y-1.5 animate-fade-in"
+          className="p-4 bg-yellow-100 border-2 border-black rounded-2xl space-y-1.5 shadow-sm"
         >
-          <div className="flex items-center space-x-2 text-xs font-bold text-emerald-900">
+          <div className="flex items-center space-x-2 text-sm font-extrabold text-black">
             <span>🎉</span>
             <span>ส่งคำขอนัดหมายเจาะจงบุคคลสำเร็จ (สถานะ: S2)</span>
           </div>
-          <p className="text-[11px] text-emerald-800 leading-relaxed">
+          <p className="text-xs text-zinc-800 leading-relaxed">
             {matchedOrder.message}
           </p>
-          <div className="text-[10px] text-emerald-600 font-semibold">
+          <div className="text-xs text-black font-bold">
             หมดเวลาตอบรับ: {new Date(matchedOrder.direct_request_expires_at).toLocaleTimeString('th-TH')}
           </div>
         </div>
       )}
 
-      {/* แถบตรึงซาเล้งที่เคยใช้บริการไว้บนสุด (AC-S03-02) */}
-      <FavoriteCollectorPinList
-        favorites={favorites}
-        onSelect={handleOpenDirectModal}
-      />
+      {/* แผงตัวกรอง + ซาเล้งประจำ (Warm Yellow Card) */}
+      <div className="bg-yellow-50/90 rounded-2xl p-4 border border-yellow-300 space-y-4">
+        <FavoriteCollectorPinList
+          favorites={favorites}
+          onSelect={handleOpenDirectModal}
+        />
 
-      {/* แผงตัวกรองหลายมิติ (AC-S03-03) */}
-      <CollectorFilterPanel
-        radiusKm={radiusKm}
-        onChangeRadius={setRadiusKm}
-        vehicleType={vehicleType}
-        onChangeVehicleType={setVehicleType}
-        minRating={minRating}
-        onChangeMinRating={setMinRating}
-        hasBulkyItems={hasBulkyItems}
-        bulkyWarningMessage={bulkyWarningMessage}
-      />
+        <CollectorFilterPanel
+          radiusKm={radiusKm}
+          onChangeRadius={setRadiusKm}
+          vehicleType={vehicleType}
+          onChangeVehicleType={setVehicleType}
+          minRating={minRating}
+          onChangeMinRating={setMinRating}
+          hasBulkyItems={hasBulkyItems}
+          bulkyWarningMessage={bulkyWarningMessage}
+        />
+      </div>
 
-      {/* รายการการ์ดซาเล้ง (AC-S03-01) */}
-      <div className="space-y-3 pt-1">
-        <div className="flex items-center justify-between text-xs text-gray-500 px-1">
-          <span>พบผู้รับซื้อ {collectors.length} รายในรัศมี</span>
-          <span className="text-[10px] text-emerald-700 font-semibold">✓ ยืนยันตัวตน 100%</span>
+      {/* รายการการ์ดซาเล้งแบบ 2 คอลัมน์เต็มพื้นที่ (AC-S03-01) */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between text-xs px-1">
+          <span className="font-bold text-black">พบผู้รับซื้อ {collectors.length} รายในรัศมี</span>
+          <span className="text-[11px] bg-black text-yellow-400 px-2.5 py-0.5 rounded-full font-bold">
+            ✓ ยืนยันตัวตน 100%
+          </span>
         </div>
 
         {loading ? (
-          <div className="text-center py-8 text-xs text-gray-400">
+          <div className="text-center py-8 text-xs text-zinc-500">
             กำลังค้นหาผู้รับซื้อในพื้นที่...
           </div>
         ) : collectors.length === 0 ? (
           <div
             data-testid="no-collectors-msg"
-            className="text-center py-10 bg-white rounded-3xl border border-dashed border-gray-200 p-6 space-y-2"
+            className="text-center py-10 bg-yellow-50 rounded-2xl border-2 border-dashed border-yellow-400 p-6 space-y-2"
           >
             <span className="text-3xl">📭</span>
-            <p className="text-xs font-bold text-gray-700">ไม่พบผู้รับซื้อในเงื่อนไขที่เลือก</p>
-            <p className="text-[11px] text-gray-400">ลองขยายรัศมี หรือปรับตัวกรองยานพาหนะ</p>
+            <p className="text-xs font-bold text-black">ไม่พบผู้รับซื้อในเงื่อนไขที่เลือก</p>
+            <p className="text-[11px] text-zinc-600">ลองขยายรัศมี หรือปรับตัวกรองยานพาหนะ</p>
           </div>
         ) : (
-          collectors.map((c) => (
-            <SalengProfileCard
-              key={c.saleng_id}
-              collector={c}
-              onSelect={handleOpenDirectModal}
-              onToggleFavorite={handleToggleFavorite}
-              onStartChat={(col) => alert(`เปิดห้องแชตกับ ${col.display_name}`)}
-            />
-          ))
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {collectors.map((c) => (
+              <SalengProfileCard
+                key={c.saleng_id}
+                collector={c}
+                onSelect={handleOpenDirectModal}
+                onToggleFavorite={handleToggleFavorite}
+                onStartChat={(col) => alert(`เปิดห้องแชตกับ ${col.display_name}`)}
+              />
+            ))}
+          </div>
         )}
       </div>
 

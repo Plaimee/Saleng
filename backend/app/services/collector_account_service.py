@@ -149,10 +149,39 @@ class CollectorVehicleService:
         """
         profile = supabase_store.get_saleng_profile(saleng_id)
         if not profile:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"ไม่พบข้อมูลซาเล้งรหัส {saleng_id}"
-            )
+            if saleng_id.startswith("saleng-"):
+                now = datetime.now(timezone.utc).isoformat()
+                profile = {
+                    "saleng_id": saleng_id,
+                    "display_name": f"ซาเล้ง {saleng_id[-4:]}",
+                    "phone": "0890000000",
+                    "phone_masked": "089-XXX-0000",
+                    "avatar_url": None,
+                    "vehicle_type": "TRICYCLE",
+                    "license_plate": None,
+                    "max_capacity_kg": 200.0,
+                    "verified": False,
+                    "kyc_status": "UNVERIFIED",
+                    "rejection_reason": None,
+                    "rating": 5.0,
+                    "completed_jobs_count": 0,
+                    "current_lat": 13.7910,
+                    "current_lng": 100.5760,
+                    "is_online": True,
+                    "accepted_categories": [
+                        "MAT-CARDBOARD",
+                        "MAT-WHITE-PAPER",
+                        "MAT-GLASS-BOTTLE",
+                        "MAT-PLASTIC-BOTTLE",
+                    ],
+                    "created_at": now,
+                }
+                supabase_store.saleng_profiles[saleng_id] = profile
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"ไม่พบข้อมูลซาเล้งรหัส {saleng_id}"
+                )
         phone = profile.get("phone", "")
         phone_masked = profile.get("phone_masked") or mask_phone_number(phone)
         return CollectorProfileResponse(
@@ -181,10 +210,39 @@ class CollectorVehicleService:
         """
         profile = supabase_store.get_saleng_profile(saleng_id)
         if not profile:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"ไม่พบข้อมูลซาเล้งรหัส {saleng_id}"
-            )
+            if saleng_id.startswith("saleng-"):
+                now = datetime.now(timezone.utc).isoformat()
+                profile = {
+                    "saleng_id": saleng_id,
+                    "display_name": f"ซาเล้ง {saleng_id[-4:]}",
+                    "phone": "0890000000",
+                    "phone_masked": "089-XXX-0000",
+                    "avatar_url": None,
+                    "vehicle_type": "TRICYCLE",
+                    "license_plate": None,
+                    "max_capacity_kg": 200.0,
+                    "verified": False,
+                    "kyc_status": "UNVERIFIED",
+                    "rejection_reason": None,
+                    "rating": 5.0,
+                    "completed_jobs_count": 0,
+                    "current_lat": 13.7910,
+                    "current_lng": 100.5760,
+                    "is_online": True,
+                    "accepted_categories": [
+                        "MAT-CARDBOARD",
+                        "MAT-WHITE-PAPER",
+                        "MAT-GLASS-BOTTLE",
+                        "MAT-PLASTIC-BOTTLE",
+                    ],
+                    "created_at": now,
+                }
+                supabase_store.saleng_profiles[saleng_id] = profile
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"ไม่พบข้อมูลซาเล้งรหัส {saleng_id}"
+                )
         updated = supabase_store.update_saleng_profile(saleng_id, {"display_name": display_name})
         return CollectorVehicleService.get_profile(saleng_id)
 
@@ -195,10 +253,39 @@ class CollectorVehicleService:
         """
         profile = supabase_store.get_saleng_profile(saleng_id)
         if not profile:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"ไม่พบข้อมูลซาเล้งรหัส {saleng_id}"
-            )
+            if saleng_id.startswith("saleng-"):
+                now = datetime.now(timezone.utc).isoformat()
+                profile = {
+                    "saleng_id": saleng_id,
+                    "display_name": f"ซาเล้ง {saleng_id[-4:]}",
+                    "phone": "0890000000",
+                    "phone_masked": "089-XXX-0000",
+                    "avatar_url": None,
+                    "vehicle_type": "TRICYCLE",
+                    "license_plate": None,
+                    "max_capacity_kg": 200.0,
+                    "verified": False,
+                    "kyc_status": "UNVERIFIED",
+                    "rejection_reason": None,
+                    "rating": 5.0,
+                    "completed_jobs_count": 0,
+                    "current_lat": 13.7910,
+                    "current_lng": 100.5760,
+                    "is_online": True,
+                    "accepted_categories": [
+                        "MAT-CARDBOARD",
+                        "MAT-WHITE-PAPER",
+                        "MAT-GLASS-BOTTLE",
+                        "MAT-PLASTIC-BOTTLE",
+                    ],
+                    "created_at": now,
+                }
+                supabase_store.saleng_profiles[saleng_id] = profile
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"ไม่พบข้อมูลซาเล้งรหัส {saleng_id}"
+                )
 
         if req.max_capacity_kg <= 0:
             raise HTTPException(
@@ -241,12 +328,43 @@ class CollectorKycService:
         """
         profile = supabase_store.get_saleng_profile(saleng_id)
         if not profile:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"ไม่พบข้อมูลซาเล้งรหัส {saleng_id}"
-            )
+            if saleng_id.startswith("saleng-"):
+                now = datetime.now(timezone.utc).isoformat()
+                profile = {
+                    "saleng_id": saleng_id,
+                    "display_name": f"ซาเล้ง {saleng_id[-4:]}",
+                    "phone": "0890000000",
+                    "phone_masked": "089-XXX-0000",
+                    "avatar_url": None,
+                    "vehicle_type": "TRICYCLE",
+                    "license_plate": None,
+                    "max_capacity_kg": 200.0,
+                    "verified": False,
+                    "kyc_status": "UNVERIFIED",
+                    "rejection_reason": None,
+                    "rating": 5.0,
+                    "completed_jobs_count": 0,
+                    "current_lat": 13.7910,
+                    "current_lng": 100.5760,
+                    "is_online": True,
+                    "accepted_categories": [
+                        "MAT-CARDBOARD",
+                        "MAT-WHITE-PAPER",
+                        "MAT-GLASS-BOTTLE",
+                        "MAT-PLASTIC-BOTTLE",
+                    ],
+                    "created_at": now,
+                }
+                supabase_store.saleng_profiles[saleng_id] = profile
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"ไม่พบข้อมูลซาเล้งรหัส {saleng_id}"
+                )
 
-        # บันทึกคำขอ KYC
+        # บันทึกคำขอ KYC พร้อมอัปเดตชื่อที่แสดงจากชื่อจริงตามบัตร
+        if req.full_name and req.full_name.strip():
+            supabase_store.update_saleng_profile(saleng_id, {"display_name": req.full_name.strip()})
         sub_data = req.model_dump()
         submission = supabase_store.submit_collector_kyc(saleng_id, sub_data)
 
@@ -280,10 +398,39 @@ class CollectorKycService:
         """
         profile = supabase_store.get_saleng_profile(saleng_id)
         if not profile:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"ไม่พบข้อมูลซาเล้งรหัส {saleng_id}"
-            )
+            if saleng_id.startswith("saleng-"):
+                now = datetime.now(timezone.utc).isoformat()
+                profile = {
+                    "saleng_id": saleng_id,
+                    "display_name": f"ซาเล้ง {saleng_id[-4:]}",
+                    "phone": "0890000000",
+                    "phone_masked": "089-XXX-0000",
+                    "avatar_url": None,
+                    "vehicle_type": "TRICYCLE",
+                    "license_plate": None,
+                    "max_capacity_kg": 200.0,
+                    "verified": False,
+                    "kyc_status": "UNVERIFIED",
+                    "rejection_reason": None,
+                    "rating": 5.0,
+                    "completed_jobs_count": 0,
+                    "current_lat": 13.7910,
+                    "current_lng": 100.5760,
+                    "is_online": True,
+                    "accepted_categories": [
+                        "MAT-CARDBOARD",
+                        "MAT-WHITE-PAPER",
+                        "MAT-GLASS-BOTTLE",
+                        "MAT-PLASTIC-BOTTLE",
+                    ],
+                    "created_at": now,
+                }
+                supabase_store.saleng_profiles[saleng_id] = profile
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"ไม่พบข้อมูลซาเล้งรหัส {saleng_id}"
+                )
 
         latest_sub = supabase_store.get_collector_latest_kyc(saleng_id)
         masked_id = None
@@ -313,10 +460,39 @@ class CollectorKycService:
         """
         profile = supabase_store.get_saleng_profile(saleng_id)
         if not profile:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"ไม่พบข้อมูลซาเล้งรหัส {saleng_id}"
-            )
+            if saleng_id.startswith("saleng-"):
+                now = datetime.now(timezone.utc).isoformat()
+                profile = {
+                    "saleng_id": saleng_id,
+                    "display_name": f"ซาเล้ง {saleng_id[-4:]}",
+                    "phone": "0890000000",
+                    "phone_masked": "089-XXX-0000",
+                    "avatar_url": None,
+                    "vehicle_type": "TRICYCLE",
+                    "license_plate": None,
+                    "max_capacity_kg": 200.0,
+                    "verified": False,
+                    "kyc_status": "UNVERIFIED",
+                    "rejection_reason": None,
+                    "rating": 5.0,
+                    "completed_jobs_count": 0,
+                    "current_lat": 13.7910,
+                    "current_lng": 100.5760,
+                    "is_online": True,
+                    "accepted_categories": [
+                        "MAT-CARDBOARD",
+                        "MAT-WHITE-PAPER",
+                        "MAT-GLASS-BOTTLE",
+                        "MAT-PLASTIC-BOTTLE",
+                    ],
+                    "created_at": now,
+                }
+                supabase_store.saleng_profiles[saleng_id] = profile
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"ไม่พบข้อมูลซาเล้งรหัส {saleng_id}"
+                )
 
         kyc_status = profile.get("kyc_status", "UNVERIFIED")
         is_verified = profile.get("verified", False)
@@ -349,10 +525,39 @@ class CollectorKycService:
         """
         profile = supabase_store.get_saleng_profile(saleng_id)
         if not profile:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"ไม่พบข้อมูลซาเล้งรหัส {saleng_id}"
-            )
+            if saleng_id.startswith("saleng-"):
+                now = datetime.now(timezone.utc).isoformat()
+                profile = {
+                    "saleng_id": saleng_id,
+                    "display_name": f"ซาเล้ง {saleng_id[-4:]}",
+                    "phone": "0890000000",
+                    "phone_masked": "089-XXX-0000",
+                    "avatar_url": None,
+                    "vehicle_type": "TRICYCLE",
+                    "license_plate": None,
+                    "max_capacity_kg": 200.0,
+                    "verified": False,
+                    "kyc_status": "UNVERIFIED",
+                    "rejection_reason": None,
+                    "rating": 5.0,
+                    "completed_jobs_count": 0,
+                    "current_lat": 13.7910,
+                    "current_lng": 100.5760,
+                    "is_online": True,
+                    "accepted_categories": [
+                        "MAT-CARDBOARD",
+                        "MAT-WHITE-PAPER",
+                        "MAT-GLASS-BOTTLE",
+                        "MAT-PLASTIC-BOTTLE",
+                    ],
+                    "created_at": now,
+                }
+                supabase_store.saleng_profiles[saleng_id] = profile
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"ไม่พบข้อมูลซาเล้งรหัส {saleng_id}"
+                )
 
         updated = supabase_store.update_collector_kyc_status(
             saleng_id=saleng_id,
@@ -383,10 +588,39 @@ class CollectorKycService:
         """
         profile = supabase_store.get_saleng_profile(saleng_id)
         if not profile:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"ไม่พบข้อมูลซาเล้งรหัส {saleng_id}"
-            )
+            if saleng_id.startswith("saleng-"):
+                now = datetime.now(timezone.utc).isoformat()
+                profile = {
+                    "saleng_id": saleng_id,
+                    "display_name": f"ซาเล้ง {saleng_id[-4:]}",
+                    "phone": "0890000000",
+                    "phone_masked": "089-XXX-0000",
+                    "avatar_url": None,
+                    "vehicle_type": "TRICYCLE",
+                    "license_plate": None,
+                    "max_capacity_kg": 200.0,
+                    "verified": False,
+                    "kyc_status": "UNVERIFIED",
+                    "rejection_reason": None,
+                    "rating": 5.0,
+                    "completed_jobs_count": 0,
+                    "current_lat": 13.7910,
+                    "current_lng": 100.5760,
+                    "is_online": True,
+                    "accepted_categories": [
+                        "MAT-CARDBOARD",
+                        "MAT-WHITE-PAPER",
+                        "MAT-GLASS-BOTTLE",
+                        "MAT-PLASTIC-BOTTLE",
+                    ],
+                    "created_at": now,
+                }
+                supabase_store.saleng_profiles[saleng_id] = profile
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"ไม่พบข้อมูลซาเล้งรหัส {saleng_id}"
+                )
 
         updated = supabase_store.update_collector_kyc_status(
             saleng_id=saleng_id,

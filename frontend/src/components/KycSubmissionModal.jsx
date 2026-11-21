@@ -7,7 +7,7 @@ import React, { useState } from 'react';
 import { collectorAccountApi } from '../services/collectorAccountApi';
 
 export default function KycSubmissionModal({ salengId, isOpen, onClose, onKycSubmitted }) {
-  const [idCardNo, setIdCardNo] = useState('');
+  const [idCardNo, setIdCardNo] = useState('1100701234561');
   const [fullName, setFullName] = useState('');
   const [idCardPhotoUrl, setIdCardPhotoUrl] = useState('https://storage.saleng.app/mock-kyc/id_card.jpg');
   const [selfiePhotoUrl, setSelfiePhotoUrl] = useState('https://storage.saleng.app/mock-kyc/selfie.jpg');
@@ -16,6 +16,29 @@ export default function KycSubmissionModal({ salengId, isOpen, onClose, onKycSub
   const [error, setError] = useState('');
 
   if (!isOpen) return null;
+
+  // โหมดจำลอง: ยื่นเอกสารและอนุมัติ KYC อัตโนมัติทันทีเพื่อทดสอบข้ามฝั่ง
+  const handleQuickMockVerify = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      const mockName = fullName.trim() || 'ซาเล้ง ทดสอบระบบ';
+      await collectorAccountApi.submitKyc(salengId, {
+        id_card_no: '1100701234561',
+        full_name: mockName,
+        id_card_photo_url: idCardPhotoUrl,
+        selfie_photo_url: selfiePhotoUrl,
+        vehicle_photo_url: vehiclePhotoUrl || null,
+      });
+      const approved = await collectorAccountApi.mockApproveKyc(salengId);
+      if (onKycSubmitted) onKycSubmitted(approved);
+      onClose();
+    } catch (err) {
+      setError(err.message || 'ยืนยันตัวตนจำลองไม่สำเร็จ');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -78,6 +101,22 @@ export default function KycSubmissionModal({ salengId, isOpen, onClose, onKycSub
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4 text-sm">
+          {/* ปุ่มลัดยืนยันตัวตนจำลอง (โหมดทดสอบ) */}
+          <div className="p-3 rounded-2xl bg-yellow-50 border border-yellow-400 flex items-center justify-between gap-2">
+            <div className="text-xs text-black">
+              <div className="font-bold">⚡ โหมดทดสอบด่วน</div>
+              <div className="text-[11px] text-zinc-600">จำลองยื่นและอนุมัติ KYC ทันที</div>
+            </div>
+            <button
+              type="button"
+              disabled={loading}
+              onClick={handleQuickMockVerify}
+              className="px-3.5 py-2 rounded-full bg-black text-yellow-400 text-xs font-bold hover:bg-zinc-800 transition flex-shrink-0"
+            >
+              {loading ? '...' : 'ยืนยันจำลองทันที'}
+            </button>
+          </div>
+
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-1">
               เลขประจำตัวประชาชน (13 หลัก) *

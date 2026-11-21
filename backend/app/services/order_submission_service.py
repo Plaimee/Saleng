@@ -94,13 +94,26 @@ class OrderSubmissionService:
         else:
             raise ValueError(f"ไม่รู้จักประเภทการส่งคำขอ: {submission.submission_type}")
 
-        # เตรียมข้อมูลสำหรับบันทึกลง Database
+        # คำนวณน้ำหนักรวมโดยประมาณ (กก.) สำหรับให้ฝั่งซาเล้งตรวจความจุรถ (BR-03)
+        total_est_weight_kg = round(
+            sum(
+                float(item.quantity) * (5.0 if item.unit == "bag" else 15.0 if item.unit == "piece" else 1.0)
+                for item in submission.items
+            ),
+            2,
+        )
+
+        # เตรียมข้อมูลสำหรับบันทึกลง Database (เชื่อมข้อมูลระหว่าง Seller <-> Collector)
         order_data = {
             "seller_id": submission.seller_id,
             "pickup_location_id": submission.pickup_location_id,
+            "location_id": submission.pickup_location_id,
             "status": "S2",  # S2: รอผู้รับซื้อ ตาม D-03
             "total_est_min_price": total_min,
             "total_est_max_price": total_max,
+            "total_estimated_price": {"min_price": total_min, "max_price": total_max},
+            "total_est_weight_kg": total_est_weight_kg,
+            "category_codes": [item.category_code for item in submission.items],
             "is_route_drop_in": is_route_drop,
             "is_building_group_drop": is_building_group,
             "building_id": submission.building_id,

@@ -138,32 +138,34 @@ export default function BillingReceiptView({
 
   return (
     <div
-      className="max-w-md mx-auto bg-gray-50 min-h-screen pb-12"
+      className="w-full space-y-4 font-sans text-black"
       data-req="UC-07"
       data-testid="billing-receipt-view"
     >
-      {/* ส่วนหัวหน้าจอ */}
-      <header className="bg-emerald-700 text-white p-4 sticky top-0 z-10 shadow-md">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+      {/* ส่วนหัวหน้าจอ (Golden Yellow + Jet Black) */}
+      <header className="rounded-2xl p-4 bg-yellow-400 border-2 border-black shadow-sm">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
             {onBack && (
               <button
                 type="button"
                 onClick={onBack}
-                className="w-10 h-10 min-h-[48px] min-w-[48px] rounded-full hover:bg-emerald-800 flex items-center justify-center text-lg"
+                className="min-h-[44px] px-3 rounded-full bg-black text-yellow-400 hover:bg-zinc-800 flex items-center justify-center text-xs font-bold"
                 data-testid="header-back-btn"
               >
-                ←
+                ← กลับคิวงาน
               </button>
             )}
             <div>
-              <h1 className="text-base font-bold">ระบบคิดเงินและออกใบเสร็จ</h1>
-              <span className="text-xs text-emerald-100 font-mono">
-                คำขอ: {orderId}
+              <h1 className="text-base sm:text-lg font-extrabold text-black">
+                ระบบชั่งน้ำหนัก คิดเงิน และออกใบเสร็จ
+              </h1>
+              <span className="text-xs text-black/80 font-mono">
+                รหัสคำขอ: {orderId}
               </span>
             </div>
           </div>
-          <span className="text-xs bg-emerald-800 text-emerald-100 font-bold px-2.5 py-1 rounded-full border border-emerald-600">
+          <span className="text-xs bg-black text-yellow-400 font-extrabold px-3 py-1 rounded-full">
             {currentStatus}
           </span>
         </div>

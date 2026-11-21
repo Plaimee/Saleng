@@ -112,40 +112,45 @@ export default function PostJobCollectorView({
 
   return (
     <div
-      className="max-w-md mx-auto bg-gray-50 min-h-screen pb-12"
+      className="w-full space-y-4 font-sans text-black"
       data-req="UC-10"
       data-testid="post-job-collector-view"
     >
-      {/* ส่วนหัวหน้าจอ */}
-      <header className="bg-emerald-700 text-white p-4 sticky top-0 z-10 shadow-md">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+      {/* ส่วนหัวหน้าจอ (Golden Yellow + Jet Black) */}
+      <header className="rounded-2xl p-4 bg-yellow-400 border-2 border-black shadow-sm">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
             {onBack && (
               <button
                 type="button"
                 onClick={onBack}
-                className="w-10 h-10 min-h-[48px] min-w-[48px] rounded-full hover:bg-emerald-800 flex items-center justify-center text-lg"
+                className="min-h-[44px] px-3 rounded-full bg-black text-yellow-400 hover:bg-zinc-800 flex items-center justify-center text-xs font-bold"
                 data-testid="header-back-btn"
               >
-                ←
+                ← กลับ
               </button>
             )}
+            <div className="w-10 h-10 rounded-xl bg-black text-yellow-400 flex items-center justify-center text-xl flex-shrink-0">
+              🤝
+            </div>
             <div>
-              <h1 className="text-base font-bold">สรุปหลังจบงานและลูกค้าประจำ</h1>
-              <span className="text-xs text-emerald-100">ซาเล้ง: {salengId}</span>
+              <h1 className="text-base sm:text-lg font-extrabold text-black">
+                สรุปหลังจบงานและลูกค้าประจำ
+              </h1>
+              <span className="text-xs text-black/80 font-medium">ซาเล้ง: {salengId}</span>
             </div>
           </div>
         </div>
 
         {/* แถบสลับแท็บ (ทัชทาร์เก็ต >= 48px ตาม REQ-UX-001, CC-01) */}
-        <div className="grid grid-cols-2 gap-1 bg-emerald-800/60 p-1 rounded-xl mt-3">
+        <div className="grid grid-cols-2 gap-1.5 bg-black p-1 rounded-full mt-3">
           <button
             type="button"
             onClick={() => setActiveTab('history')}
-            className={`min-h-[48px] rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+            className={`min-h-[48px] rounded-full text-xs font-bold transition flex items-center justify-center gap-1.5 ${
               activeTab === 'history'
-                ? 'bg-white text-emerald-900 shadow-sm'
-                : 'text-emerald-100 hover:text-white'
+                ? 'bg-yellow-400 text-black shadow'
+                : 'text-zinc-300 hover:text-white'
             }`}
             data-testid="tab-history-btn"
           >
@@ -155,10 +160,10 @@ export default function PostJobCollectorView({
           <button
             type="button"
             onClick={() => setActiveTab('regular')}
-            className={`min-h-[48px] rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+            className={`min-h-[48px] rounded-full text-xs font-bold transition flex items-center justify-center gap-1.5 ${
               activeTab === 'regular'
-                ? 'bg-white text-emerald-900 shadow-sm'
-                : 'text-emerald-100 hover:text-white'
+                ? 'bg-yellow-400 text-black shadow'
+                : 'text-zinc-300 hover:text-white'
             }`}
             data-testid="tab-regular-btn"
           >

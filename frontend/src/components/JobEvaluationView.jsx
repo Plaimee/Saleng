@@ -110,14 +110,26 @@ export default function JobEvaluationView({
           <p className="font-semibold text-sm">เกิดข้อผิดพลาด</p>
           <p className="text-xs mt-1">{error || 'ไม่พบข้อมูลคำขอขาย'}</p>
         </div>
-        <button
-          type="button"
-          onClick={loadEvaluation}
-          style={{ minHeight: '48px' }}
-          className="px-6 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold"
-        >
-          ลองใหม่อีกครั้ง
-        </button>
+        <div className="flex items-center gap-2">
+          {onNavigateBack && (
+            <button
+              type="button"
+              onClick={onNavigateBack}
+              style={{ minHeight: '48px' }}
+              className="px-5 py-2 bg-white border-2 border-black text-black rounded-full text-sm font-bold"
+            >
+              ← กลับหน้าหางาน
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={loadEvaluation}
+            style={{ minHeight: '48px' }}
+            className="px-6 py-2 bg-black text-yellow-400 rounded-full text-sm font-bold"
+          >
+            ลองใหม่อีกครั้ง
+          </button>
+        </div>
       </div>
     );
   }

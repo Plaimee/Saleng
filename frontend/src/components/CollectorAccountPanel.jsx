@@ -12,7 +12,7 @@ import VehicleConfigCard from './VehicleConfigCard';
 import KycStatusBanner from './KycStatusBanner';
 import KycSubmissionModal from './KycSubmissionModal';
 
-export default function CollectorAccountPanel() {
+export default function CollectorAccountPanel({ showDevTools = true } = {}) {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -129,69 +129,91 @@ export default function CollectorAccountPanel() {
   }
 
   return (
-    <div data-req="UC-01" className="max-w-md mx-auto p-4 space-y-4">
-      {/* 1. ข้อมูลส่วนตัวและป้ายสถานะ */}
-      <CollectorProfileCard
-        profile={profile}
-        onProfileUpdated={(updated) => setProfile(updated)}
-        onLogout={handleLogout}
-      />
-
-      {/* 2. แบนเนอร์แจ้งสถานะ KYC */}
-      <KycStatusBanner
-        profile={profile}
-        onOpenKycModal={() => setIsKycModalOpen(true)}
-      />
-
-      {/* 3. การตั้งค่ายานพาหนะและความจุ (BR-03) */}
-      <VehicleConfigCard
-        profile={profile}
-        onVehicleUpdated={(updated) => setProfile(updated)}
-      />
-
-      {/* 4. ปุ่มทดสอบการรับงาน (Unverified Gate D-00-01) */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
-        <h4 className="text-sm font-bold text-gray-900 mb-1">ทดสอบการรับงาน (D-00-01 Gate Check)</h4>
-        <p className="text-xs text-gray-500 mb-3">
-          ทดสอบการทำงานของระบบความปลอดภัย บล็อกผู้ที่ยังไม่ผ่าน KYC
-        </p>
-        <button
-          type="button"
-          data-testid="test-claim-job-btn"
-          onClick={handleTestClaimJob}
-          className="w-full min-h-[48px] bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl text-sm transition shadow-sm flex items-center justify-center space-x-2"
-        >
-          <span>🎯</span>
-          <span>ทดสอบกดรับงาน (Claim Job)</span>
-        </button>
+    <div data-req="UC-01" className="w-full space-y-5 font-sans">
+      {/* Header Banner: Golden Yellow + Jet Black */}
+      <div className="rounded-2xl p-4 bg-yellow-400 border-2 border-black shadow-sm flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-black text-yellow-400 flex items-center justify-center text-xl flex-shrink-0">
+          🪪
+        </div>
+        <div>
+          <h2 className="text-base sm:text-lg font-extrabold text-black leading-tight">
+            บัญชีผู้ขับขี่และการยืนยันตัวตน KYC
+          </h2>
+          <p className="text-xs text-black/80">
+            จัดการข้อมูลส่วนตัว ยานพาหนะ ความจุบรรทุก และสถานะ KYC (กฎ D-00-01)
+          </p>
+        </div>
       </div>
 
-      {/* 5. กล่องเครื่องมือสำหรับทดสอบ (Q-06 Mock Helpers) */}
-      <div className="bg-slate-50 border border-dashed border-slate-300 rounded-2xl p-4 text-xs text-slate-700">
-        <div className="flex justify-between items-center mb-2">
-          <span className="font-bold text-slate-900">🛠️ เครื่องมือทดสอบ KYC (Q-06)</span>
-          <span className="bg-slate-200 text-slate-600 px-2 py-0.5 rounded text-[10px]">Dev / Test</span>
+      {/* 2-Column Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        <div className="lg:col-span-6 space-y-4">
+          <CollectorProfileCard
+            profile={profile}
+            onProfileUpdated={(updated) => setProfile(updated)}
+            onLogout={handleLogout}
+          />
+          <KycStatusBanner
+            profile={profile}
+            onOpenKycModal={() => setIsKycModalOpen(true)}
+          />
         </div>
-        {testActionMsg && (
-          <p className="mb-2 p-1.5 bg-white border rounded text-emerald-700 font-medium">{testActionMsg}</p>
-        )}
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            data-testid="mock-approve-btn"
-            onClick={handleMockApprove}
-            className="min-h-[40px] bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition"
-          >
-            จำลองอนุมัติ (VERIFIED)
-          </button>
-          <button
-            type="button"
-            data-testid="mock-reject-btn"
-            onClick={handleMockReject}
-            className="min-h-[40px] bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition"
-          >
-            จำลองปฏิเสธ (REJECTED)
-          </button>
+
+        <div className="lg:col-span-6 space-y-4">
+          <VehicleConfigCard
+            profile={profile}
+            onVehicleUpdated={(updated) => setProfile(updated)}
+          />
+
+          {showDevTools && (
+            <>
+              {/* 4. ปุ่มทดสอบการรับงาน (Unverified Gate D-00-01) */}
+              <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+                <h4 className="text-sm font-bold text-gray-900 mb-1">ทดสอบการรับงาน (D-00-01 Gate Check)</h4>
+                <p className="text-xs text-gray-500 mb-3">
+                  ทดสอบการทำงานของระบบความปลอดภัย บล็อกผู้ที่ยังไม่ผ่าน KYC
+                </p>
+                <button
+                  type="button"
+                  data-testid="test-claim-job-btn"
+                  onClick={handleTestClaimJob}
+                  className="w-full min-h-[48px] bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl text-sm transition shadow-sm flex items-center justify-center space-x-2"
+                >
+                  <span>🎯</span>
+                  <span>ทดสอบกดรับงาน (Claim Job)</span>
+                </button>
+              </div>
+
+              {/* 5. กล่องเครื่องมือสำหรับทดสอบ (Q-06 Mock Helpers) */}
+              <div className="bg-slate-50 border border-dashed border-slate-300 rounded-2xl p-4 text-xs text-slate-700">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="font-bold text-slate-900">🛠️ เครื่องมือทดสอบ KYC (Q-06)</span>
+                  <span className="bg-slate-200 text-slate-600 px-2 py-0.5 rounded text-[10px]">Dev / Test</span>
+                </div>
+                {testActionMsg && (
+                  <p className="mb-2 p-1.5 bg-white border rounded text-emerald-700 font-medium">{testActionMsg}</p>
+                )}
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    data-testid="mock-approve-btn"
+                    onClick={handleMockApprove}
+                    className="min-h-[40px] bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition"
+                  >
+                    จำลองอนุมัติ (VERIFIED)
+                  </button>
+                  <button
+                    type="button"
+                    data-testid="mock-reject-btn"
+                    onClick={handleMockReject}
+                    className="min-h-[40px] bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition"
+                  >
+                    จำลองปฏิเสธ (REJECTED)
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
 

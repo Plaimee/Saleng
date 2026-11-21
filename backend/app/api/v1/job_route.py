@@ -3,8 +3,9 @@ FastAPI Router สำหรับระบบจัดการงานแล�
 รองรับ REQ-BR-002, REQ-SEC-002, REQ-OP-001, CC-01, CC-04, CC-05, BR-02, BR-03, D-B04-01..06
 """
 
-from typing import Optional
+from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, HTTPException, status, Query
+from backend.app.core.supabase import supabase_store
 
 from backend.app.models.job_route_models import (
     ClaimJobRequest,
@@ -18,6 +19,49 @@ from backend.app.models.job_route_models import (
 from backend.app.services.job_route_service import JobRouteManagementService
 
 router = APIRouter(prefix="", tags=["Buyer Job & Route Management"])
+
+
+@router.get(
+    "/{saleng_id}/incoming-requests",
+    summary="ดึงรายการคำขอเรียกตรงจากผู้ขายที่รอซาเล้งตอบรับ (S2 Direct Request)",
+)
+def get_incoming_direct_requests(saleng_id: str) -> Dict[str, Any]:
+    """คืนรายการคำขอสถานะ S2 ที่ผู้ขายระบุเจาะจงเรียกซาเล้งท่านนี้โดยตรง"""
+    incoming: List[Dict[str, Any]] = []
+    for o in supabase_store.orders.values():
+        if o.get("status") == "S2" and o.get("assigned_saleng_id") == saleng_id:
+            items = [
+                it for it in supabase_store.items.values()
+                if it.get("order_id") == o.get("order_id")
+            ]
+            incoming.append({
+                "order_id": o.get("order_id"),
+                "seller_id": o.get("seller_id", "seller-01"),
+                "status": o.get("status"),
+                "version": int(o.get("version", 1)),
+                "items_count": len(items),
+                "total_est_min_price": float(o.get("total_est_min_price", 0.0)),
+                "total_est_max_price": float(o.get("total_est_max_price", 0.0)),
+                "total_est_weight_kg": float(o.get("total_est_weight_kg", 0.0)),
+                "appointment_notes": o.get("appointment_notes") or "",
+                "direct_request_expires_at": o.get("direct_request_expires_at"),
+                "created_at": o.get("created_at"),
+            })
+    return {"saleng_id": saleng_id, "requests": incoming, "total": len(incoming)}
+
+
+@router.post(
+    "/jobs/{order_id}/decline-direct",
+    summary="ซาเล้งปฏิเสธคำขอเรียกตรง (คืนสถานะ S2 ให้ซาเล้งท่านอื่น)",
+)
+def decline_direct_request(order_id: str, saleng_id: str = Query(...)) -> Dict[str, Any]:
+    order = supabase_store.orders.get(order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail=f"ไม่พบคำขอรหัส {order_id}")
+    if order.get("assigned_saleng_id") == saleng_id:
+        order["assigned_saleng_id"] = None
+        order["direct_request_expires_at"] = None
+    return {"order_id": order_id, "status": order.get("status", "S2"), "declined": True}
 
 
 @router.post("/jobs/{order_id}/claim", response_model=ClaimJobResponse)

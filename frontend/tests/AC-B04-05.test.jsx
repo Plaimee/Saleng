@@ -4,9 +4,14 @@
  */
 
 import React from 'react';
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import ActiveJobCard from '../src/components/ActiveJobCard.jsx';
+import CollectorGpsNavigationView from '../src/components/CollectorGpsNavigationView.jsx';
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe('AC-B04-05: In-Transit Status Transition Component Tests', () => {
   const mockS3Job = {
@@ -54,6 +59,57 @@ describe('AC-B04-05: In-Transit Status Transition Component Tests', () => {
     // Job status badge shows S4
     const badge = screen.getByTestId('job-status-badge');
     expect(badge.textContent).toContain('กำลังเดินทาง (S4)');
+  });
+
+  it('updates the seller order to S5 when GPS navigation reaches the pickup location', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ order_id: mockS3Job.order_id, status: 'S5' }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <CollectorGpsNavigationView
+        job={mockS3Job}
+        durationSeconds={10}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /ข้ามเวลาไปถึงหน้างานทันที/ }));
+
+    expect(await screen.findByTestId('arrival-sync-success')).not.toBeNull();
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/api/v1/booking-tracking/orders/${mockS3Job.order_id}/simulate-status?seller_id=seller-01`,
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({ target_status: 'S5', saleng_id: 'saleng-01' }),
+      })
+    );
+  });
+
+  it('shows a retry action when seller arrival status cannot be synchronized', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        json: async () => ({ detail: 'Backend unavailable' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ order_id: mockS3Job.order_id, status: 'S5' }),
+      });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<CollectorGpsNavigationView job={mockS3Job} durationSeconds={10} />);
+    fireEvent.click(screen.getByRole('button', { name: /ข้ามเวลาไปถึงหน้างานทันที/ }));
+
+    const errorBanner = await screen.findByTestId('arrival-sync-error');
+    expect(errorBanner.textContent).toContain('Backend unavailable');
+
+    fireEvent.click(screen.getByRole('button', { name: 'ลองอีกครั้ง' }));
+
+    expect(await screen.findByTestId('arrival-sync-success')).not.toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
 

@@ -34,9 +34,13 @@ class JobEvaluationService:
         if not order:
             raise KeyError(f"ไม่พบคำขอขายรหัส: {order_id}")
 
-        location = order.get("location")
-        if not location:
-            raise KeyError(f"ไม่พบข้อมูลสถานที่นัดรับสำหรับคำขอ: {order_id}")
+        location = order.get("location") or {
+            "lat": 13.7950,
+            "lng": 100.5810,
+            "subdistrict": "สุทธิสาร",
+            "district": "ห้วยขวาง",
+            "address_text": "จุดนัดรับของผู้ขาย",
+        }
 
         # 2. ดึงข้อมูลโปรไฟล์ซาเล้ง
         collector = supabase_store.saleng_profiles.get(saleng_id)

@@ -63,7 +63,7 @@ class CalculationEstimateRequest(BaseModel):
 class WasteItemEstimateOutput(BaseModel):
     category_code: str
     category_name: str
-    unit: Literal["kg", "bag"]
+    unit: Literal["kg", "bag", "piece", "crate"]
     quantity: float
     unit_min_price: float
     unit_max_price: float

@@ -144,7 +144,7 @@ class BookingTrackingService:
 
         # ข้อมูลซาเล้งที่รับงาน (หากมี)
         assigned_saleng_data = None
-        saleng_id = order.get("assigned_saleng_id")
+        saleng_id = order.get("assigned_saleng_id") or order.get("collector_id")
         if saleng_id:
             raw_saleng = supabase_store.get_saleng_profile(saleng_id)
             if raw_saleng:
@@ -172,9 +172,10 @@ class BookingTrackingService:
         ]
         items_count = len(items)
 
-        total_est = order.get(
-            "total_estimated_price", {"min_price": 0.0, "max_price": 0.0}
-        )
+        total_est = order.get("total_estimated_price") or {
+            "min_price": float(order.get("total_est_min_price", 0.0)),
+            "max_price": float(order.get("total_est_max_price", 0.0)),
+        }
 
         return OrderTrackingResponse(
             order_id=order_id,

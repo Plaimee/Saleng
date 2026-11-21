@@ -4,6 +4,7 @@
  */
 
 import React, { useState } from 'react';
+import InteractiveMapPicker from './InteractiveMapPicker';
 
 export default function PickupLocationModal({
   isOpen,
@@ -78,7 +79,7 @@ export default function PickupLocationModal({
       data-req="UC-01"
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
     >
-      <div className="bg-white rounded-3xl w-full max-w-md shadow-xl overflow-hidden border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-white rounded-3xl w-full max-w-lg max-h-[92vh] overflow-y-auto shadow-xl border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <h3 className="font-bold text-gray-900 text-base">
             {location ? 'แก้ไขที่อยู่นัดหมาย' : 'เพิ่มที่อยู่นัดหมายใหม่'}
@@ -148,27 +149,44 @@ export default function PickupLocationModal({
             />
           </div>
 
-          <div className="p-3 bg-gray-50 rounded-2xl border border-gray-200/60">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
-                📍 พิกัด GPS นัดหมาย
+          <div className="p-3.5 bg-gray-50 rounded-2xl border border-gray-200/80 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                📍 ปักหมุดจุดนัดรับบนแผนที่
               </span>
               <button
                 type="button"
                 data-testid="gps-pin-btn"
                 onClick={handleGetCurrentLocation}
                 disabled={locating}
-                className="text-xs text-emerald-600 font-semibold hover:underline flex items-center gap-1"
+                className="text-xs bg-black text-yellow-400 px-2.5 py-1 rounded-full font-semibold hover:bg-zinc-800 flex items-center gap-1"
               >
-                {locating ? 'กำลังดึงพิกัด...' : '🎯 ดึงตำแหน่งปัจจุบัน'}
+                {locating ? 'กำลังดึงพิกัด...' : '🎯 ตำแหน่งปัจจุบัน'}
               </button>
             </div>
-            <div className="text-[11px] text-gray-500 font-mono">
-              ละติจูด: {lat}, ลองจิจูด: {lng}
+
+            <InteractiveMapPicker
+              lat={lat}
+              lng={lng}
+              onChange={(newLat, newLng) => {
+                setLat(newLat);
+                setLng(newLng);
+                setGpsSuccess(true);
+              }}
+              onAddressFound={({ subDistrict: foundSub }) => {
+                if (foundSub && !subDistrict.trim()) {
+                  setSubDistrict(foundSub);
+                }
+              }}
+              height="210px"
+            />
+
+            <div className="flex items-center justify-between text-[11px] text-gray-500 font-mono">
+              <span>ละติจูด: {lat}, ลองจิจูด: {lng}</span>
+              {gpsSuccess && (
+                <span className="text-emerald-600 font-sans font-semibold">✓ ปักหมุดพิกัดสำเร็จ</span>
+              )}
             </div>
-            {gpsSuccess && (
-              <span className="text-[10px] text-emerald-600 font-medium">✓ ปักหมุดพิกัดสำเร็จ</span>
-            )}
           </div>
 
           <label className="flex items-center space-x-2 cursor-pointer pt-1">
