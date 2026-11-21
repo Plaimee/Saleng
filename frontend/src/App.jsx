@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 
 // Seller Components & Pages
+import AccountAccessPanel from './components/AccountAccessPanel';
 import ScrapPostingPanel from './components/ScrapPostingPanel';
 import PricingDecisionPage from './pages/PricingDecisionPage';
 import BuyerSearchPanel from './components/BuyerSearchPanel';
@@ -24,12 +25,40 @@ import AdminUserVerificationView from './components/admin/AdminUserVerificationV
 import AdminBenchmarkGradingView from './components/admin/AdminBenchmarkGradingView';
 import AdminDispatchDisputeView from './components/admin/AdminDispatchDisputeView';
 import AdminSecurityComplianceView from './components/admin/AdminSecurityComplianceView';
+import AdminLoginPanel from './components/admin/AdminLoginPanel';
 
 export default function App() {
-  const [activeRole, setActiveRole] = useState('seller'); // 'seller' | 'collector' | 'admin'
-  const [activeSubView, setActiveSubView] = useState('seller-posting');
+  const getRoleFromPath = () => {
+    if (window.location.pathname.startsWith('/buyer')) return 'collector';
+    if (window.location.pathname.startsWith('/admin')) return 'admin';
+    return 'seller';
+  };
+
+  const [activeRole, setActiveRole] = useState(getRoleFromPath);
+  const [activeSubView, setActiveSubView] = useState(() => {
+    if (window.location.pathname.startsWith('/buyer')) return 'collector-account';
+    if (window.location.pathname.startsWith('/admin')) {
+      return window.localStorage.getItem('saleng_admin_session') === 'authenticated'
+        ? 'admin-users'
+        : 'admin-login';
+    }
+    return 'seller-account';
+  });
+  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(
+    () => window.localStorage.getItem('saleng_admin_session') === 'authenticated'
+  );
+
+  const navigateToRole = (role) => {
+    const path = role === 'collector' ? '/buyer' : `/${role}`;
+    window.history.pushState({}, '', path);
+    setActiveRole(role);
+    if (role === 'seller') setActiveSubView('seller-account');
+    if (role === 'collector') setActiveSubView('collector-account');
+    if (role === 'admin') setActiveSubView('admin-login');
+  };
 
   const sellerMenu = [
+    { id: 'seller-account', label: '👤 บัญชี & เข้าสู่ระบบ', icon: '🔐' },
     { id: 'seller-posting', label: '📦 โพสต์ขายของเก่า', icon: '📝' },
     { id: 'seller-pricing', label: '💰 ราคากลางและประเมิน', icon: '⚖️' },
     { id: 'seller-search', label: '🔍 ค้นหาซาเล้งใกล้ฉัน', icon: '🛺' },
@@ -58,10 +87,7 @@ export default function App() {
   ];
 
   const handleRoleChange = (role) => {
-    setActiveRole(role);
-    if (role === 'seller') setActiveSubView('seller-posting');
-    if (role === 'collector') setActiveSubView('collector-search');
-    if (role === 'admin') setActiveSubView('admin-users');
+    navigateToRole(role);
   };
 
   return (
@@ -81,7 +107,7 @@ export default function App() {
             </div>
           </div>
 
-          {/* Persona Switcher */}
+          {/* Separate Portal Switcher */}
           <div className="flex items-center bg-gray-100 p-1 rounded-xl border border-gray-200">
             <button
               type="button"
@@ -190,6 +216,7 @@ export default function App() {
         {/* Seller Sub Views */}
         {activeRole === 'seller' && (
           <div>
+            {activeSubView === 'seller-account' && <AccountAccessPanel />}
             {activeSubView === 'seller-posting' && <ScrapPostingPanel />}
             {activeSubView === 'seller-pricing' && <PricingDecisionPage />}
             {activeSubView === 'seller-search' && <BuyerSearchPanel />}
@@ -217,10 +244,22 @@ export default function App() {
         {/* Admin Sub Views */}
         {activeRole === 'admin' && (
           <div>
-            {activeSubView === 'admin-users' && <AdminUserVerificationView />}
-            {activeSubView === 'admin-pricing' && <AdminBenchmarkGradingView />}
-            {activeSubView === 'admin-dispatch' && <AdminDispatchDisputeView />}
-            {activeSubView === 'admin-compliance' && <AdminSecurityComplianceView />}
+            {!isAdminLoggedIn ? (
+              <AdminLoginPanel
+                onLoginSuccess={() => {
+                  window.localStorage.setItem('saleng_admin_session', 'authenticated');
+                  setIsAdminLoggedIn(true);
+                  setActiveSubView('admin-users');
+                }}
+              />
+            ) : (
+              <>
+                {activeSubView === 'admin-users' && <AdminUserVerificationView />}
+                {activeSubView === 'admin-pricing' && <AdminBenchmarkGradingView />}
+                {activeSubView === 'admin-dispatch' && <AdminDispatchDisputeView />}
+                {activeSubView === 'admin-compliance' && <AdminSecurityComplianceView />}
+              </>
+            )}
           </div>
         )}
       </main>
